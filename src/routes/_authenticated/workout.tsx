@@ -141,10 +141,6 @@ function Workout() {
       toast.error("Enter a weight and at least 1 rep.");
       return;
     }
-    if (!userId) {
-      toast.error("Finish setting up your profile first.");
-      return;
-    }
     if (!exercise) {
       toast.error("Your workout is still loading. Try again in a moment.");
       return;
@@ -152,8 +148,9 @@ function Workout() {
     setLogging(true);
     try {
       await logSet({
-        data: { user_id: userId, exercise_id: exercise.id, weight_kg: w, reps_completed: r, set_number: setNumber },
+        data: { exercise_id: exercise.id, weight_kg: w, reps_completed: r, set_number: setNumber },
       });
+
       toast.success(`Set ${setNumber} logged: ${w} kg × ${r}`);
       setLastLog({ weight_kg: w, reps_completed: r });
       setSetNumber((n) => n + 1);
