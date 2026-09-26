@@ -103,21 +103,21 @@ function Home() {
     queryFn: () => fetchStats({ data: {} }),
   });
 
-  const { data: workout, isLoading: workoutLoading } = useQuery({
+  const { data: workout } = useQuery({
     queryKey: ["day-one-workout"],
     queryFn: () => fetchWorkout({ data: {} }),
   });
 
-
   const firstName = profile.name?.trim().split(/\s+/)[0] ?? "";
   const completed = stats?.completedWorkouts ?? 0;
   const weeklyTarget = stats?.weeklyTarget ?? FREQUENCY_TARGETS[profile.frequency ?? ""] ?? 3;
-  
+
   const percentage = Math.min(1, completed / weeklyTarget);
   const dashArray = 2 * Math.PI * 44;
   const dashOffset = dashArray * (1 - percentage);
 
-  const firstExercise = workout?.exercises[0];
+  const hasCustom = Boolean(workout?.is_custom && (workout?.exercises.length ?? 0) > 0);
+  const customNames = hasCustom ? workout!.exercises.slice(0, 3).map((e) => e.name) : [];
 
   return (
     <>
@@ -173,43 +173,64 @@ function Home() {
         <p className="mt-6 text-center text-sm text-muted-foreground">Weekly Consistency: {completed} / {weeklyTarget} Workouts</p>
       </section>
 
-      <section className="mt-14">
-        <div className="mb-5 flex items-end justify-between">
-          <h2 className="text-lg font-semibold">Your workout</h2>
-          <span className="text-xs text-muted-foreground">
-            {workout ? `01 / ${String(workout.exercises.length).padStart(2, "0")}` : "Day 1"}
-          </span>
-        </div>
+      <section className="mt-14 space-y-6" aria-label="Your programs">
+        {/* Card A — Pre-Made Plan */}
         <div className="rounded-lg border border-border bg-card p-6">
           <div className="flex items-start justify-between gap-5">
             <div>
-              <p className="text-xs font-semibold uppercase text-primary">
-                {workout?.is_custom ? "Custom Day" : "Today's Focus: Day 1"} · Exercise 01
+              <p className="text-xs font-semibold uppercase text-primary">Guided Program</p>
+              <h3 className="mt-3 text-xl font-semibold">The GymBuddy Pre-Made Plan</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Day 1 · Full Body Compound (3 Movements • 45 Mins)
               </p>
-              <h3 className="mt-4 text-2xl font-semibold">
-                {firstExercise?.name ?? (workoutLoading ? "Loading…" : "No workout found")}
-              </h3>
-              {workout && (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {workout.target_sets} sets <span className="mx-2 text-primary">·</span> {workout.target_reps} reps
-                </p>
-              )}
             </div>
             <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-primary/40 bg-primary/10 text-primary">
               <Dumbbell size={22} strokeWidth={1.7} aria-hidden="true" />
             </div>
           </div>
-          <Link to="/custom-routine" className="mt-5 inline-block text-sm text-muted-foreground underline-offset-4 hover:text-primary hover:underline">
-            Want to customize? <span className="text-primary">Create your own routine</span>
-          </Link>
+          <Button asChild className="mt-6 h-14 w-full rounded-lg text-base font-semibold shadow-neon transition-transform active:scale-[0.98]">
+            <Link to="/workout" search={{ mode: "premade" }}>
+              Start Pre-Made Workout <ArrowRight className="ml-2" aria-hidden="true" />
+            </Link>
+          </Button>
+        </div>
+
+        {/* Card B — Custom Routine Builder */}
+        <div className="rounded-lg border border-border bg-card p-6">
+          <p className="text-xs font-semibold uppercase text-primary">Your Program</p>
+          <h3 className="mt-3 text-xl font-semibold">Your Custom Routine Builder</h3>
+          {hasCustom ? (
+            <>
+              <ul className="mt-4 space-y-2.5">
+                {customNames.map((name) => (
+                  <li key={name} className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                    {name}
+                  </li>
+                ))}
+              </ul>
+              <Button asChild className="mt-6 h-14 w-full rounded-lg text-base font-semibold shadow-neon transition-transform active:scale-[0.98]">
+                <Link to="/workout" search={{ mode: "custom" }}>
+                  Start Custom Workout <ArrowRight className="ml-2" aria-hidden="true" />
+                </Link>
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                No custom routine assembled yet, Bro.
+              </p>
+              <Button
+                asChild
+                variant="outline"
+                className="mt-6 h-14 w-full rounded-lg border-primary/60 text-base font-semibold text-primary hover:bg-primary/10 hover:text-primary"
+              >
+                <Link to="/custom-routine">Assemble Custom Routine</Link>
+              </Button>
+            </>
+          )}
         </div>
       </section>
-
-      <div className="mt-auto pt-12">
-        <Button asChild size="lg" className="h-16 w-full rounded-lg text-lg font-semibold shadow-neon transition-transform active:scale-[0.98]">
-          <Link to="/workout">Start Workout <ArrowRight className="ml-2" aria-hidden="true" /></Link>
-        </Button>
-      </div>
     </main>
     <BottomNav />
     </>
