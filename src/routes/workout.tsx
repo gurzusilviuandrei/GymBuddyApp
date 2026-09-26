@@ -120,12 +120,12 @@ function Workout() {
         </button>
       </div>
 
-      <div className="mt-auto pt-10">
+       <div className="mt-auto pt-10">
         <Link
-          to="/"
+           to="/home"
           className="flex h-12 w-full items-center justify-center rounded-xl text-sm font-medium text-muted-foreground transition hover:text-foreground"
         >
-          Back to routine
+           Back to home
         </Link>
       </div>
     </div>

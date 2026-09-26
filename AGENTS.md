@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+GymBuddy uses separate TanStack routes for Welcome (/), equipment onboarding (/onboarding), Home (/home), and the workout tracker (/workout) so each step can be revisited directly and navigated with typed links.
