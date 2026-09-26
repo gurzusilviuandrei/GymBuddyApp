@@ -118,7 +118,7 @@ export const getDayOneWorkout = createServerFn({ method: "GET" })
 
     const { data: exerciseRows, error: exercisesError } = await supabaseAdmin
       .from("exercises")
-      .select("id, name, instructions, video_url, alternative_exercise_id")
+      .select("id, name, instructions, setup_cue, position_cue, movement_cue, video_url, alternative_exercise_id")
       .in("id", program.exercise_ids_list);
     if (exercisesError) throw new Error("Could not load exercises");
 
@@ -181,7 +181,7 @@ export const getAlternativeExercise = createServerFn({ method: "GET" })
     if (!current?.alternative_exercise_id) return null;
     const { data: alt } = await supabaseAdmin
       .from("exercises")
-      .select("id, name, instructions, video_url, alternative_exercise_id")
+      .select("id, name, instructions, setup_cue, position_cue, movement_cue, video_url, alternative_exercise_id")
       .eq("id", current.alternative_exercise_id)
       .maybeSingle();
     return alt;

@@ -17,3 +17,5 @@
 - [x] Move Profile access out of the Home header into the bottom bar.
 - [x] Show the Pre-Made plan and Custom routine as two launchable cards on Home.
 - [x] Verify both cards launch the tracker with the correct program.
+- [x] Add a 90-second rest countdown after logging sets, with Skip Rest.
+- [x] Show three exercise-specific setup and form cues for all 30 exercises.
