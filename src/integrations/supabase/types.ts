@@ -163,6 +163,47 @@ export type Database = {
         }
         Relationships: []
       }
+      workout_sessions: {
+        Row: {
+          completed_at: string
+          exercise_names: string[]
+          id: string
+          program_type: string
+          started_at: string
+          total_sets: number
+          total_volume_kg: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          exercise_names?: string[]
+          id?: string
+          program_type: string
+          started_at?: string
+          total_sets?: number
+          total_volume_kg?: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          exercise_names?: string[]
+          id?: string
+          program_type?: string
+          started_at?: string
+          total_sets?: number
+          total_volume_kg?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
