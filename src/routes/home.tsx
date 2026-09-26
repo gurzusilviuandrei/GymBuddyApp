@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, Dumbbell, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getDayOneWorkout, getUserStats } from "@/lib/gym.functions";
 
 const FREQUENCY_TARGETS: Record<string, number> = {
   "2-days": 2,
@@ -12,6 +15,7 @@ const FREQUENCY_TARGETS: Record<string, number> = {
 interface Profile {
   name?: string;
   frequency?: string;
+  userId?: string;
 }
 
 function readProfile(): Profile {
@@ -39,20 +43,41 @@ export const Route = createFileRoute("/home")({
 
 function Home() {
   const [profile, setProfile] = useState<Profile>({});
+  const fetchWorkout = useServerFn(getDayOneWorkout);
+  const fetchStats = useServerFn(getUserStats);
 
   useEffect(() => {
     setProfile(readProfile());
   }, []);
 
+  const { data: stats } = useQuery({
+    queryKey: ["user-stats", profile.userId],
+    queryFn: () => fetchStats({ data: { user_id: profile.userId! } }),
+    enabled: Boolean(profile.userId),
+  });
+
+  const { data: workout, isLoading: workoutLoading } = useQuery({
+    queryKey: ["day-one-workout", profile.userId],
+    queryFn: () => fetchWorkout({ data: { user_id: profile.userId! } }),
+    enabled: Boolean(profile.userId),
+  });
+
   const firstName = profile.name?.trim().split(/\s+/)[0] ?? "";
-  const weeklyTarget = FREQUENCY_TARGETS[profile.frequency ?? ""] ?? 3;
+  const completed = stats?.completedWorkouts ?? 0;
+  const weeklyTarget = stats?.weeklyTarget ?? FREQUENCY_TARGETS[profile.frequency ?? ""] ?? 3;
+  
+  const percentage = Math.min(1, completed / weeklyTarget);
+  const dashArray = 2 * Math.PI * 44;
+  const dashOffset = dashArray * (1 - percentage);
+
+  const firstExercise = workout?.exercises[0];
 
   return (
     <main className="home-enter mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-background px-7 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-12 text-foreground">
       <header className="flex items-center justify-between">
-        <Link to="/" className="text-xl font-bold text-foreground" aria-label="GymBuddy welcome">GymBuddy<span className="text-primary">.</span></Link>
-        <Button asChild variant="outline" size="icon" className="size-11 rounded-lg border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground" title="Change equipment">
-          <Link to="/onboarding" aria-label="Change equipment"><SlidersHorizontal aria-hidden="true" /></Link>
+        <Link to="/" className="text-xl font-bold text-foreground">GymBuddy<span className="text-primary">.</span></Link>
+        <Button asChild variant="outline" size="icon" className="size-11 rounded-lg border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground">
+          <Link to="/onboarding"><SlidersHorizontal aria-hidden="true" /></Link>
         </Button>
       </header>
 
@@ -64,11 +89,11 @@ function Home() {
         <p className="mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">Take it one set at a time. Your guided workout is ready when you are.</p>
       </div>
 
-      <section className="mt-14 rounded-lg border border-border bg-card p-8" aria-labelledby="consistency-heading">
-        <h2 id="consistency-heading" className="text-center text-sm font-semibold uppercase tracking-widest text-muted-foreground">Weekly Consistency</h2>
+      <section className="mt-14 rounded-lg border border-border bg-card p-8">
+        <h2 className="text-center text-sm font-semibold uppercase tracking-widest text-muted-foreground">Weekly Consistency</h2>
         <div className="mt-6 flex justify-center">
           <div className="relative size-40">
-            <svg viewBox="0 0 100 100" className="size-full -rotate-90" role="img" aria-label={`0 of ${weeklyTarget} weekly workouts completed`}>
+            <svg viewBox="0 0 100 100" className="size-full -rotate-90">
               <circle cx="50" cy="50" r="44" fill="none" strokeWidth="7" className="stroke-muted" />
               <circle
                 cx="50"
@@ -77,34 +102,41 @@ function Home() {
                 fill="none"
                 strokeWidth="7"
                 strokeLinecap="round"
-                className="stroke-primary"
-                strokeDasharray={2 * Math.PI * 44}
-                strokeDashoffset={2 * Math.PI * 44}
+                className="stroke-primary transition-[stroke-dashoffset] duration-1000 ease-out"
+                strokeDasharray={dashArray}
+                strokeDashoffset={dashOffset}
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-3xl font-semibold text-foreground">
-                0 <span className="text-muted-foreground">/ {weeklyTarget}</span>
+                {completed} <span className="text-muted-foreground">/ {weeklyTarget}</span>
               </span>
               <span className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">Workouts</span>
             </div>
           </div>
         </div>
-        <p className="mt-6 text-center text-sm text-muted-foreground">Weekly Consistency: 0 / {weeklyTarget} Workouts</p>
+        <p className="mt-6 text-center text-sm text-muted-foreground">Weekly Consistency: {completed} / {weeklyTarget} Workouts</p>
       </section>
 
-
-      <section className="mt-14" aria-labelledby="workout-heading">
+      <section className="mt-14">
         <div className="mb-5 flex items-end justify-between">
-          <h2 id="workout-heading" className="text-lg font-semibold">Your workout</h2>
-          <span className="text-xs text-muted-foreground">01 / 01</span>
+          <h2 className="text-lg font-semibold">Your workout</h2>
+          <span className="text-xs text-muted-foreground">
+            {workout ? `01 / ${String(workout.exercises.length).padStart(2, "0")}` : "Day 1"}
+          </span>
         </div>
         <div className="rounded-lg border border-border bg-card p-6">
           <div className="flex items-start justify-between gap-5">
             <div>
-              <p className="text-xs font-semibold uppercase text-primary">Exercise 01</p>
-              <h3 className="mt-4 text-2xl font-semibold">Lat Pulldown</h3>
-              <p className="mt-2 text-sm text-muted-foreground">3 sets <span className="mx-2 text-primary">·</span> 10 reps</p>
+              <p className="text-xs font-semibold uppercase text-primary">Day 1 · Exercise 01</p>
+              <h3 className="mt-4 text-2xl font-semibold">
+                {firstExercise?.name ?? (workoutLoading ? "Loading…" : "No workout found")}
+              </h3>
+              {workout && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {workout.target_sets} sets <span className="mx-2 text-primary">·</span> {workout.target_reps} reps
+                </p>
+              )}
             </div>
             <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-primary/40 bg-primary/10 text-primary">
               <Dumbbell size={22} strokeWidth={1.7} aria-hidden="true" />

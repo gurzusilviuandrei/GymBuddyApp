@@ -30,30 +30,46 @@ export const createUserProfile = createServerFn({ method: "POST" })
     return { id: row.id as string };
   });
 
-export const getActiveExercise = createServerFn({ method: "GET" })
+export const getDayOneWorkout = createServerFn({ method: "GET" })
   .inputValidator((data) => z.object({ user_id: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: user } = await supabaseAdmin
+    const { data: user, error: userError } = await supabaseAdmin
       .from("users")
       .select("equipment_type")
       .eq("id", data.user_id)
       .maybeSingle();
+    if (userError) throw new Error("Could not load profile");
     if (!user) return null;
-    const { data: program } = await supabaseAdmin
+    const { data: program, error: programError } = await supabaseAdmin
       .from("workout_programs")
-      .select("exercise_ids_list")
+      .select("id, day_number, exercise_ids_list, target_sets, target_reps")
       .eq("equipment_type", user.equipment_type)
       .eq("day_number", 1)
       .maybeSingle();
-    const exerciseId = program?.exercise_ids_list?.[0];
-    if (!exerciseId) return null;
-    const { data: exercise } = await supabaseAdmin
+    if (programError) throw new Error("Could not load workout program");
+    if (!program || program.exercise_ids_list.length === 0) return null;
+
+    const { data: exerciseRows, error: exercisesError } = await supabaseAdmin
       .from("exercises")
-      .select("id, name, instructions, alternative_exercise_id")
-      .eq("id", exerciseId)
-      .maybeSingle();
-    return exercise;
+      .select("id, name, instructions, video_url, alternative_exercise_id")
+      .in("id", program.exercise_ids_list);
+    if (exercisesError) throw new Error("Could not load exercises");
+
+    const exerciseById = new Map((exerciseRows ?? []).map((exercise) => [exercise.id, exercise]));
+    const exercises = program.exercise_ids_list.flatMap((id) => {
+      const exercise = exerciseById.get(id);
+      return exercise ? [exercise] : [];
+    });
+
+    return {
+      id: program.id,
+      day_number: program.day_number,
+      target_sets: program.target_sets,
+      target_reps: program.target_reps,
+      exercise_ids: program.exercise_ids_list,
+      exercises,
+    };
   });
 
 export const getAlternativeExercise = createServerFn({ method: "GET" })
@@ -68,7 +84,7 @@ export const getAlternativeExercise = createServerFn({ method: "GET" })
     if (!current?.alternative_exercise_id) return null;
     const { data: alt } = await supabaseAdmin
       .from("exercises")
-      .select("id, name, instructions, alternative_exercise_id")
+      .select("id, name, instructions, video_url, alternative_exercise_id")
       .eq("id", current.alternative_exercise_id)
       .maybeSingle();
     return alt;
@@ -93,4 +109,36 @@ export const logWorkoutSet = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error("Could not log set");
     return row;
+  });
+
+export const getUserStats = createServerFn({ method: "GET" })
+  .inputValidator((data) => z.object({ user_id: z.string().uuid() }).parse(data))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    
+    // Get start of current week (Sunday)
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day;
+    const sunday = new Date(now.setDate(diff));
+    sunday.setHours(0, 0, 0, 0);
+
+    const { data: logs } = await supabaseAdmin
+      .from("workout_logs")
+      .select("timestamp")
+      .eq("user_id", data.user_id)
+      .gte("timestamp", sunday.toISOString());
+
+    const uniqueDays = new Set(logs?.map((l) => new Date(l.timestamp).toDateString())).size;
+    
+    const { data: user } = await supabaseAdmin
+      .from("users")
+      .select("weekly_goal_days")
+      .eq("id", data.user_id)
+      .maybeSingle();
+
+    return {
+      completedWorkouts: uniqueDays,
+      weeklyTarget: user?.weekly_goal_days ?? 3,
+    };
   });

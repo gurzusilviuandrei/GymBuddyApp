@@ -130,18 +130,24 @@ export type Database = {
           equipment_type: string
           exercise_ids_list: string[]
           id: string
+          target_reps: number
+          target_sets: number
         }
         Insert: {
           day_number: number
           equipment_type: string
           exercise_ids_list: string[]
           id?: string
+          target_reps?: number
+          target_sets?: number
         }
         Update: {
           day_number?: number
           equipment_type?: string
           exercise_ids_list?: string[]
           id?: string
+          target_reps?: number
+          target_sets?: number
         }
         Relationships: []
       }
