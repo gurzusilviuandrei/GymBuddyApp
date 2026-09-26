@@ -183,7 +183,9 @@ function Home() {
         <div className="rounded-lg border border-border bg-card p-6">
           <div className="flex items-start justify-between gap-5">
             <div>
-              <p className="text-xs font-semibold uppercase text-primary">Day 1 · Exercise 01</p>
+              <p className="text-xs font-semibold uppercase text-primary">
+                {workout?.is_custom ? "Custom Day" : "Today's Focus: Day 1"} · Exercise 01
+              </p>
               <h3 className="mt-4 text-2xl font-semibold">
                 {firstExercise?.name ?? (workoutLoading ? "Loading…" : "No workout found")}
               </h3>
@@ -197,6 +199,9 @@ function Home() {
               <Dumbbell size={22} strokeWidth={1.7} aria-hidden="true" />
             </div>
           </div>
+          <Link to="/custom-routine" className="mt-5 inline-block text-sm text-muted-foreground underline-offset-4 hover:text-primary hover:underline">
+            Want to customize? <span className="text-primary">Create your own routine</span>
+          </Link>
         </div>
       </section>
 
