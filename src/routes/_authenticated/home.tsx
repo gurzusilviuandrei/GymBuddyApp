@@ -128,7 +128,7 @@ function Home() {
   const dashOffset = dashArray * (1 - percentage);
 
   const hasCustom = Boolean(workout?.is_custom && (workout?.exercises.length ?? 0) > 0);
-  const customNames = hasCustom ? workout!.exercises.slice(0, 3).map((e) => e.name) : [];
+  const customNames = hasCustom ? workout?.exercises.map((e) => e.name) ?? [] : [];
 
   return (
     <>
@@ -192,7 +192,7 @@ function Home() {
               <p className="text-xs font-semibold uppercase text-primary">Guided Program</p>
               <h3 className="mt-3 text-xl font-semibold">The GymBuddy Pre-Made Plan</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Day 1 · Full Body Compound (3 Movements • 45 Mins)
+                 Day 1 · Full Body Compound ({workout?.is_custom ? "Guided workout" : `${workout?.exercises.length ?? 0} movements`})
               </p>
             </div>
             <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-primary/40 bg-primary/10 text-primary">
