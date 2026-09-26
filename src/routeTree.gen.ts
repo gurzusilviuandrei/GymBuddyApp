@@ -10,63 +10,68 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as HomeRouteImport } from './routes/home'
-import { Route as OnboardingRouteImport } from './routes/onboarding'
-import { Route as WorkoutRouteImport } from './routes/workout'
+import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthenticatedWorkoutRouteImport } from './routes/_authenticated/workout'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HomeRoute = HomeRouteImport.update({
-  id: '/home',
+const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
+  id: '/_authenticated/home',
   path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OnboardingRoute = OnboardingRouteImport.update({
-  id: '/onboarding',
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/_authenticated/onboarding',
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkoutRoute = WorkoutRouteImport.update({
-  id: '/workout',
+const AuthenticatedWorkoutRoute = AuthenticatedWorkoutRouteImport.update({
+  id: '/_authenticated/workout',
   path: '/workout',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/home': typeof HomeRoute
-  '/onboarding': typeof OnboardingRoute
-  '/workout': typeof WorkoutRoute
+  '/home': typeof AuthenticatedHomeRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/workout': typeof AuthenticatedWorkoutRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/home': typeof HomeRoute
-  '/onboarding': typeof OnboardingRoute
-  '/workout': typeof WorkoutRoute
+  '/home': typeof AuthenticatedHomeRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/workout': typeof AuthenticatedWorkoutRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/home': typeof HomeRoute
-  '/onboarding': typeof OnboardingRoute
-  '/workout': typeof WorkoutRoute
+  '/_authenticated/home': typeof AuthenticatedHomeRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/_authenticated/workout': typeof AuthenticatedWorkoutRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths: '/' | '/home' | '/onboarding' | '/workout'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/home' | '/onboarding' | '/workout'
-  id: '__root__' | '/' | '/home' | '/onboarding' | '/workout'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated/home'
+    | '/_authenticated/onboarding'
+    | '/_authenticated/workout'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  HomeRoute: typeof HomeRoute
-  OnboardingRoute: typeof OnboardingRoute
-  WorkoutRoute: typeof WorkoutRoute
+  AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
+  AuthenticatedWorkoutRoute: typeof AuthenticatedWorkoutRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -78,25 +83,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/home': {
-      id: '/home'
+    '/_authenticated/home': {
+      id: '/_authenticated/home'
       path: '/home'
       fullPath: '/home'
-      preLoaderRoute: typeof HomeRouteImport
+      preLoaderRoute: typeof AuthenticatedHomeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/onboarding': {
-      id: '/onboarding'
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
       path: '/onboarding'
       fullPath: '/onboarding'
-      preLoaderRoute: typeof OnboardingRouteImport
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workout': {
-      id: '/workout'
+    '/_authenticated/workout': {
+      id: '/_authenticated/workout'
       path: '/workout'
       fullPath: '/workout'
-      preLoaderRoute: typeof WorkoutRouteImport
+      preLoaderRoute: typeof AuthenticatedWorkoutRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -104,9 +109,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  HomeRoute: HomeRoute,
-  OnboardingRoute: OnboardingRoute,
-  WorkoutRoute: WorkoutRoute,
+  AuthenticatedHomeRoute: AuthenticatedHomeRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
+  AuthenticatedWorkoutRoute: AuthenticatedWorkoutRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
