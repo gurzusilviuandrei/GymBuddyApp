@@ -69,7 +69,7 @@ export const getDayOneWorkout = createServerFn({ method: "GET" })
       .eq("id", context.userId)
       .maybeSingle();
     if (userError) throw new Error("Could not load profile");
-    if (!user) return null;
+    if (!user?.equipment_type) return null;
     const { data: program, error: programError } = await supabaseAdmin
       .from("workout_programs")
       .select("id, day_number, exercise_ids_list, target_sets, target_reps")
