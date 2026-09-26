@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type MouseEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -96,7 +96,7 @@ function ProfilePage() {
     }
   };
 
-  const handleDelete = async (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleDelete = async (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     if (deleteText !== "DELETE" || deleting) return;
     setDeleting(true);

@@ -20,7 +20,7 @@ export const getAccountSettings = createServerFn({ method: "GET" })
     return {
       fullName: profile?.full_name ?? "GymBuddy Member",
       email: typeof context.claims.email === "string" ? context.claims.email : "",
-      tier: "free" as const,
+      tier: "free" as "free" | "pro",
     };
   });
 
