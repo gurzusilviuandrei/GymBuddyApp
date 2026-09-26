@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ensureUserRow, getDayOneWorkout, getUserStats, getWorkoutHistory } from "@/lib/gym.functions";
 import { SessionCard } from "@/components/SessionCard";
 import { syncLocalProfile } from "@/lib/account-sync";
+import { readActiveSession, clearActiveSession, type ActiveSession } from "@/lib/active-session";
 
 
 const FREQUENCY_TARGETS: Record<string, number> = {
@@ -50,6 +51,10 @@ export const Route = createFileRoute("/_authenticated/home")({
 function Home() {
   const [profile, setProfile] = useState<Profile>({});
   const [signingOut, setSigningOut] = useState(false);
+  const [active, setActive] = useState<ActiveSession | null>(null);
+  useEffect(() => {
+    setActive(readActiveSession());
+  }, []);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fetchWorkout = useServerFn(getDayOneWorkout);
