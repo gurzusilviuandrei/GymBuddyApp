@@ -15,3 +15,5 @@
 - [x] Add a fixed bottom navigation bar with Home, History and Profile tabs.
 - [x] Add a workout history screen listing past sessions.
 - [x] Move Profile access out of the Home header into the bottom bar.
+- [x] Show the Pre-Made plan and Custom routine as two launchable cards on Home.
+- [x] Verify both cards launch the tracker with the correct program.
