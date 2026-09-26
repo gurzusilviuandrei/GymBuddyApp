@@ -191,9 +191,11 @@ function Workout() {
       <div className="mt-5 flex justify-center">
         <button
           type="button"
-          className="rounded-xl border border-border px-6 py-3 text-sm font-medium text-muted-foreground transition hover:border-primary/60 hover:text-foreground"
+          onClick={handleSwap}
+          disabled={swapping || !exercise}
+          className="rounded-xl border border-border px-6 py-3 text-sm font-medium text-muted-foreground transition hover:border-primary/60 hover:text-foreground disabled:opacity-60"
         >
-          Machine Occupied? Swap Exercise
+          {swapping ? "Swapping…" : "Machine Occupied? Swap Exercise"}
         </button>
       </div>
 
