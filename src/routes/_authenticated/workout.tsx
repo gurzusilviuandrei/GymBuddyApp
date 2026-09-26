@@ -69,14 +69,13 @@ function Workout() {
     }
   }, []);
 
+  // Identity comes from the signed-in session on the server, so this loads even
+  // when the local copy of the profile is missing.
   const { data: workout, isLoading } = useQuery({
-    queryKey: ["day-one-workout", userId],
-    queryFn: () => {
-      if (!userId) throw new Error("Profile is missing");
-      return fetchWorkout({ data: { user_id: userId } });
-    },
-    enabled: Boolean(userId),
+    queryKey: ["day-one-workout"],
+    queryFn: () => fetchWorkout({ data: {} }),
   });
+
 
   const session = workout?.exercises.slice(0, EXERCISES_PER_SESSION) ?? [];
   const targetSets = workout?.target_sets ?? 3;
