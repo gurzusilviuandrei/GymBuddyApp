@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { readActiveSession, writeActiveSession, clearActiveSession } from "@/lib/active-session";
 import { getDayOneWorkout, getAlternativeExercise, getLastLog, logWorkoutSet, completeWorkout } from "@/lib/gym.functions";
 
 export const Route = createFileRoute("/_authenticated/workout")({
@@ -159,6 +160,7 @@ function Workout() {
       if (finishing) return;
       setFinishing(true);
       setComplete(true);
+      clearActiveSession();
       try {
         const doneIds = session.map((e, i) => usedExerciseIds.current[i] ?? e.id);
         const saved = await finish({
@@ -198,6 +200,7 @@ function Workout() {
         toast.info("No alternative exercise available for this one.");
         return;
       }
+      swappedMap.current = { ...swappedMap.current, [index]: alt };
       setSwapped(alt);
       setSetNumber(1);
       usedExerciseIds.current[index] = alt.id;
