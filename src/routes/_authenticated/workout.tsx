@@ -60,16 +60,8 @@ function Workout() {
   const [swapped, setSwapped] = useState<Ex | null>(null);
   const [swapping, setSwapping] = useState(false);
 
-  useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem("gymbuddy-profile") ?? "{}") as { userId?: string };
-      setUserId(stored.userId);
-    } catch {
-      setUserId(undefined);
-    }
-  }, []);
-
   // Identity comes from the signed-in session on the server, so this loads even
+
   // when the local copy of the profile is missing.
   const { data: workout, isLoading } = useQuery({
     queryKey: ["day-one-workout"],
