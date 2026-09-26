@@ -6,7 +6,9 @@ import { ArrowRight, Dumbbell, LogOut, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { getDayOneWorkout, getUserStats } from "@/lib/gym.functions";
+import { ensureUserRow, getDayOneWorkout, getUserStats } from "@/lib/gym.functions";
+import { syncLocalProfile } from "@/lib/account-sync";
+
 
 const FREQUENCY_TARGETS: Record<string, number> = {
   "2-days": 2,
@@ -50,6 +52,8 @@ function Home() {
   const queryClient = useQueryClient();
   const fetchWorkout = useServerFn(getDayOneWorkout);
   const fetchStats = useServerFn(getUserStats);
+  const ensure = useServerFn(ensureUserRow);
+
 
   // Keep Home as the signed-in entry point; explicit actions such as Start Workout and Sign Out remain available.
   useBlocker({
@@ -71,27 +75,38 @@ function Home() {
     }
   };
 
+  // Source of truth is the signed-in account, not browser storage: refresh the
+  // local copy from the backend and send unfinished accounts to onboarding.
   useEffect(() => {
     setProfile(readProfile());
+    let cancelled = false;
+    ensure()
+      .then((result) => {
+        if (cancelled) return;
+        const dest = syncLocalProfile(result);
+        if (dest === "/onboarding") {
+          navigate({ to: "/onboarding", replace: true });
+          return;
+        }
+        setProfile(readProfile());
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const { data: stats } = useQuery({
-    queryKey: ["user-stats", profile.userId],
-    queryFn: () => {
-      if (!profile.userId) throw new Error("Profile is missing");
-      return fetchStats({ data: { user_id: profile.userId } });
-    },
-    enabled: Boolean(profile.userId),
+    queryKey: ["user-stats"],
+    queryFn: () => fetchStats({ data: {} }),
   });
 
   const { data: workout, isLoading: workoutLoading } = useQuery({
-    queryKey: ["day-one-workout", profile.userId],
-    queryFn: () => {
-      if (!profile.userId) throw new Error("Profile is missing");
-      return fetchWorkout({ data: { user_id: profile.userId } });
-    },
-    enabled: Boolean(profile.userId),
+    queryKey: ["day-one-workout"],
+    queryFn: () => fetchWorkout({ data: {} }),
   });
+
 
   const firstName = profile.name?.trim().split(/\s+/)[0] ?? "";
   const completed = stats?.completedWorkouts ?? 0;

@@ -10,4 +10,5 @@
 - [x] Add Profile and Settings access from Home.
 - [x] Add account identification and security controls.
 - [x] Add secure password recovery and permanent account deletion.
-- [x] Verify Profile navigation and protected account controls.
+- [x] Verify Profile navigation and protected account controls.- [x] Load the routine from the signed-in account instead of browser storage.
+- [x] Send members without a chosen equipment type back to onboarding.

@@ -49,7 +49,6 @@ function Workout() {
   const [reps, setReps] = useState("");
   const [setNumber, setSetNumber] = useState(1);
   const [logging, setLogging] = useState(false);
-  const [userId, setUserId] = useState<string>();
   const [index, setIndex] = useState(0);
   const [complete, setComplete] = useState(false);
   const [lastLog, setLastLog] = useState<{ weight_kg: number; reps_completed: number } | null>(null);
@@ -60,23 +59,14 @@ function Workout() {
   const [swapped, setSwapped] = useState<Ex | null>(null);
   const [swapping, setSwapping] = useState(false);
 
-  useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem("gymbuddy-profile") ?? "{}") as { userId?: string };
-      setUserId(stored.userId);
-    } catch {
-      setUserId(undefined);
-    }
-  }, []);
+  // Identity comes from the signed-in session on the server, so this loads even
 
+  // when the local copy of the profile is missing.
   const { data: workout, isLoading } = useQuery({
-    queryKey: ["day-one-workout", userId],
-    queryFn: () => {
-      if (!userId) throw new Error("Profile is missing");
-      return fetchWorkout({ data: { user_id: userId } });
-    },
-    enabled: Boolean(userId),
+    queryKey: ["day-one-workout"],
+    queryFn: () => fetchWorkout({ data: {} }),
   });
+
 
   const session = workout?.exercises.slice(0, EXERCISES_PER_SESSION) ?? [];
   const targetSets = workout?.target_sets ?? 3;
@@ -91,15 +81,16 @@ function Workout() {
 
   useEffect(() => {
     setLastLog(null);
-    if (!userId || !exercise) return;
+    if (!exercise) return;
     let cancelled = false;
-    fetchLastLog({ data: { user_id: userId, exercise_id: exercise.id } })
+    fetchLastLog({ data: { exercise_id: exercise.id } })
       .then((row) => !cancelled && setLastLog(row))
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [userId, exercise?.id]);
+  }, [exercise?.id]);
+
 
   const handleNext = () => {
     if (isLastExercise) {
@@ -141,10 +132,6 @@ function Workout() {
       toast.error("Enter a weight and at least 1 rep.");
       return;
     }
-    if (!userId) {
-      toast.error("Finish setting up your profile first.");
-      return;
-    }
     if (!exercise) {
       toast.error("Your workout is still loading. Try again in a moment.");
       return;
@@ -152,8 +139,9 @@ function Workout() {
     setLogging(true);
     try {
       await logSet({
-        data: { user_id: userId, exercise_id: exercise.id, weight_kg: w, reps_completed: r, set_number: setNumber },
+        data: { exercise_id: exercise.id, weight_kg: w, reps_completed: r, set_number: setNumber },
       });
+
       toast.success(`Set ${setNumber} logged: ${w} kg × ${r}`);
       setLastLog({ weight_kg: w, reps_completed: r });
       setSetNumber((n) => n + 1);
