@@ -79,7 +79,7 @@ function Workout() {
     setLogging(true);
     try {
       await logSet({
-        data: { user_id: userId, exercise_id: "lat-pulldown", weight_kg: w, reps_completed: r, set_number: setNumber },
+        data: { user_id: userId, exercise_id: exercise.id, weight_kg: w, reps_completed: r, set_number: setNumber },
       });
       toast.success(`Set ${setNumber} logged: ${w} kg × ${r}`);
       setSetNumber((n) => n + 1);
@@ -97,21 +97,21 @@ function Workout() {
       <div
         className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-5 rounded-3xl border-2 border-border bg-card"
         role="img"
-        aria-label="Lat Pulldown Video Guide placeholder"
+        aria-label={`${exercise?.name ?? "Exercise"} Video Guide placeholder`}
       >
         <PlayIcon />
         <p className="text-base font-medium tracking-wide text-muted-foreground">
-          Lat Pulldown Video Guide
+          {exercise ? `${exercise.name} Video Guide` : "Loading your workout…"}
         </p>
       </div>
 
       {/* Exercise title & target */}
       <div className="mt-10">
         <h1 className="text-[2.1rem] font-semibold leading-tight tracking-tight text-foreground">
-          Lat Pulldown
+          {exercise?.name ?? "Your Workout"}
         </h1>
         <p className="mt-3 text-lg text-muted-foreground">
-          Target: 3 Sets x 10 Reps
+          {exercise?.instructions || "Target: 3 Sets x 10 Reps"}
         </p>
       </div>
 
