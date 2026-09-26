@@ -31,7 +31,11 @@ function ResetPasswordPage() {
 
   useEffect(() => {
     const recoveryLink = new URLSearchParams(window.location.hash.slice(1)).get("type") === "recovery";
-    supabase.auth.getSession().then(({ data }) => setReady(recoveryLink || Boolean(data.session)));
+    setReady(recoveryLink);
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setReady(true);
+    });
+    return () => data.subscription.unsubscribe();
   }, []);
 
   const submit = async (event: FormEvent) => {
