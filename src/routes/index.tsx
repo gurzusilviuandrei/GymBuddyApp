@@ -33,7 +33,7 @@ function Welcome() {
           <p className="mt-4 text-sm font-medium text-muted-foreground">The beginner&rsquo;s gym guide.</p>
         </header>
 
-        <div className="flex aspect-square w-full max-w-72 items-center justify-center" aria-hidden="true">
+        <div className="relative flex aspect-square w-full max-w-72 items-center justify-center" aria-hidden="true">
           <div className="absolute inset-3 rounded-full border border-border/70" />
           <div className="absolute inset-10 rounded-full border border-primary/40" />
           <div className="absolute inset-17 rounded-full bg-card" />
