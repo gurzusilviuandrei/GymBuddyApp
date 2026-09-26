@@ -61,6 +61,11 @@ function Workout() {
   const fetchLastLog = useServerFn(getLastLog);
   const [swapped, setSwapped] = useState<Ex | null>(null);
   const [swapping, setSwapping] = useState(false);
+  const finish = useServerFn(completeWorkout);
+  const queryClient = useQueryClient();
+  const [startedAt] = useState(() => new Date().toISOString());
+  const [finishing, setFinishing] = useState(false);
+  const [summary, setSummary] = useState<{ sets: number; volume: number } | null>(null);
 
   // Identity comes from the signed-in session on the server, so this loads even
   // when the local copy of the profile is missing. `mode` picks the program:
@@ -96,9 +101,28 @@ function Workout() {
   }, [exercise?.id]);
 
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (isLastExercise) {
-      setComplete(true);
+      if (finishing) return;
+      setFinishing(true);
+      try {
+        const doneIds = session.map((e, i) => (i === index && swapped ? swapped.id : e.id));
+        const saved = await finish({
+          data: {
+            program_type: workout?.is_custom ? "custom" : "premade",
+            exercise_ids: doneIds,
+            started_at: startedAt,
+          },
+        });
+        setSummary({ sets: saved.sets, volume: saved.volume });
+        queryClient.invalidateQueries({ queryKey: ["user-stats"] });
+        queryClient.invalidateQueries({ queryKey: ["workout-history"] });
+        setComplete(true);
+      } catch {
+        toast.error("Couldn't save your workout. Try again.");
+      } finally {
+        setFinishing(false);
+      }
       return;
     }
     setIndex((i) => i + 1);
