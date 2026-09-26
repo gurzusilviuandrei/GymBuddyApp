@@ -58,9 +58,18 @@ export const createUserProfile = createServerFn({ method: "POST" })
     return { id: context.userId };
   });
 
+// mode "premade"/"custom" lets the dashboard launch either program on demand;
+// "auto" keeps the previous behaviour (custom when active, else pre-made).
 export const getDayOneWorkout = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ user_id: z.string().optional() }).parse(data))
+  .inputValidator((data) =>
+    z
+      .object({
+        user_id: z.string().optional(),
+        mode: z.enum(["auto", "premade", "custom"]).optional(),
+      })
+      .parse(data),
+  )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: user, error: userError } = await supabaseAdmin
@@ -77,7 +86,8 @@ export const getDayOneWorkout = createServerFn({ method: "GET" })
       .eq("day_number", 1)
       .maybeSingle();
     if (programError) throw new Error("Could not load workout program");
-    const useCustom = user.is_custom && (user.custom_exercise_ids?.length ?? 0) > 0;
+    const hasCustom = user.is_custom && (user.custom_exercise_ids?.length ?? 0) > 0;
+    const useCustom = data.mode === "premade" ? false : data.mode === "custom" ? hasCustom : hasCustom;
     const program = useCustom
       ? {
           id: baseProgram?.id ?? "custom",
