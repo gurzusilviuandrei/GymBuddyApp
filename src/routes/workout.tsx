@@ -199,7 +199,12 @@ function Workout() {
       </div>
 
       {/* Exercise title & target */}
-      <div className="mt-10">
+      <div key={exercise?.id} className="mt-10 home-enter">
+        {session.length > 0 && (
+          <p className="mb-2 text-sm font-medium uppercase tracking-widest text-primary">
+            Exercise {index + 1} of {session.length}
+          </p>
+        )}
         <h1 className="text-[2.1rem] font-semibold leading-tight tracking-tight text-foreground">
           {exercise?.name ?? "Your Workout"}
         </h1>
@@ -209,6 +214,17 @@ function Workout() {
         <p className="mt-4 text-base leading-relaxed text-muted-foreground">
           {exercise?.instructions ?? (isLoading ? "Loading exercise details…" : "No exercise is assigned to this workout.")}
         </p>
+        {lastLog && (
+          <div className="mt-6 rounded-2xl border border-primary/40 bg-card p-5" aria-live="polite">
+            <p className="text-sm text-muted-foreground">
+              Last time: {lastLog.weight_kg} kg × {lastLog.reps_completed}
+            </p>
+            <p className="mt-1 text-base font-medium text-foreground">
+              Today: Try to hit <span className="text-primary">{lastLog.reps_completed + 1} reps</span> or add{" "}
+              <span className="text-primary">2.5kg</span>.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Set logging inputs */}
@@ -255,7 +271,13 @@ function Workout() {
           disabled={logging || !exercise}
           className="h-16 w-full rounded-2xl bg-primary text-lg font-semibold tracking-wide text-primary-foreground shadow-neon transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
         >
-          {logging ? "Logging…" : `Log Set ${setNumber}`}
+          {logging
+            ? "Logging…"
+            : setsDone
+              ? isLastExercise
+                ? "Finish Workout"
+                : "Next Exercise"
+              : `Log Set ${setNumber}`}
         </button>
       </div>
 
