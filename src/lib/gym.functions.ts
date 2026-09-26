@@ -65,18 +65,28 @@ export const getDayOneWorkout = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: user, error: userError } = await supabaseAdmin
       .from("users")
-      .select("equipment_type")
+      .select("equipment_type, is_custom, custom_exercise_ids")
       .eq("id", context.userId)
       .maybeSingle();
     if (userError) throw new Error("Could not load profile");
     if (!user?.equipment_type) return null;
-    const { data: program, error: programError } = await supabaseAdmin
+    const { data: baseProgram, error: programError } = await supabaseAdmin
       .from("workout_programs")
       .select("id, day_number, exercise_ids_list, target_sets, target_reps")
       .eq("equipment_type", user.equipment_type)
       .eq("day_number", 1)
       .maybeSingle();
     if (programError) throw new Error("Could not load workout program");
+    const useCustom = user.is_custom && (user.custom_exercise_ids?.length ?? 0) > 0;
+    const program = useCustom
+      ? {
+          id: baseProgram?.id ?? "custom",
+          day_number: 1,
+          target_sets: baseProgram?.target_sets ?? 3,
+          target_reps: baseProgram?.target_reps ?? 10,
+          exercise_ids_list: user.custom_exercise_ids,
+        }
+      : baseProgram;
     if (!program || program.exercise_ids_list.length === 0) return null;
 
     const { data: exerciseRows, error: exercisesError } = await supabaseAdmin
@@ -98,7 +108,37 @@ export const getDayOneWorkout = createServerFn({ method: "GET" })
       target_reps: program.target_reps,
       exercise_ids: program.exercise_ids_list,
       exercises,
+      is_custom: useCustom,
     };
+  });
+
+export const getExerciseLibrary = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const [{ data: rows, error }, { data: user }] = await Promise.all([
+      context.supabase.from("exercises").select("id, name, movement_type").order("name"),
+      context.supabase.from("users").select("custom_exercise_ids").eq("id", context.userId).maybeSingle(),
+    ]);
+    if (error) throw new Error("Could not load exercises");
+    return { exercises: rows ?? [], selected: user?.custom_exercise_ids ?? [] };
+  });
+
+export const saveCustomRoutine = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) =>
+    z.object({ exercise_ids: z.array(z.string().min(1).max(64)).length(3) }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    if (new Set(data.exercise_ids).size !== 3) throw new Error("Pick 3 different exercises");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: found } = await supabaseAdmin.from("exercises").select("id").in("id", data.exercise_ids);
+    if ((found?.length ?? 0) !== 3) throw new Error("Unknown exercise");
+    const { error } = await supabaseAdmin
+      .from("users")
+      .update({ is_custom: true, custom_exercise_ids: data.exercise_ids })
+      .eq("id", context.userId);
+    if (error) throw new Error("Could not save routine");
+    return { ok: true };
   });
 
 export const getAlternativeExercise = createServerFn({ method: "GET" })
