@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, Dumbbell, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getDayOneWorkout } from "@/lib/gym.functions";
 
 const FREQUENCY_TARGETS: Record<string, number> = {
   "2-days": 2,
@@ -12,6 +15,7 @@ const FREQUENCY_TARGETS: Record<string, number> = {
 interface Profile {
   name?: string;
   frequency?: string;
+  userId?: string;
 }
 
 function readProfile(): Profile {
@@ -39,6 +43,7 @@ export const Route = createFileRoute("/home")({
 
 function Home() {
   const [profile, setProfile] = useState<Profile>({});
+  const fetchWorkout = useServerFn(getDayOneWorkout);
 
   useEffect(() => {
     setProfile(readProfile());
@@ -46,6 +51,15 @@ function Home() {
 
   const firstName = profile.name?.trim().split(/\s+/)[0] ?? "";
   const weeklyTarget = FREQUENCY_TARGETS[profile.frequency ?? ""] ?? 3;
+  const { data: workout, isLoading: workoutLoading } = useQuery({
+    queryKey: ["day-one-workout", profile.userId],
+    queryFn: () => {
+      if (!profile.userId) throw new Error("Profile is missing");
+      return fetchWorkout({ data: { user_id: profile.userId } });
+    },
+    enabled: Boolean(profile.userId),
+  });
+  const firstExercise = workout?.exercises[0];
 
   return (
     <main className="home-enter mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-background px-7 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-12 text-foreground">
@@ -97,14 +111,22 @@ function Home() {
       <section className="mt-14" aria-labelledby="workout-heading">
         <div className="mb-5 flex items-end justify-between">
           <h2 id="workout-heading" className="text-lg font-semibold">Your workout</h2>
-          <span className="text-xs text-muted-foreground">01 / 01</span>
+          <span className="text-xs text-muted-foreground">
+            {workout ? `01 / ${String(workout.exercises.length).padStart(2, "0")}` : "Day 1"}
+          </span>
         </div>
         <div className="rounded-lg border border-border bg-card p-6">
           <div className="flex items-start justify-between gap-5">
             <div>
-              <p className="text-xs font-semibold uppercase text-primary">Exercise 01</p>
-              <h3 className="mt-4 text-2xl font-semibold">Lat Pulldown</h3>
-              <p className="mt-2 text-sm text-muted-foreground">3 sets <span className="mx-2 text-primary">·</span> 10 reps</p>
+              <p className="text-xs font-semibold uppercase text-primary">Day 1 · Exercise 01</p>
+              <h3 className="mt-4 text-2xl font-semibold">
+                {firstExercise?.name ?? (workoutLoading ? "Loading workout…" : "Workout unavailable")}
+              </h3>
+              {workout && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {workout.target_sets} sets <span className="mx-2 text-primary">·</span> {workout.target_reps} reps
+                </p>
+              )}
             </div>
             <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-primary/40 bg-primary/10 text-primary">
               <Dumbbell size={22} strokeWidth={1.7} aria-hidden="true" />

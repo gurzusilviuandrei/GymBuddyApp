@@ -1,20 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getActiveExercise, getAlternativeExercise, logWorkoutSet } from "@/lib/gym.functions";
+import { Button } from "@/components/ui/button";
+import { getDayOneWorkout, getAlternativeExercise, logWorkoutSet } from "@/lib/gym.functions";
 
 export const Route = createFileRoute("/workout")({
   head: () => ({
     meta: [
-      { title: "Active Workout — Lat Pulldown" },
+      { title: "Active Workout — GymBuddy" },
       {
         name: "description",
         content:
           "Follow along with your guided exercise video, log your sets, and swap exercises when machines are busy.",
       },
-      { property: "og:title", content: "Active Workout — Lat Pulldown" },
+      { property: "og:title", content: "Active Workout — GymBuddy" },
       {
         property: "og:description",
         content:
@@ -45,25 +46,32 @@ function Workout() {
   const [reps, setReps] = useState("");
   const [setNumber, setSetNumber] = useState(1);
   const [logging, setLogging] = useState(false);
+  const [userId, setUserId] = useState<string>();
   const logSet = useServerFn(logWorkoutSet);
-  const fetchExercise = useServerFn(getActiveExercise);
+  const fetchWorkout = useServerFn(getDayOneWorkout);
   const fetchAlternative = useServerFn(getAlternativeExercise);
-  const [swapped, setSwapped] = useState<{ id: string; name: string; instructions: string; alternative_exercise_id: string | null } | null>(null);
+  const [swapped, setSwapped] = useState<{ id: string; name: string; instructions: string; video_url: string | null; alternative_exercise_id: string | null } | null>(null);
   const [swapping, setSwapping] = useState(false);
 
-  let userId: string | undefined;
-  try {
-    userId = JSON.parse(localStorage.getItem("gymbuddy-profile") ?? "{}").userId;
-  } catch {
-    userId = undefined;
-  }
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("gymbuddy-profile") ?? "{}") as { userId?: string };
+      setUserId(stored.userId);
+    } catch {
+      setUserId(undefined);
+    }
+  }, []);
 
-  const { data: primary } = useQuery({
-    queryKey: ["active-exercise", userId],
-    queryFn: () => fetchExercise({ data: { user_id: userId! } }),
+  const { data: workout, isLoading } = useQuery({
+    queryKey: ["day-one-workout", userId],
+    queryFn: () => {
+      if (!userId) throw new Error("Profile is missing");
+      return fetchWorkout({ data: { user_id: userId } });
+    },
     enabled: Boolean(userId),
   });
 
+  const primary = workout?.exercises[0];
   const exercise = swapped ?? primary;
 
   const handleSwap = async () => {
@@ -135,7 +143,10 @@ function Workout() {
           {exercise?.name ?? "Your Workout"}
         </h1>
         <p className="mt-3 text-lg text-muted-foreground">
-          {exercise?.instructions || "Target: 3 Sets x 10 Reps"}
+          {workout ? `Target: ${workout.target_sets} Sets × ${workout.target_reps} Reps` : "Loading target…"}
+        </p>
+        <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+          {exercise?.instructions ?? (isLoading ? "Loading exercise details…" : "No exercise is assigned to this workout.")}
         </p>
       </div>
 
@@ -177,26 +188,27 @@ function Workout() {
 
       {/* Log Set */}
       <div className="mt-8">
-        <button
+        <Button
           type="button"
           onClick={handleLogSet}
-          disabled={logging}
+          disabled={logging || !exercise}
           className="h-16 w-full rounded-2xl bg-primary text-lg font-semibold tracking-wide text-primary-foreground shadow-neon transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
         >
           {logging ? "Logging…" : `Log Set ${setNumber}`}
-        </button>
+        </Button>
       </div>
 
       {/* Secondary swap action */}
       <div className="mt-5 flex justify-center">
-        <button
+        <Button
           type="button"
+          variant="outline"
           onClick={handleSwap}
           disabled={swapping || !exercise}
           className="rounded-xl border border-border px-6 py-3 text-sm font-medium text-muted-foreground transition hover:border-primary/60 hover:text-foreground disabled:opacity-60"
         >
           {swapping ? "Swapping…" : "Machine Occupied? Swap Exercise"}
-        </button>
+        </Button>
       </div>
 
        <div className="mt-auto pt-10">
