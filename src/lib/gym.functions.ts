@@ -50,10 +50,28 @@ export const getActiveExercise = createServerFn({ method: "GET" })
     if (!exerciseId) return null;
     const { data: exercise } = await supabaseAdmin
       .from("exercises")
-      .select("id, name, instructions")
+      .select("id, name, instructions, alternative_exercise_id")
       .eq("id", exerciseId)
       .maybeSingle();
     return exercise;
+  });
+
+export const getAlternativeExercise = createServerFn({ method: "GET" })
+  .inputValidator((data) => z.object({ exercise_id: z.string().min(1).max(64) }).parse(data))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: current } = await supabaseAdmin
+      .from("exercises")
+      .select("alternative_exercise_id")
+      .eq("id", data.exercise_id)
+      .maybeSingle();
+    if (!current?.alternative_exercise_id) return null;
+    const { data: alt } = await supabaseAdmin
+      .from("exercises")
+      .select("id, name, instructions, alternative_exercise_id")
+      .eq("id", current.alternative_exercise_id)
+      .maybeSingle();
+    return alt;
   });
 
 const logSchema = z.object({
