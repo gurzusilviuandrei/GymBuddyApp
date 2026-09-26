@@ -147,16 +147,26 @@ function CustomRoutine() {
           <div className="mx-auto w-full max-w-lg flex-1 overflow-y-auto overscroll-contain px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
             {available.length === 0 && <p className="py-8 text-sm text-muted-foreground">No more exercises in this group.</p>}
             {FILTERS.filter((item) => item.key !== "all").map((group) => {
-              const items = available.filter((exercise) => categoryOf(exercise.movement_type) === group.key);
+              const items = exercises.filter((exercise) => categoryOf(exercise.movement_type) === group.key && matchesFilter(exercise));
               if (!items.length) return null;
               return (
                 <section key={group.key} className="mb-7">
                   <h3 className="mb-3 text-xs font-semibold uppercase text-primary">{group.label}</h3>
-                  <ul className="space-y-2">{items.map((exercise) => (
-                    <li key={exercise.id}><Button type="button" variant="outline" onClick={() => addExercise(exercise.id)} className="h-auto min-h-16 w-full justify-between gap-3 whitespace-normal rounded-lg border-border bg-card px-4 py-3 text-left hover:border-primary/60">
-                      <span className="min-w-0"><span className="block font-medium">{exercise.name}</span><span className="block text-xs text-muted-foreground">{exercise.equipment_type} · {exercise.target}</span></span><Plus className="shrink-0 text-primary" aria-hidden="true" />
-                    </Button></li>
-                  ))}</ul>
+                  <ul className="space-y-2">{items.map((exercise) => {
+                    const inRoutine = selected.includes(exercise.id);
+                    return (
+                      <li key={exercise.id}>
+                        <Button type="button" variant="outline" disabled={inRoutine} onClick={() => addExercise(exercise.id)} aria-label={inRoutine ? `${exercise.name} — already in your routine` : `Add ${exercise.name}`} className={cn("h-auto min-h-16 w-full justify-between gap-3 whitespace-normal rounded-lg border-border bg-card px-4 py-3 text-left hover:border-primary/60", inRoutine && "border-primary/40 bg-primary/5")}>
+                          <span className="min-w-0">
+                            <span className="block font-medium">{exercise.name}</span>
+                            <span className="block text-xs text-muted-foreground">{exercise.equipment_type} · {exercise.target}</span>
+                            {inRoutine && <span className="mt-0.5 block text-xs font-semibold text-primary">In routine · exercise {selected.indexOf(exercise.id) + 1}</span>}
+                          </span>
+                          {inRoutine ? <Check className="shrink-0 text-primary" aria-hidden="true" /> : <Plus className="shrink-0 text-primary" aria-hidden="true" />}
+                        </Button>
+                      </li>
+                    );
+                  })}</ul>
                 </section>
               );
             })}
