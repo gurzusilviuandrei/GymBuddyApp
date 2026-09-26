@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowDown, ArrowLeft, ArrowUp, Plus, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Check, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -49,11 +49,18 @@ function CustomRoutine() {
   const [saving, setSaving] = useState(false);
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["exercise-library"], queryFn: () => fetchLib() });
 
-  useEffect(() => { if (data?.selected) setSelected(data.selected); }, [data]);
+  useEffect(() => { if (data?.selected) setSelected([...new Set(data.selected)]); }, [data]);
   const exercises = data?.exercises ?? [];
   const exerciseById = new Map(exercises.map((exercise) => [exercise.id, exercise]));
   const available = exercises.filter((exercise) => !selected.includes(exercise.id) && (filter === "all" || categoryOf(exercise.movement_type) === filter));
-  const addExercise = (id: string) => setSelected((current) => current.includes(id) ? current : [...current, id]);
+  const matchesFilter = (exercise: { movement_type: string }) => filter === "all" || categoryOf(exercise.movement_type) === filter;
+  const addExercise = (id: string) => {
+    if (selected.includes(id)) {
+      toast.error("Already in your routine.");
+      return;
+    }
+    setSelected((current) => [...current, id]);
+  };
   const removeExercise = (id: string) => setSelected((current) => current.filter((item) => item !== id));
   const moveExercise = (index: number, direction: -1 | 1) => setSelected((current) => {
     const nextIndex = index + direction;
@@ -138,18 +145,28 @@ function CustomRoutine() {
             <div className="mt-5">{filterRow(true)}</div>
           </DrawerHeader>
           <div className="mx-auto w-full max-w-lg flex-1 overflow-y-auto overscroll-contain px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-            {available.length === 0 && <p className="py-8 text-sm text-muted-foreground">No more exercises in this group.</p>}
+            {available.length === 0 && <p className="py-8 text-sm text-muted-foreground">Nothing left to add here — every exercise in this group is already in your routine.</p>}
             {FILTERS.filter((item) => item.key !== "all").map((group) => {
-              const items = available.filter((exercise) => categoryOf(exercise.movement_type) === group.key);
+              const items = exercises.filter((exercise) => categoryOf(exercise.movement_type) === group.key && matchesFilter(exercise));
               if (!items.length) return null;
               return (
                 <section key={group.key} className="mb-7">
                   <h3 className="mb-3 text-xs font-semibold uppercase text-primary">{group.label}</h3>
-                  <ul className="space-y-2">{items.map((exercise) => (
-                    <li key={exercise.id}><Button type="button" variant="outline" onClick={() => addExercise(exercise.id)} className="h-auto min-h-16 w-full justify-between gap-3 whitespace-normal rounded-lg border-border bg-card px-4 py-3 text-left hover:border-primary/60">
-                      <span className="min-w-0"><span className="block font-medium">{exercise.name}</span><span className="block text-xs text-muted-foreground">{exercise.equipment_type} · {exercise.target}</span></span><Plus className="shrink-0 text-primary" aria-hidden="true" />
-                    </Button></li>
-                  ))}</ul>
+                  <ul className="space-y-2">{items.map((exercise) => {
+                    const inRoutine = selected.includes(exercise.id);
+                    return (
+                      <li key={exercise.id}>
+                        <Button type="button" variant="outline" disabled={inRoutine} onClick={() => addExercise(exercise.id)} aria-label={inRoutine ? `${exercise.name} — already in your routine` : `Add ${exercise.name}`} className={cn("h-auto min-h-16 w-full justify-between gap-3 whitespace-normal rounded-lg border-border bg-card px-4 py-3 text-left hover:border-primary/60", inRoutine && "border-primary/40 bg-primary/5")}>
+                          <span className="min-w-0">
+                            <span className="block font-medium">{exercise.name}</span>
+                            <span className="block text-xs text-muted-foreground">{exercise.equipment_type} · {exercise.target}</span>
+                            {inRoutine && <span className="mt-0.5 block text-xs font-semibold text-primary">In routine · exercise {selected.indexOf(exercise.id) + 1}</span>}
+                          </span>
+                          {inRoutine ? <Check className="shrink-0 text-primary" aria-hidden="true" /> : <Plus className="shrink-0 text-primary" aria-hidden="true" />}
+                        </Button>
+                      </li>
+                    );
+                  })}</ul>
                 </section>
               );
             })}
