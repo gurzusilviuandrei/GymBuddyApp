@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -94,13 +94,16 @@ function Index() {
       </div>
 
       <div className="mt-auto pt-14">
-        <button
-          type="button"
+        <Link
+          to="/workout"
           disabled={!selected}
-          className="h-16 w-full rounded-2xl bg-primary text-lg font-semibold tracking-wide text-primary-foreground shadow-neon transition hover:brightness-110 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 disabled:shadow-none"
+          className={cn(
+            "flex h-16 w-full items-center justify-center rounded-2xl bg-primary text-lg font-semibold tracking-wide text-primary-foreground shadow-neon transition hover:brightness-110 active:scale-[0.98]",
+            !selected && "pointer-events-none opacity-40 shadow-none"
+          )}
         >
           Generate My Routine
-        </button>
+        </Link>
       </div>
     </div>
   );

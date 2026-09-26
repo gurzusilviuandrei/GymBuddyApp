@@ -101,4 +101,16 @@
   ::selection {
     background-color: oklch(0.87 0.29 142.5 / 0.3);
   }
+
+  /* Hide number input spinners for a cleaner look */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
 }
