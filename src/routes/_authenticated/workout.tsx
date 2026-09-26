@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { getDayOneWorkout, getAlternativeExercise, getLastLog, logWorkoutSet } from "@/lib/gym.functions";
@@ -284,7 +284,7 @@ function Workout() {
         <button
           type="button"
           onClick={handleLogSet}
-          disabled={logging || !exercise}
+          disabled={logging || finishing || !exercise}
           className="h-16 w-full rounded-2xl bg-primary text-lg font-semibold tracking-wide text-primary-foreground shadow-neon transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
         >
           {logging
