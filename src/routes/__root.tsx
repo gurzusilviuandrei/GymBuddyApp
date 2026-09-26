@@ -77,21 +77,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Select Your Equipment — Routine Generator" },
+      { title: "GymBuddy" },
       {
         name: "description",
         content:
-          "Pick the equipment you train with and generate a personalized workout routine.",
+          "The beginner's gym guide.",
       },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Select Your Equipment — Routine Generator" },
-      {
-        property: "og:description",
-        content: "Pick the equipment you train with and generate a personalized workout routine.",
-      },
+      { property: "og:site_name", content: "GymBuddy" },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {

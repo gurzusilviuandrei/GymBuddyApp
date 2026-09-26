@@ -1,110 +1,45 @@
-import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { cn } from "@/lib/utils";
+import { ArrowRight, Dumbbell } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Select Your Equipment" },
-      {
-        name: "description",
-        content:
-          "Pick the equipment you train with — full gym machines, dumbbells, or barbell — and generate a personalized routine.",
-      },
-      { property: "og:title", content: "Select Your Equipment" },
-      {
-        property: "og:description",
-        content:
-          "Pick the equipment you train with and generate a personalized routine.",
-      },
+      { title: "Welcome to GymBuddy" },
+      { name: "description", content: "GymBuddy is the beginner's gym guide. Start your training journey with confidence." },
+      { property: "og:title", content: "Welcome to GymBuddy" },
+      { property: "og:description", content: "The beginner's gym guide. Start your training journey with confidence." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: Index,
+  component: Welcome,
 });
 
-const EQUIPMENT_OPTIONS = [
-  { id: "full-gym", label: "Full Gym Machines" },
-  { id: "dumbbells", label: "Dumbbells Only" },
-  { id: "barbell", label: "Barbell Only" },
-] as const;
-
-function CheckIcon() {
+function Welcome() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="3.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="size-3.5 text-primary-foreground"
-      aria-hidden="true"
-    >
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-
-function Index() {
-  const [selected, setSelected] = useState<string | null>(null);
-
-  return (
-    <div className="flex min-h-dvh flex-col bg-background px-7 pb-10 pt-16 text-foreground">
+    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col overflow-hidden bg-background px-7 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-14 text-foreground">
       <header>
-        <h1 className="text-[2.1rem] font-semibold leading-tight tracking-tight">
-          Select Your Equipment
-        </h1>
-        <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-          Tell us what you have access to and we&rsquo;ll build your routine
-          around it.
-        </p>
+        <h1 className="text-4xl font-bold leading-none">GymBuddy<span className="text-primary">.</span></h1>
+        <p className="mt-3 text-sm font-medium text-muted-foreground">The beginner&rsquo;s gym guide.</p>
       </header>
 
-      <div className="mt-12 flex flex-col gap-5" role="radiogroup" aria-label="Equipment">
-        {EQUIPMENT_OPTIONS.map((option) => {
-          const isSelected = selected === option.id;
-          return (
-            <button
-              key={option.id}
-              type="button"
-              role="radio"
-              aria-checked={isSelected}
-              onClick={() => setSelected(option.id)}
-              className={cn(
-                "flex w-full items-center justify-between rounded-2xl border-2 bg-card px-7 py-8 text-left text-lg font-medium transition-all duration-200",
-                isSelected
-                  ? "border-primary text-foreground shadow-neon"
-                  : "border-border text-foreground/80 hover:border-muted-foreground/60"
-              )}
-            >
-              {option.label}
-              <span
-                className={cn(
-                  "flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-200",
-                  isSelected ? "border-primary bg-primary" : "border-muted-foreground/40"
-                )}
-              >
-                {isSelected && <CheckIcon />}
-              </span>
-            </button>
-          );
-        })}
+      <div className="flex min-h-80 flex-1 items-center justify-center py-10" aria-hidden="true">
+        <div className="relative flex aspect-square w-full max-w-80 items-center justify-center">
+          <div className="absolute inset-3 rounded-full border border-border/70" />
+          <div className="absolute inset-10 rounded-full border border-primary/40" />
+          <div className="absolute inset-17 rounded-full bg-card" />
+          <div className="absolute left-2 top-1/2 h-px w-12 bg-primary/70" />
+          <div className="absolute right-2 top-1/2 h-px w-12 bg-primary/70" />
+          <Dumbbell className="relative size-32 -rotate-35 text-primary drop-shadow-[0_0_22px_var(--primary)]" strokeWidth={1.15} />
+          <span className="absolute bottom-4 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-primary" />
+          <span className="absolute left-1/2 top-4 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-primary" />
+        </div>
       </div>
 
-      <div className="mt-auto pt-14">
-        <Link
-          to="/workout"
-          disabled={!selected}
-          className={cn(
-            "flex h-16 w-full items-center justify-center rounded-2xl bg-primary text-lg font-semibold tracking-wide text-primary-foreground shadow-neon transition hover:brightness-110 active:scale-[0.98]",
-            !selected && "pointer-events-none opacity-40 shadow-none"
-          )}
-        >
-          Generate My Routine
-        </Link>
-      </div>
-    </div>
+      <Button asChild size="lg" className="h-16 w-full rounded-lg text-lg font-semibold shadow-neon transition-transform active:scale-[0.98]">
+        <Link to="/onboarding">Get Started <ArrowRight className="ml-2" aria-hidden="true" /></Link>
+      </Button>
+    </main>
   );
 }
