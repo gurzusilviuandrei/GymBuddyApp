@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { logWorkoutSet } from "@/lib/gym.functions";
+import { getActiveExercise, logWorkoutSet } from "@/lib/gym.functions";
 
 export const Route = createFileRoute("/workout")({
   head: () => ({
