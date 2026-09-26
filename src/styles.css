@@ -130,8 +130,24 @@
   animation: welcome-logo-fade-in 900ms ease-out both;
 }
 
+@keyframes home-enter {
+  from {
+    opacity: 0;
+    transform: translateX(1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.home-enter {
+  animation: home-enter 500ms ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .welcome-logo {
+  .welcome-logo,
+  .home-enter {
     animation: none;
   }
 }
