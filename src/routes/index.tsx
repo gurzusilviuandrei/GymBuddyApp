@@ -23,7 +23,7 @@ function Welcome() {
       {/* Unified group: logo + subtitle + graphic, centered as one block with
           even empty space above and below. 24px (gap-6) between the subtitle
           and the top of the barbell circle. */}
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 py-8">
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 py-8">
         <header className="text-center">
           <img
             src={gymBuddyLogo}
