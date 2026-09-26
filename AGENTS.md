@@ -22,4 +22,6 @@ Home and Workout share one Day 1 server query that resolves the saved user's equ
 
 - Account settings use authenticated server functions for identity-scoped reads, email changes, and deletion; password recovery uses the public reset route and the auth provider's recovery session. Why: sensitive account operations must be validated server-side and recovery links must work while signed out.
 
-- Signed-in pages (Home, History, Profile) render a shared fixed bottom tab bar from src/components/BottomNav.tsx and reserve bottom padding for it; Onboarding and the active workout screen omit it so members cannot navigate away mid-session. Why: one navigation surface, and no accidental exits during a tracked workout.
+- Home, History, and Profile share a fixed bottom tab bar; Onboarding and Workout omit it. Why: avoid mid-session exits.
+
+- Exercise cues live on exercise rows and load for planned and swapped movements. Why: guidance must match the movement shown.
