@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CalendarDays, Flame } from "lucide-react";
+import { CalendarDays } from "lucide-react";
+import { SessionCard } from "@/components/SessionCard";
 import { BottomNav } from "@/components/BottomNav";
 import { getWorkoutHistory } from "@/lib/gym.functions";
 

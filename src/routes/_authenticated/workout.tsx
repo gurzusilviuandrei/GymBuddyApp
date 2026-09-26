@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { getDayOneWorkout, getAlternativeExercise, getLastLog, logWorkoutSet } from "@/lib/gym.functions";
+import { getDayOneWorkout, getAlternativeExercise, getLastLog, logWorkoutSet, completeWorkout } from "@/lib/gym.functions";
 
 export const Route = createFileRoute("/_authenticated/workout")({
   validateSearch: (search: Record<string, unknown>) => ({
