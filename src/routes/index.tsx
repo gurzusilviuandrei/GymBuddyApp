@@ -1,4 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { supabase } from "@/integrations/supabase/client";
+import { ensureUserRow } from "@/lib/gym.functions";
+import { syncLocalProfile } from "@/lib/account-sync";
 import { ArrowRight, Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import gymBuddyLogo from "@/assets/gymbuddy-logo.png";
@@ -18,6 +23,24 @@ export const Route = createFileRoute("/")({
 });
 
 function Welcome() {
+  const navigate = useNavigate();
+  const ensure = useServerFn(ensureUserRow);
+  // Signed-in users skip Welcome / Login / Onboarding entirely.
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session || cancelled) return;
+      try {
+        const dest = syncLocalProfile(await ensure());
+        if (!cancelled) navigate({ to: dest, replace: true });
+      } catch {
+        /* stay on welcome */
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [ensure, navigate]);
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col overflow-hidden bg-background px-7 pb-[max(2.5rem,env(safe-area-inset-bottom))] text-foreground">
       {/* Unified group: logo + subtitle + graphic, centered as one block with
@@ -46,7 +69,7 @@ function Welcome() {
       </div>
 
       <Button asChild size="lg" className="h-16 w-full justify-center rounded-lg text-center text-lg font-semibold shadow-neon transition-transform active:scale-[0.98]">
-        <Link to="/onboarding" className="justify-center">
+        <Link to="/auth" className="justify-center">
           Get Started <ArrowRight className="ml-2" aria-hidden="true" />
         </Link>
       </Button>

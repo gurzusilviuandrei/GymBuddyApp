@@ -51,31 +51,31 @@ export type Database = {
       }
       users: {
         Row: {
-          age: number
+          age: number | null
           created_at: string
-          equipment_type: string
-          full_name: string
+          equipment_type: string | null
+          full_name: string | null
           id: string
-          primary_goal: string
-          weekly_goal_days: number
+          primary_goal: string | null
+          weekly_goal_days: number | null
         }
         Insert: {
-          age: number
+          age?: number | null
           created_at?: string
-          equipment_type: string
-          full_name: string
-          id?: string
-          primary_goal: string
-          weekly_goal_days: number
+          equipment_type?: string | null
+          full_name?: string | null
+          id: string
+          primary_goal?: string | null
+          weekly_goal_days?: number | null
         }
         Update: {
-          age?: number
+          age?: number | null
           created_at?: string
-          equipment_type?: string
-          full_name?: string
+          equipment_type?: string | null
+          full_name?: string | null
           id?: string
-          primary_goal?: string
-          weekly_goal_days?: number
+          primary_goal?: string | null
+          weekly_goal_days?: number | null
         }
         Relationships: []
       }
