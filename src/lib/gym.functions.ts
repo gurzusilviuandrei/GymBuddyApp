@@ -110,3 +110,26 @@ export const logWorkoutSet = createServerFn({ method: "POST" })
     if (error) throw new Error("Could not log set");
     return row;
   });
+
+export const getUserStats = createServerFn({ method: "GET" })
+  .inputValidator((data) => z.object({ user_id: z.string().uuid() }).parse(data))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: logs } = await supabaseAdmin
+      .from("workout_logs")
+      .select("timestamp")
+      .eq("user_id", data.user_id);
+
+    const uniqueDays = new Set(logs?.map((l) => new Date(l.timestamp).toDateString())).size;
+    
+    const { data: user } = await supabaseAdmin
+      .from("users")
+      .select("weekly_goal_days")
+      .eq("id", data.user_id)
+      .maybeSingle();
+
+    return {
+      completedWorkouts: uniqueDays,
+      weeklyTarget: user?.weekly_goal_days ?? 3,
+    };
+  });
