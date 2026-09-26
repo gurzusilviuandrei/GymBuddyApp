@@ -8,9 +8,9 @@ export const Route = createFileRoute("/onboarding")({
   head: () => ({
     meta: [
       { title: "Get Started — GymBuddy" },
-      { name: "description", content: "Set up your GymBuddy profile and choose the equipment you have available." },
+      { name: "description", content: "Set up your GymBuddy profile, pick your weekly commitment and choose the equipment you have available." },
       { property: "og:title", content: "Get Started — GymBuddy" },
-      { property: "og:description", content: "Set up your GymBuddy profile and choose the equipment you have available." },
+      { property: "og:description", content: "Set up your GymBuddy profile, pick your weekly commitment and choose the equipment you have available." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -18,12 +18,18 @@ export const Route = createFileRoute("/onboarding")({
   component: Onboarding,
 });
 
-const TOTAL_STEPS = 2;
+const TOTAL_STEPS = 3;
 
 const EQUIPMENT_OPTIONS = [
   { id: "full-gym", label: "Full Gym Machines" },
   { id: "dumbbells", label: "Dumbbells Only" },
   { id: "barbell", label: "Barbell Only" },
+] as const;
+
+const FREQUENCY_OPTIONS = [
+  { id: "2-days", label: "2 Days / Week" },
+  { id: "3-days", label: "3 Days / Week" },
+  { id: "4-plus", label: "4+ Days / Week" },
 ] as const;
 
 function CheckIcon() {
@@ -54,19 +60,31 @@ function Onboarding() {
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
+  const [frequency, setFrequency] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
 
   const ageNumber = Number(age);
   const detailsValid = name.trim().length > 0 && age.trim().length > 0 && Number.isFinite(ageNumber) && ageNumber >= 10 && ageNumber <= 100;
 
-  const goToStep2 = () => {
-    if (!detailsValid) return;
+  const saveProfile = (patch: Record<string, unknown>) => {
     try {
-      localStorage.setItem("gymbuddy-profile", JSON.stringify({ name: name.trim(), age: ageNumber }));
+      const existing = JSON.parse(localStorage.getItem("gymbuddy-profile") ?? "{}");
+      localStorage.setItem("gymbuddy-profile", JSON.stringify({ ...existing, ...patch }));
     } catch {
       // storage unavailable — continue anyway
     }
+  };
+
+  const goToStep2 = () => {
+    if (!detailsValid) return;
+    saveProfile({ name: name.trim(), age: ageNumber });
     setStep(2);
+  };
+
+  const goToStep3 = () => {
+    if (!frequency) return;
+    saveProfile({ frequency });
+    setStep(3);
   };
 
   return (
@@ -133,12 +151,65 @@ function Onboarding() {
           </form>
         </section>
 
-        {/* Step 2 — Equipment */}
+        {/* Step 2 — Frequency */}
         <section
           aria-hidden={step !== 2}
           className={cn(
             "flex flex-1 flex-col transition-[transform,opacity] duration-500 ease-out",
-            step === 2 ? "translate-x-0 opacity-100" : "pointer-events-none absolute inset-0 translate-x-10 opacity-0",
+            step === 2 ? "translate-x-0 opacity-100" : step < 2 ? "pointer-events-none absolute inset-0 -translate-x-10 opacity-0" : "pointer-events-none absolute inset-0 translate-x-10 opacity-0",
+          )}
+        >
+          <header>
+            <h1 className="text-[2.1rem] font-semibold leading-tight">What&rsquo;s your weekly commitment?</h1>
+            <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+              Don&rsquo;t overdo it&mdash;consistency is key.
+            </p>
+          </header>
+
+          <div className="mt-12 flex flex-col gap-5" role="radiogroup" aria-label="Weekly frequency">
+            {FREQUENCY_OPTIONS.map((option) => {
+              const isSelected = frequency === option.id;
+              return (
+                <Button
+                  key={option.id}
+                  type="button"
+                  variant="outline"
+                  role="radio"
+                  aria-checked={isSelected}
+                  onClick={() => setFrequency(option.id)}
+                  className={cn(
+                    "flex h-auto min-h-22 w-full items-center justify-between whitespace-normal rounded-lg border-2 bg-card px-7 py-6 text-left text-lg font-medium text-foreground transition-[border-color,box-shadow] duration-200 hover:bg-card hover:text-foreground",
+                    isSelected ? "border-primary shadow-neon" : "border-border hover:border-muted-foreground/60",
+                  )}
+                >
+                  {option.label}
+                  <span className={cn("flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-200", isSelected ? "border-primary bg-primary" : "border-muted-foreground/40")}>
+                    {isSelected && <CheckIcon />}
+                  </span>
+                </Button>
+              );
+            })}
+          </div>
+
+          <div className="mt-auto pt-14">
+            <Button
+              type="button"
+              size="lg"
+              disabled={!frequency}
+              onClick={goToStep3}
+              className="h-16 w-full rounded-lg text-lg font-semibold shadow-neon transition-transform active:scale-[0.98] disabled:opacity-40 disabled:shadow-none"
+            >
+              Next Step
+            </Button>
+          </div>
+        </section>
+
+        {/* Step 3 — Equipment */}
+        <section
+          aria-hidden={step !== 3}
+          className={cn(
+            "flex flex-1 flex-col transition-[transform,opacity] duration-500 ease-out",
+            step === 3 ? "translate-x-0 opacity-100" : "pointer-events-none absolute inset-0 translate-x-10 opacity-0",
           )}
         >
           <header>
