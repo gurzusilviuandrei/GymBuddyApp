@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { getDayOneWorkout, getAlternativeExercise, getLastLog, logWorkoutSet } from "@/lib/gym.functions";
 
 export const Route = createFileRoute("/_authenticated/workout")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    mode: search.mode === "premade" || search.mode === "custom" ? search.mode : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Active Workout — GymBuddy" },
@@ -60,11 +63,12 @@ function Workout() {
   const [swapping, setSwapping] = useState(false);
 
   // Identity comes from the signed-in session on the server, so this loads even
-
-  // when the local copy of the profile is missing.
+  // when the local copy of the profile is missing. `mode` picks the program:
+  // premade plan, saved custom routine, or the active default.
+  const { mode } = Route.useSearch();
   const { data: workout, isLoading } = useQuery({
-    queryKey: ["day-one-workout"],
-    queryFn: () => fetchWorkout({ data: {} }),
+    queryKey: ["day-one-workout", mode ?? "auto"],
+    queryFn: () => fetchWorkout({ data: { mode } }),
   });
 
 
