@@ -30,6 +30,32 @@ export const createUserProfile = createServerFn({ method: "POST" })
     return { id: row.id as string };
   });
 
+export const getActiveExercise = createServerFn({ method: "GET" })
+  .inputValidator((data) => z.object({ user_id: z.string().uuid() }).parse(data))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: user } = await supabaseAdmin
+      .from("users")
+      .select("equipment_type")
+      .eq("id", data.user_id)
+      .maybeSingle();
+    if (!user) return null;
+    const { data: program } = await supabaseAdmin
+      .from("workout_programs")
+      .select("exercise_ids_list")
+      .eq("equipment_type", user.equipment_type)
+      .eq("day_number", 1)
+      .maybeSingle();
+    const exerciseId = program?.exercise_ids_list?.[0];
+    if (!exerciseId) return null;
+    const { data: exercise } = await supabaseAdmin
+      .from("exercises")
+      .select("id, name, instructions")
+      .eq("id", exerciseId)
+      .maybeSingle();
+    return exercise;
+  });
+
 const logSchema = z.object({
   user_id: z.string().uuid(),
   exercise_id: z.string().min(1).max(64),

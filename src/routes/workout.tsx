@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { logWorkoutSet } from "@/lib/gym.functions";
+import { getActiveExercise, logWorkoutSet } from "@/lib/gym.functions";
 
 export const Route = createFileRoute("/workout")({
   head: () => ({
@@ -45,6 +46,20 @@ function Workout() {
   const [setNumber, setSetNumber] = useState(1);
   const [logging, setLogging] = useState(false);
   const logSet = useServerFn(logWorkoutSet);
+  const fetchExercise = useServerFn(getActiveExercise);
+
+  let userId: string | undefined;
+  try {
+    userId = JSON.parse(localStorage.getItem("gymbuddy-profile") ?? "{}").userId;
+  } catch {
+    userId = undefined;
+  }
+
+  const { data: exercise } = useQuery({
+    queryKey: ["active-exercise", userId],
+    queryFn: () => fetchExercise({ data: { user_id: userId! } }),
+    enabled: Boolean(userId),
+  });
 
   const handleLogSet = async () => {
     const w = Number(weight);
@@ -53,20 +68,18 @@ function Workout() {
       toast.error("Enter a weight and at least 1 rep.");
       return;
     }
-    let userId: string | undefined;
-    try {
-      userId = JSON.parse(localStorage.getItem("gymbuddy-profile") ?? "{}").userId;
-    } catch {
-      userId = undefined;
-    }
     if (!userId) {
       toast.error("Finish setting up your profile first.");
+      return;
+    }
+    if (!exercise) {
+      toast.error("Your workout is still loading. Try again in a moment.");
       return;
     }
     setLogging(true);
     try {
       await logSet({
-        data: { user_id: userId, exercise_id: "lat-pulldown", weight_kg: w, reps_completed: r, set_number: setNumber },
+        data: { user_id: userId, exercise_id: exercise.id, weight_kg: w, reps_completed: r, set_number: setNumber },
       });
       toast.success(`Set ${setNumber} logged: ${w} kg × ${r}`);
       setSetNumber((n) => n + 1);
@@ -84,21 +97,21 @@ function Workout() {
       <div
         className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-5 rounded-3xl border-2 border-border bg-card"
         role="img"
-        aria-label="Lat Pulldown Video Guide placeholder"
+        aria-label={`${exercise?.name ?? "Exercise"} Video Guide placeholder`}
       >
         <PlayIcon />
         <p className="text-base font-medium tracking-wide text-muted-foreground">
-          Lat Pulldown Video Guide
+          {exercise ? `${exercise.name} Video Guide` : "Loading your workout…"}
         </p>
       </div>
 
       {/* Exercise title & target */}
       <div className="mt-10">
         <h1 className="text-[2.1rem] font-semibold leading-tight tracking-tight text-foreground">
-          Lat Pulldown
+          {exercise?.name ?? "Your Workout"}
         </h1>
         <p className="mt-3 text-lg text-muted-foreground">
-          Target: 3 Sets x 10 Reps
+          {exercise?.instructions || "Target: 3 Sets x 10 Reps"}
         </p>
       </div>
 
