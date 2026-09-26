@@ -14,7 +14,137 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      exercises: {
+        Row: {
+          alternative_exercise_id: string | null
+          id: string
+          instructions: string
+          movement_type: string
+          name: string
+          video_url: string | null
+        }
+        Insert: {
+          alternative_exercise_id?: string | null
+          id: string
+          instructions?: string
+          movement_type: string
+          name: string
+          video_url?: string | null
+        }
+        Update: {
+          alternative_exercise_id?: string | null
+          id?: string
+          instructions?: string
+          movement_type?: string
+          name?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercises_alternative_exercise_id_fkey"
+            columns: ["alternative_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          age: number
+          created_at: string
+          equipment_type: string
+          full_name: string
+          id: string
+          primary_goal: string
+          weekly_goal_days: number
+        }
+        Insert: {
+          age: number
+          created_at?: string
+          equipment_type: string
+          full_name: string
+          id?: string
+          primary_goal: string
+          weekly_goal_days: number
+        }
+        Update: {
+          age?: number
+          created_at?: string
+          equipment_type?: string
+          full_name?: string
+          id?: string
+          primary_goal?: string
+          weekly_goal_days?: number
+        }
+        Relationships: []
+      }
+      workout_logs: {
+        Row: {
+          exercise_id: string
+          id: string
+          reps_completed: number
+          set_number: number
+          timestamp: string
+          user_id: string
+          weight_kg: number
+        }
+        Insert: {
+          exercise_id: string
+          id?: string
+          reps_completed: number
+          set_number: number
+          timestamp?: string
+          user_id: string
+          weight_kg: number
+        }
+        Update: {
+          exercise_id?: string
+          id?: string
+          reps_completed?: number
+          set_number?: number
+          timestamp?: string
+          user_id?: string
+          weight_kg?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_logs_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workout_programs: {
+        Row: {
+          day_number: number
+          equipment_type: string
+          exercise_ids_list: string[]
+          id: string
+        }
+        Insert: {
+          day_number: number
+          equipment_type: string
+          exercise_ids_list: string[]
+          id?: string
+        }
+        Update: {
+          day_number?: number
+          equipment_type?: string
+          exercise_ids_list?: string[]
+          id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
