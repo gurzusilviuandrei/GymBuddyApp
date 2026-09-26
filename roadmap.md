@@ -26,3 +26,4 @@
 - [x] Filter the exercise library by muscle group and add exercises from a bottom drawer.
 - [x] Edit the ordered custom routine with remove and move controls.
 - [x] Save the edited order to the signed-in account and confirm it on Home.
+- [x] Mid-workout recovery: cache progress, Resume/Abandon banner on Home, clear on finish.

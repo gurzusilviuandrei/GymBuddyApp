@@ -30,7 +30,12 @@ export function readActiveSession(): ActiveSession | null {
     if (!raw) return null;
     const s = JSON.parse(raw) as ActiveSession;
     if (typeof s.current_exercise_index !== "number" || !s.session_start_time) return null;
-    return { swapped_exercises_map: {}, logged_set_ids: [], used_exercise_ids: {}, ...s };
+    return {
+      ...s,
+      swapped_exercises_map: s.swapped_exercises_map ?? {},
+      logged_set_ids: s.logged_set_ids ?? [],
+      used_exercise_ids: s.used_exercise_ids ?? {},
+    };
   } catch {
     return null;
   }
