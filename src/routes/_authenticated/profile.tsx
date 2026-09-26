@@ -114,7 +114,8 @@ function ProfilePage() {
   };
 
   return (
-    <main className="home-enter mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-background px-7 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-8 text-foreground">
+    <>
+    <main className="home-enter mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-background px-7 pb-32 pt-8 text-foreground">
       <header className="flex items-center gap-4">
         <Button asChild variant="outline" size="icon" className="size-11 rounded-lg border-border bg-card text-muted-foreground hover:text-foreground">
           <Link to="/home" aria-label="Back to Home"><ArrowLeft aria-hidden="true" /></Link>
