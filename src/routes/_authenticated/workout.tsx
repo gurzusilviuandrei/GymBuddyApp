@@ -90,15 +90,16 @@ function Workout() {
 
   useEffect(() => {
     setLastLog(null);
-    if (!userId || !exercise) return;
+    if (!exercise) return;
     let cancelled = false;
-    fetchLastLog({ data: { user_id: userId, exercise_id: exercise.id } })
+    fetchLastLog({ data: { exercise_id: exercise.id } })
       .then((row) => !cancelled && setLastLog(row))
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [userId, exercise?.id]);
+  }, [exercise?.id]);
+
 
   const handleNext = () => {
     if (isLastExercise) {
