@@ -35,7 +35,7 @@ function HistoryPage() {
           <p className="text-xs font-semibold uppercase text-primary">Your training log</p>
           <h1 className="mt-3 text-3xl font-semibold">History</h1>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            Every session you have logged, newest first.
+            Every workout you have finished, newest first.
           </p>
         </header>
 
@@ -49,7 +49,7 @@ function HistoryPage() {
               </div>
               <h2 className="mt-5 text-lg font-semibold">No workouts yet</h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Log your first set and your sessions will show up right here.
+                Finish your first workout and it will show up right here.
               </p>
             </div>
           )}
