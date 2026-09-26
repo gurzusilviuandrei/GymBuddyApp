@@ -1,6 +1,27 @@
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Dumbbell, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+const FREQUENCY_TARGETS: Record<string, number> = {
+  "2-days": 2,
+  "3-days": 3,
+  "4-plus": 4,
+};
+
+interface Profile {
+  name?: string;
+  frequency?: string;
+}
+
+function readProfile(): Profile {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem("gymbuddy-profile") ?? "{}") as Profile;
+  } catch {
+    return {};
+  }
+}
 
 export const Route = createFileRoute("/home")({
   head: () => ({
@@ -17,8 +38,17 @@ export const Route = createFileRoute("/home")({
 });
 
 function Home() {
+  const [profile, setProfile] = useState<Profile>({});
+
+  useEffect(() => {
+    setProfile(readProfile());
+  }, []);
+
+  const firstName = profile.name?.trim().split(/\s+/)[0] ?? "";
+  const weeklyTarget = FREQUENCY_TARGETS[profile.frequency ?? ""] ?? 3;
+
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-background px-7 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-12 text-foreground">
+    <main className="home-enter mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-background px-7 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-12 text-foreground">
       <header className="flex items-center justify-between">
         <Link to="/" className="text-xl font-bold text-foreground" aria-label="GymBuddy welcome">GymBuddy<span className="text-primary">.</span></Link>
         <Button asChild variant="outline" size="icon" className="size-11 rounded-lg border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground" title="Change equipment">
@@ -28,9 +58,41 @@ function Home() {
 
       <div className="mt-16">
         <p className="text-xs font-semibold uppercase text-primary">Your training starts here</p>
-        <h1 className="mt-5 text-[2.5rem] font-semibold leading-tight">Ready to move?</h1>
+        <h1 className="mt-5 text-[2.5rem] font-semibold leading-tight">
+          {firstName ? `Welcome back, ${firstName}! 👋` : "Welcome back! 👋"}
+        </h1>
         <p className="mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">Take it one set at a time. Your guided workout is ready when you are.</p>
       </div>
+
+      <section className="mt-14 rounded-lg border border-border bg-card p-8" aria-labelledby="consistency-heading">
+        <h2 id="consistency-heading" className="text-center text-sm font-semibold uppercase tracking-widest text-muted-foreground">Weekly Consistency</h2>
+        <div className="mt-6 flex justify-center">
+          <div className="relative size-40">
+            <svg viewBox="0 0 100 100" className="size-full -rotate-90" role="img" aria-label={`0 of ${weeklyTarget} weekly workouts completed`}>
+              <circle cx="50" cy="50" r="44" fill="none" strokeWidth="7" className="stroke-muted" />
+              <circle
+                cx="50"
+                cy="50"
+                r="44"
+                fill="none"
+                strokeWidth="7"
+                strokeLinecap="round"
+                className="stroke-primary"
+                strokeDasharray={2 * Math.PI * 44}
+                strokeDashoffset={2 * Math.PI * 44}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-3xl font-semibold text-foreground">
+                0 <span className="text-muted-foreground">/ {weeklyTarget}</span>
+              </span>
+              <span className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">Workouts</span>
+            </div>
+          </div>
+        </div>
+        <p className="mt-6 text-center text-sm text-muted-foreground">Weekly Consistency: 0 / {weeklyTarget} Workouts</p>
+      </section>
+
 
       <section className="mt-14" aria-labelledby="workout-heading">
         <div className="mb-5 flex items-end justify-between">
