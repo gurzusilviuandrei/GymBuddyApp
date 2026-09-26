@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { getDayOneWorkout, getAlternativeExercise, logWorkoutSet } from "@/lib/gym.functions";
+import { getDayOneWorkout, getAlternativeExercise, getLastLog, logWorkoutSet } from "@/lib/gym.functions";
 
 export const Route = createFileRoute("/workout")({
   head: () => ({
@@ -41,16 +41,23 @@ function PlayIcon() {
   );
 }
 
+const EXERCISES_PER_SESSION = 3;
+type Ex = { id: string; name: string; instructions: string; video_url: string | null; alternative_exercise_id: string | null };
+
 function Workout() {
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("");
   const [setNumber, setSetNumber] = useState(1);
   const [logging, setLogging] = useState(false);
   const [userId, setUserId] = useState<string>();
+  const [index, setIndex] = useState(0);
+  const [complete, setComplete] = useState(false);
+  const [lastLog, setLastLog] = useState<{ weight_kg: number; reps_completed: number } | null>(null);
   const logSet = useServerFn(logWorkoutSet);
   const fetchWorkout = useServerFn(getDayOneWorkout);
   const fetchAlternative = useServerFn(getAlternativeExercise);
-  const [swapped, setSwapped] = useState<{ id: string; name: string; instructions: string; video_url: string | null; alternative_exercise_id: string | null } | null>(null);
+  const fetchLastLog = useServerFn(getLastLog);
+  const [swapped, setSwapped] = useState<Ex | null>(null);
   const [swapping, setSwapping] = useState(false);
 
   useEffect(() => {
@@ -71,14 +78,41 @@ function Workout() {
     enabled: Boolean(userId),
   });
 
-  const primary = workout?.exercises[0];
+  const session = workout?.exercises.slice(0, EXERCISES_PER_SESSION) ?? [];
+  const targetSets = workout?.target_sets ?? 3;
+  const primary = session[index];
   const exercise = swapped ?? primary;
+  const setsDone = setNumber > targetSets;
+  const isLastExercise = index >= session.length - 1;
 
   useEffect(() => {
-    if (exercise?.name) {
-      document.title = `${exercise.name} — GymBuddy`;
-    }
+    if (exercise?.name) document.title = `${exercise.name} — GymBuddy`;
   }, [exercise?.name]);
+
+  useEffect(() => {
+    setLastLog(null);
+    if (!userId || !exercise) return;
+    let cancelled = false;
+    fetchLastLog({ data: { user_id: userId, exercise_id: exercise.id } })
+      .then((row) => !cancelled && setLastLog(row))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, exercise?.id]);
+
+  const handleNext = () => {
+    if (isLastExercise) {
+      setComplete(true);
+      return;
+    }
+    setIndex((i) => i + 1);
+    setSwapped(null);
+    setSetNumber(1);
+    setWeight("");
+    setReps("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const handleSwap = async () => {
     if (!exercise || swapping) return;
@@ -100,6 +134,7 @@ function Workout() {
   };
 
   const handleLogSet = async () => {
+    if (setsDone) return handleNext();
     const w = Number(weight);
     const r = Number(reps);
     if (weight === "" || !Number.isFinite(w) || w < 0 || !Number.isInteger(r) || r < 1) {
@@ -120,6 +155,7 @@ function Workout() {
         data: { user_id: userId, exercise_id: exercise.id, weight_kg: w, reps_completed: r, set_number: setNumber },
       });
       toast.success(`Set ${setNumber} logged: ${w} kg × ${r}`);
+      setLastLog({ weight_kg: w, reps_completed: r });
       setSetNumber((n) => n + 1);
       setReps("");
     } catch {
@@ -128,6 +164,25 @@ function Workout() {
       setLogging(false);
     }
   };
+
+  if (complete) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-7 text-center text-foreground home-enter">
+        <div className="text-7xl" aria-hidden="true">🏆</div>
+        <h1 className="mt-8 text-3xl font-semibold tracking-tight">Workout Complete!</h1>
+        <p className="mt-3 text-lg text-primary">Bro Status Upgraded 🏆</p>
+        <p className="mt-4 text-base text-muted-foreground">
+          {session.length} exercises · {session.length * targetSets} sets crushed.
+        </p>
+        <Link
+          to="/home"
+          className="mt-12 flex h-16 w-full max-w-sm items-center justify-center rounded-2xl bg-primary text-lg font-semibold text-primary-foreground shadow-neon transition hover:brightness-110"
+        >
+          Back to Home
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-dvh flex-col bg-background px-7 pb-10 pt-14 text-foreground">
@@ -144,7 +199,12 @@ function Workout() {
       </div>
 
       {/* Exercise title & target */}
-      <div className="mt-10">
+      <div key={exercise?.id} className="mt-10 home-enter">
+        {session.length > 0 && (
+          <p className="mb-2 text-sm font-medium uppercase tracking-widest text-primary">
+            Exercise {index + 1} of {session.length}
+          </p>
+        )}
         <h1 className="text-[2.1rem] font-semibold leading-tight tracking-tight text-foreground">
           {exercise?.name ?? "Your Workout"}
         </h1>
@@ -154,6 +214,17 @@ function Workout() {
         <p className="mt-4 text-base leading-relaxed text-muted-foreground">
           {exercise?.instructions ?? (isLoading ? "Loading exercise details…" : "No exercise is assigned to this workout.")}
         </p>
+        {lastLog && (
+          <div className="mt-6 rounded-2xl border border-primary/40 bg-card p-5" aria-live="polite">
+            <p className="text-sm text-muted-foreground">
+              Last time: {lastLog.weight_kg} kg × {lastLog.reps_completed}
+            </p>
+            <p className="mt-1 text-base font-medium text-foreground">
+              Today: Try to hit <span className="text-primary">{lastLog.reps_completed + 1} reps</span> or add{" "}
+              <span className="text-primary">2.5kg</span>.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Set logging inputs */}
@@ -200,7 +271,13 @@ function Workout() {
           disabled={logging || !exercise}
           className="h-16 w-full rounded-2xl bg-primary text-lg font-semibold tracking-wide text-primary-foreground shadow-neon transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
         >
-          {logging ? "Logging…" : `Log Set ${setNumber}`}
+          {logging
+            ? "Logging…"
+            : setsDone
+              ? isLastExercise
+                ? "Finish Workout"
+                : "Next Exercise"
+              : `Log Set ${setNumber}`}
         </button>
       </div>
 

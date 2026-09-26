@@ -111,6 +111,23 @@ export const logWorkoutSet = createServerFn({ method: "POST" })
     return row;
   });
 
+export const getLastLog = createServerFn({ method: "GET" })
+  .inputValidator((data) =>
+    z.object({ user_id: z.string().uuid(), exercise_id: z.string().min(1).max(64) }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row } = await supabaseAdmin
+      .from("workout_logs")
+      .select("weight_kg, reps_completed")
+      .eq("user_id", data.user_id)
+      .eq("exercise_id", data.exercise_id)
+      .order("timestamp", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return row ? { weight_kg: Number(row.weight_kg), reps_completed: row.reps_completed } : null;
+  });
+
 export const getUserStats = createServerFn({ method: "GET" })
   .inputValidator((data) => z.object({ user_id: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
