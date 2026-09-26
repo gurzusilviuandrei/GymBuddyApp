@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, Dumbbell, LogOut, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, Dumbbell, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +51,12 @@ function Home() {
   const fetchWorkout = useServerFn(getDayOneWorkout);
   const fetchStats = useServerFn(getUserStats);
 
+  // Keep Home as the signed-in entry point; explicit actions such as Start Workout and Sign Out remain available.
+  useBlocker({
+    shouldBlockFn: ({ action, current }) => action === "BACK" && current.pathname === "/home",
+    enableBeforeUnload: false,
+  });
+
   const handleSignOut = async () => {
     if (signingOut) return;
     setSigningOut(true);
@@ -94,11 +100,8 @@ function Home() {
   return (
     <main className="home-enter mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-background px-7 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-12 text-foreground">
       <header className="flex items-center justify-between">
-        <Link to="/" className="text-xl font-bold text-foreground">GymBuddy<span className="text-primary">.</span></Link>
+        <span className="text-xl font-bold text-foreground">GymBuddy<span className="text-primary">.</span></span>
         <div className="flex items-center gap-3">
-          <Button asChild variant="outline" size="icon" className="size-11 rounded-lg border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground">
-            <Link to="/onboarding" aria-label="Change equipment or plan"><SlidersHorizontal aria-hidden="true" /></Link>
-          </Button>
           <Button
             variant="outline"
             size="icon"
