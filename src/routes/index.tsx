@@ -31,7 +31,12 @@ function Welcome() {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session || cancelled) return;
       try {
-        const dest = syncLocalProfile(await ensure());
+        const result = await ensure();
+        if (result.accountMissing) {
+          await supabase.auth.signOut();
+          return;
+        }
+        const dest = syncLocalProfile(result);
         if (!cancelled) navigate({ to: dest, replace: true });
       } catch {
         /* stay on welcome */
