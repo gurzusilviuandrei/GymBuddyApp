@@ -158,13 +158,15 @@ export const saveCustomRoutine = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (new Set(data.exercise_ids).size !== data.exercise_ids.length) throw new Error("Pick different exercises");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: found } = await supabaseAdmin.from("exercises").select("id").in("id", data.exercise_ids);
-    if ((found?.length ?? 0) !== data.exercise_ids.length) throw new Error("Unknown exercise");
-    const { error } = await supabaseAdmin
+    const { data: found, error: lookupError } = await supabaseAdmin.from("exercises").select("id").in("id", data.exercise_ids);
+    if (lookupError || (found?.length ?? 0) !== data.exercise_ids.length) throw new Error("Unknown exercise");
+    const { data: updated, error } = await supabaseAdmin
       .from("users")
       .update({ is_custom: true, custom_exercise_ids: data.exercise_ids })
-      .eq("id", context.userId);
-    if (error) throw new Error("Could not save routine");
+      .eq("id", context.userId)
+      .select("id")
+      .maybeSingle();
+    if (error || !updated) throw new Error("Could not save routine");
     return { ok: true };
   });
 

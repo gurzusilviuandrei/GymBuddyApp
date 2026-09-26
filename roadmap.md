@@ -22,3 +22,7 @@
 - [x] Run the tracker through every exercise in the selected program, with the final action finishing the session.
 - [x] Let custom routines contain any number of distinct exercises and show them all on Home.
 - [x] Total only this session's logged sets across the full routine in the recap and history.
+
+- [x] Filter the exercise library by muscle group and add exercises from a bottom drawer.
+- [x] Edit the ordered custom routine with remove and move controls.
+- [x] Save the edited order to the signed-in account and confirm it on Home.

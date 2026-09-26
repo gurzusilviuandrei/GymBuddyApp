@@ -2,32 +2,40 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { getExerciseLibrary, saveCustomRoutine } from "@/lib/gym.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/custom-routine")({
-  head: () => ({
-    meta: [
-      { title: "Custom Routine Builder — GymBuddy" },
-      { name: "description", content: "Pick your exercises to build your own GymBuddy workout day." },
-      { property: "og:title", content: "Custom Routine Builder — GymBuddy" },
-      { property: "og:description", content: "Pick your exercises to build your own GymBuddy workout day." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () => ({ meta: [
+    { title: "Custom Workout Editor — GymBuddy" },
+    { name: "description", content: "Arrange and edit your own GymBuddy workout routine." },
+    { property: "og:title", content: "Custom Workout Editor — GymBuddy" },
+    { property: "og:description", content: "Arrange and edit your own GymBuddy workout routine." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+  ] }),
   component: CustomRoutine,
 });
 
-const GROUPS = ["Squats & Hinges", "Presses", "Pulls"] as const;
-function groupOf(type: string): (typeof GROUPS)[number] {
-  const t = type.toLowerCase();
-  if (t.includes("press")) return "Presses";
-  if (t.includes("pull")) return "Pulls";
-  return "Squats & Hinges";
+const FILTERS = [
+  { label: "All", key: "all" },
+  { label: "Chest (Horizontal Press)", key: "chest" },
+  { label: "Back (Pull)", key: "back" },
+  { label: "Legs (Squat/Hinge)", key: "legs" },
+  { label: "Shoulders (Vertical Press)", key: "shoulders" },
+] as const;
+type Filter = (typeof FILTERS)[number]["key"];
+
+function categoryOf(type: string): Exclude<Filter, "all"> {
+  const value = type.toLowerCase();
+  if (value.includes("horizontal press")) return "chest";
+  if (value.includes("vertical press")) return "shoulders";
+  if (value.includes("pull") || value.includes("row")) return "back";
+  return "legs";
 }
 
 function CustomRoutine() {
@@ -36,23 +44,33 @@ function CustomRoutine() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<string[]>([]);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const { data, isLoading } = useQuery({ queryKey: ["exercise-library"], queryFn: () => fetchLib() });
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["exercise-library"], queryFn: () => fetchLib() });
 
-  useEffect(() => {
-    if (data?.selected) setSelected(data.selected);
-  }, [data]);
-
-  const toggle = (id: string) =>
-    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  useEffect(() => { if (data?.selected) setSelected(data.selected); }, [data]);
+  const exercises = data?.exercises ?? [];
+  const exerciseById = new Map(exercises.map((exercise) => [exercise.id, exercise]));
+  const available = exercises.filter((exercise) => !selected.includes(exercise.id) && (filter === "all" || categoryOf(exercise.movement_type) === filter));
+  const addExercise = (id: string) => setSelected((current) => current.includes(id) ? current : [...current, id]);
+  const removeExercise = (id: string) => setSelected((current) => current.filter((item) => item !== id));
+  const moveExercise = (index: number, direction: -1 | 1) => setSelected((current) => {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= current.length) return current;
+    const next = [...current];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    return next;
+  });
 
   const handleSave = async () => {
-    if (selected.length === 0 || saving) return;
+    if (selected.length === 0 || saving || !data) return;
     setSaving(true);
     try {
       await save({ data: { exercise_ids: selected } });
       await queryClient.invalidateQueries({ queryKey: ["day-one-workout"] });
-      toast.success("Custom Routine Saved, Bro! 🏋️‍♂️");
+      await queryClient.invalidateQueries({ queryKey: ["exercise-library"] });
+      toast.success("Custom Routine Updated, Bro! 🔧");
       navigate({ to: "/home" });
     } catch {
       setSaving(false);
@@ -60,69 +78,83 @@ function CustomRoutine() {
     }
   };
 
+  const filterRow = (insideDrawer: boolean) => (
+    <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Filter exercises">
+      {FILTERS.map((item) => (
+        <Button key={item.key} type="button" size="sm" variant="outline" aria-pressed={filter === item.key}
+          onClick={() => { setFilter(item.key); if (!insideDrawer) setDrawerOpen(true); }}
+          className={cn("h-10 shrink-0 rounded-full border-border px-4 text-xs", filter === item.key ? "border-primary bg-primary/10 text-primary hover:text-primary" : "bg-card text-muted-foreground")}
+        >{item.label}</Button>
+      ))}
+    </div>
+  );
+
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-background px-7 pb-36 pt-10 text-foreground">
-      <header className="flex items-center gap-4">
-        <Link to="/home" aria-label="Back to Home" className="flex size-11 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground">
-          <ArrowLeft aria-hidden="true" />
-        </Link>
-        <h1 className="text-2xl font-semibold">Custom Routine Builder</h1>
+    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-background px-5 pb-36 pt-8 text-foreground sm:px-7">
+      <header className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-4">
+        <Link to="/home" aria-label="Back to Home" className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground"><ArrowLeft aria-hidden="true" /></Link>
+        <h1 className="min-w-0 text-2xl font-semibold">Custom Routine Builder</h1>
       </header>
-
-      <div className="sticky top-0 z-10 -mx-7 mt-6 border-b border-border bg-background/95 px-7 py-4 backdrop-blur" aria-live="polite">
-        <p className="text-sm font-semibold uppercase tracking-widest">
-          Selected: <span className={selected.length > 0 ? "text-primary" : "text-foreground"}>{selected.length}</span> {selected.length === 1 ? "Exercise" : "Exercises"}
-        </p>
-      </div>
-
-      {isLoading && <p className="mt-8 text-muted-foreground">Loading exercises…</p>}
-
-      {GROUPS.map((group) => {
-        const items = (data?.exercises ?? []).filter((e) => groupOf(e.movement_type) === group);
-        if (!items.length) return null;
-        return (
-          <section key={group} className="mt-8">
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-primary">{group}</h2>
-            <ul className="space-y-2">
-              {items.map((ex) => {
-                const on = selected.includes(ex.id);
-                return (
-                  <li key={ex.id}>
-                    <Button
-                      type="button"
-                      role="checkbox"
-                      aria-checked={on}
-                      variant="outline"
-                      onClick={() => toggle(ex.id)}
-                      className={cn(
-                        "h-auto min-h-16 w-full justify-between whitespace-normal rounded-lg bg-card px-5 py-4 text-left transition-colors",
-                        on ? "border-primary" : "border-border",
-                      )}
-                    >
-                      <span>
-                        <span className="block font-medium">{ex.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {ex.movement_type} · {ex.equipment_type} · {ex.target}
-                        </span>
-                      </span>
-                      <span className={cn("flex size-6 items-center justify-center rounded-full border-2", on ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground")}>
-                        {on && <Check size={14} strokeWidth={3} aria-hidden="true" />}
-                      </span>
-                    </Button>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        );
-      })}
-
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 px-7 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur">
-        <div className="mx-auto max-w-lg">
-          <Button size="lg" disabled={selected.length === 0 || saving} onClick={handleSave} className="h-16 w-full rounded-lg text-lg font-semibold shadow-neon">
-            {saving ? "Saving…" : "Save Custom Routine"}
-          </Button>
+      <div className="mt-8">{filterRow(false)}</div>
+      <section className="mt-9" aria-label="My Custom Routine Overview">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
+          <h2 className="min-w-0 text-lg font-semibold">My Custom Routine Overview</h2>
+          <span className="shrink-0 text-sm font-semibold text-primary" aria-live="polite">{selected.length} {selected.length === 1 ? "exercise" : "exercises"}</span>
         </div>
+        {isLoading && <p className="mt-6 text-sm text-muted-foreground">Loading exercises…</p>}
+        {isError && <div className="mt-6 flex items-center gap-3 text-sm text-muted-foreground">Couldn't load exercises. <Button variant="link" onClick={() => refetch()} className="px-0">Retry</Button></div>}
+        {!isLoading && !isError && selected.length === 0 && <p className="mt-5 border-l-2 border-primary pl-4 text-sm text-muted-foreground">Your routine is empty. Add your first exercise below.</p>}
+        <ol className="mt-5 space-y-2.5">
+          {selected.map((id, index) => {
+            const exercise = exerciseById.get(id);
+            if (!exercise) return null;
+            return (
+              <li key={id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-border bg-card px-2 py-3.5 sm:gap-3 sm:px-3">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-sm font-bold text-primary">{index + 1}</span>
+                <div className="min-w-0"><p className="truncate text-sm font-semibold">{exercise.name}</p><p className="truncate text-xs text-muted-foreground">{exercise.movement_type} · {exercise.equipment_type}</p></div>
+                <div className="flex shrink-0 items-center gap-0.5">
+                  <Button type="button" size="icon" variant="ghost" disabled={index === 0} onClick={() => moveExercise(index, -1)} aria-label={`Move ${exercise.name} up`} title="Move up" className="size-8 text-muted-foreground hover:text-primary"><ArrowUp aria-hidden="true" /></Button>
+                  <Button type="button" size="icon" variant="ghost" disabled={index === selected.length - 1} onClick={() => moveExercise(index, 1)} aria-label={`Move ${exercise.name} down`} title="Move down" className="size-8 text-muted-foreground hover:text-primary"><ArrowDown aria-hidden="true" /></Button>
+                  <Button type="button" size="icon" variant="ghost" onClick={() => removeExercise(id)} aria-label={`Remove ${exercise.name}`} title="Remove exercise" className="size-8 text-muted-foreground hover:text-destructive"><X aria-hidden="true" /></Button>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+        <Button type="button" variant="outline" disabled={isLoading || isError} onClick={() => setDrawerOpen(true)} className="mt-5 h-16 w-full rounded-lg border-dashed border-primary/70 bg-primary/5 text-sm font-semibold text-primary hover:bg-primary/10 hover:text-primary"><Plus aria-hidden="true" /> Add Exercise to Routine</Button>
+      </section>
+
+      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen} shouldScaleBackground={false}>
+        <DrawerContent className="max-h-[85dvh] rounded-t-lg border-border bg-background">
+          <DrawerHeader className="mx-auto w-full max-w-lg px-5 pb-3 text-left">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+              <div className="min-w-0"><DrawerTitle className="text-xl">Add Exercise</DrawerTitle><DrawerDescription className="mt-2">{selected.length} in your routine</DrawerDescription></div>
+              <Button size="icon" variant="ghost" onClick={() => setDrawerOpen(false)} aria-label="Close exercise library" className="size-9 shrink-0 text-muted-foreground"><X aria-hidden="true" /></Button>
+            </div>
+            <div className="mt-5">{filterRow(true)}</div>
+          </DrawerHeader>
+          <div className="mx-auto w-full max-w-lg flex-1 overflow-y-auto overscroll-contain px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+            {available.length === 0 && <p className="py-8 text-sm text-muted-foreground">No more exercises in this group.</p>}
+            {FILTERS.filter((item) => item.key !== "all").map((group) => {
+              const items = available.filter((exercise) => categoryOf(exercise.movement_type) === group.key);
+              if (!items.length) return null;
+              return (
+                <section key={group.key} className="mb-7">
+                  <h3 className="mb-3 text-xs font-semibold uppercase text-primary">{group.label}</h3>
+                  <ul className="space-y-2">{items.map((exercise) => (
+                    <li key={exercise.id}><Button type="button" variant="outline" onClick={() => addExercise(exercise.id)} className="h-auto min-h-16 w-full justify-between gap-3 whitespace-normal rounded-lg border-border bg-card px-4 py-3 text-left hover:border-primary/60">
+                      <span className="min-w-0"><span className="block font-medium">{exercise.name}</span><span className="block text-xs text-muted-foreground">{exercise.equipment_type} · {exercise.target}</span></span><Plus className="shrink-0 text-primary" aria-hidden="true" />
+                    </Button></li>
+                  ))}</ul>
+                </section>
+              );
+            })}
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur sm:px-7">
+        <div className="mx-auto max-w-lg"><Button size="lg" disabled={selected.length === 0 || saving || !data} onClick={handleSave} className="h-16 w-full rounded-lg text-lg font-semibold shadow-neon">{saving ? "Saving…" : "Save Changes"}</Button></div>
       </div>
     </main>
   );
