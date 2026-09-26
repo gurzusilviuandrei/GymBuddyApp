@@ -95,9 +95,21 @@ function Home() {
     <main className="home-enter mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-background px-7 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-12 text-foreground">
       <header className="flex items-center justify-between">
         <Link to="/" className="text-xl font-bold text-foreground">GymBuddy<span className="text-primary">.</span></Link>
-        <Button asChild variant="outline" size="icon" className="size-11 rounded-lg border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground">
-          <Link to="/onboarding"><SlidersHorizontal aria-hidden="true" /></Link>
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button asChild variant="outline" size="icon" className="size-11 rounded-lg border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground">
+            <Link to="/onboarding" aria-label="Change equipment or plan"><SlidersHorizontal aria-hidden="true" /></Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Sign out"
+            disabled={signingOut}
+            onClick={handleSignOut}
+            className="size-11 rounded-lg border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <LogOut aria-hidden="true" />
+          </Button>
+        </div>
       </header>
 
       <div className="mt-16">
