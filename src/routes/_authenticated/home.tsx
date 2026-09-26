@@ -52,6 +52,8 @@ function Home() {
   const queryClient = useQueryClient();
   const fetchWorkout = useServerFn(getDayOneWorkout);
   const fetchStats = useServerFn(getUserStats);
+  const ensure = useServerFn(ensureUserRow);
+
 
   // Keep Home as the signed-in entry point; explicit actions such as Start Workout and Sign Out remain available.
   useBlocker({
