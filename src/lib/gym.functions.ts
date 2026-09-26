@@ -1,5 +1,31 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+const DAYS_FREQ: Record<number, string> = { 2: "2-days", 3: "3-days", 4: "4-plus" };
+
+export const ensureUserRow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error: upErr } = await supabaseAdmin
+      .from("users")
+      .upsert({ id: context.userId }, { onConflict: "id", ignoreDuplicates: true });
+    if (upErr) throw new Error("Could not create account profile");
+    const { data: row } = await supabaseAdmin
+      .from("users")
+      .select("full_name, weekly_goal_days, primary_goal, equipment_type")
+      .eq("id", context.userId)
+      .maybeSingle();
+    return {
+      userId: context.userId,
+      onboarded: Boolean(row?.equipment_type),
+      fullName: row?.full_name ?? null,
+      frequency: row?.weekly_goal_days ? (DAYS_FREQ[row.weekly_goal_days] ?? null) : null,
+      goal: row?.primary_goal ?? null,
+      equipment: row?.equipment_type ?? null,
+    };
+  });
 
 const FREQ_DAYS: Record<string, number> = { "2-days": 2, "3-days": 3, "4-plus": 4 };
 
@@ -12,12 +38,14 @@ const profileSchema = z.object({
 });
 
 export const createUserProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data) => profileSchema.parse(data))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row, error } = await supabaseAdmin
       .from("users")
-      .insert({
+      .upsert({
+        id: context.userId,
         full_name: data.full_name,
         age: data.age,
         weekly_goal_days: FREQ_DAYS[data.frequency] ?? 3,
@@ -27,17 +55,18 @@ export const createUserProfile = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error) throw new Error("Could not save profile");
-    return { id: row.id as string };
+    return { id: context.userId };
   });
 
 export const getDayOneWorkout = createServerFn({ method: "GET" })
-  .inputValidator((data) => z.object({ user_id: z.string().uuid() }).parse(data))
-  .handler(async ({ data }) => {
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ user_id: z.string().optional() }).parse(data))
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: user, error: userError } = await supabaseAdmin
       .from("users")
       .select("equipment_type")
-      .eq("id", data.user_id)
+      .eq("id", context.userId)
       .maybeSingle();
     if (userError) throw new Error("Could not load profile");
     if (!user) return null;
@@ -73,8 +102,9 @@ export const getDayOneWorkout = createServerFn({ method: "GET" })
   });
 
 export const getAlternativeExercise = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data) => z.object({ exercise_id: z.string().min(1).max(64) }).parse(data))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: current } = await supabaseAdmin
       .from("exercises")
@@ -91,7 +121,7 @@ export const getAlternativeExercise = createServerFn({ method: "GET" })
   });
 
 const logSchema = z.object({
-  user_id: z.string().uuid(),
+  user_id: z.string().optional(),
   exercise_id: z.string().min(1).max(64),
   weight_kg: z.number().min(0).max(1000),
   reps_completed: z.number().int().min(1).max(100),
@@ -99,12 +129,13 @@ const logSchema = z.object({
 });
 
 export const logWorkoutSet = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data) => logSchema.parse(data))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row, error } = await supabaseAdmin
       .from("workout_logs")
-      .insert(data)
+      .insert({ exercise_id: data.exercise_id, weight_kg: data.weight_kg, reps_completed: data.reps_completed, set_number: data.set_number, user_id: context.userId })
       .select("id, set_number")
       .single();
     if (error) throw new Error("Could not log set");
@@ -112,15 +143,16 @@ export const logWorkoutSet = createServerFn({ method: "POST" })
   });
 
 export const getLastLog = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data) =>
-    z.object({ user_id: z.string().uuid(), exercise_id: z.string().min(1).max(64) }).parse(data),
+    z.object({ user_id: z.string().optional(), exercise_id: z.string().min(1).max(64) }).parse(data),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row } = await supabaseAdmin
       .from("workout_logs")
       .select("weight_kg, reps_completed")
-      .eq("user_id", data.user_id)
+      .eq("user_id", context.userId)
       .eq("exercise_id", data.exercise_id)
       .order("timestamp", { ascending: false })
       .limit(1)
@@ -129,8 +161,9 @@ export const getLastLog = createServerFn({ method: "GET" })
   });
 
 export const getUserStats = createServerFn({ method: "GET" })
-  .inputValidator((data) => z.object({ user_id: z.string().uuid() }).parse(data))
-  .handler(async ({ data }) => {
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ user_id: z.string().optional() }).parse(data))
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     
     // Get start of current week (Sunday)
@@ -143,7 +176,7 @@ export const getUserStats = createServerFn({ method: "GET" })
     const { data: logs } = await supabaseAdmin
       .from("workout_logs")
       .select("timestamp")
-      .eq("user_id", data.user_id)
+      .eq("user_id", context.userId)
       .gte("timestamp", sunday.toISOString());
 
     const uniqueDays = new Set(logs?.map((l) => new Date(l.timestamp).toDateString())).size;
@@ -151,7 +184,7 @@ export const getUserStats = createServerFn({ method: "GET" })
     const { data: user } = await supabaseAdmin
       .from("users")
       .select("weekly_goal_days")
-      .eq("id", data.user_id)
+      .eq("id", context.userId)
       .maybeSingle();
 
     return {

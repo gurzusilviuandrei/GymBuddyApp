@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { getDayOneWorkout, getAlternativeExercise, getLastLog, logWorkoutSet } from "@/lib/gym.functions";
 
-export const Route = createFileRoute("/workout")({
+export const Route = createFileRoute("/_authenticated/workout")({
   head: () => ({
     meta: [
       { title: "Active Workout — GymBuddy" },
