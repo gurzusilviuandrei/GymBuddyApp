@@ -143,7 +143,7 @@ export const getExerciseLibrary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const [{ data: rows, error }, { data: user }] = await Promise.all([
-      context.supabase.from("exercises").select("id, name, movement_type").order("name"),
+      context.supabase.from("exercises").select("id, name, movement_type, equipment_type, target").order("name"),
       context.supabase.from("users").select("custom_exercise_ids").eq("id", context.userId).maybeSingle(),
     ]);
     if (error) throw new Error("Could not load exercises");

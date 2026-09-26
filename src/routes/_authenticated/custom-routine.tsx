@@ -22,12 +22,12 @@ export const Route = createFileRoute("/_authenticated/custom-routine")({
   component: CustomRoutine,
 });
 
-const GROUPS = ["Squats", "Presses", "Pulls"] as const;
+const GROUPS = ["Squats & Hinges", "Presses", "Pulls"] as const;
 function groupOf(type: string): (typeof GROUPS)[number] {
   const t = type.toLowerCase();
   if (t.includes("press")) return "Presses";
   if (t.includes("pull")) return "Pulls";
-  return "Squats";
+  return "Squats & Hinges";
 }
 
 function CustomRoutine() {
@@ -103,7 +103,9 @@ function CustomRoutine() {
                     >
                       <span>
                         <span className="block font-medium">{ex.name}</span>
-                        <span className="text-xs text-muted-foreground">{ex.movement_type}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {ex.movement_type} · {ex.equipment_type} · {ex.target}
+                        </span>
                       </span>
                       <span className={cn("flex size-6 items-center justify-center rounded-full border-2", on ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground")}>
                         {on && <Check size={14} strokeWidth={3} aria-hidden="true" />}
