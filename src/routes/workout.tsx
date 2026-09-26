@@ -74,6 +74,12 @@ function Workout() {
   const primary = workout?.exercises[0];
   const exercise = swapped ?? primary;
 
+  useEffect(() => {
+    if (exercise?.name) {
+      document.title = `${exercise.name} — GymBuddy`;
+    }
+  }, [exercise?.name]);
+
   const handleSwap = async () => {
     if (!exercise || swapping) return;
     setSwapping(true);
@@ -188,27 +194,26 @@ function Workout() {
 
       {/* Log Set */}
       <div className="mt-8">
-        <Button
+        <button
           type="button"
           onClick={handleLogSet}
           disabled={logging || !exercise}
           className="h-16 w-full rounded-2xl bg-primary text-lg font-semibold tracking-wide text-primary-foreground shadow-neon transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
         >
           {logging ? "Logging…" : `Log Set ${setNumber}`}
-        </Button>
+        </button>
       </div>
 
       {/* Secondary swap action */}
       <div className="mt-5 flex justify-center">
-        <Button
+        <button
           type="button"
-          variant="outline"
           onClick={handleSwap}
           disabled={swapping || !exercise}
           className="rounded-xl border border-border px-6 py-3 text-sm font-medium text-muted-foreground transition hover:border-primary/60 hover:text-foreground disabled:opacity-60"
         >
           {swapping ? "Swapping…" : "Machine Occupied? Swap Exercise"}
-        </Button>
+        </button>
       </div>
 
        <div className="mt-auto pt-10">

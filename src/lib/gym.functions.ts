@@ -115,10 +115,19 @@ export const getUserStats = createServerFn({ method: "GET" })
   .inputValidator((data) => z.object({ user_id: z.string().uuid() }).parse(data))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    
+    // Get start of current week (Sunday)
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day;
+    const sunday = new Date(now.setDate(diff));
+    sunday.setHours(0, 0, 0, 0);
+
     const { data: logs } = await supabaseAdmin
       .from("workout_logs")
       .select("timestamp")
-      .eq("user_id", data.user_id);
+      .eq("user_id", data.user_id)
+      .gte("timestamp", sunday.toISOString());
 
     const uniqueDays = new Set(logs?.map((l) => new Date(l.timestamp).toDateString())).size;
     
