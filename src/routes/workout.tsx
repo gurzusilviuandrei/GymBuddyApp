@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getActiveExercise, logWorkoutSet } from "@/lib/gym.functions";
+import { getActiveExercise, getAlternativeExercise, logWorkoutSet } from "@/lib/gym.functions";
 
 export const Route = createFileRoute("/workout")({
   head: () => ({
@@ -47,6 +47,9 @@ function Workout() {
   const [logging, setLogging] = useState(false);
   const logSet = useServerFn(logWorkoutSet);
   const fetchExercise = useServerFn(getActiveExercise);
+  const fetchAlternative = useServerFn(getAlternativeExercise);
+  const [swapped, setSwapped] = useState<{ id: string; name: string; instructions: string; alternative_exercise_id: string | null } | null>(null);
+  const [swapping, setSwapping] = useState(false);
 
   let userId: string | undefined;
   try {
@@ -55,11 +58,32 @@ function Workout() {
     userId = undefined;
   }
 
-  const { data: exercise } = useQuery({
+  const { data: primary } = useQuery({
     queryKey: ["active-exercise", userId],
     queryFn: () => fetchExercise({ data: { user_id: userId! } }),
     enabled: Boolean(userId),
   });
+
+  const exercise = swapped ?? primary;
+
+  const handleSwap = async () => {
+    if (!exercise || swapping) return;
+    setSwapping(true);
+    try {
+      const alt = await fetchAlternative({ data: { exercise_id: exercise.id } });
+      if (!alt) {
+        toast.info("No alternative exercise available for this one.");
+        return;
+      }
+      setSwapped(alt);
+      setSetNumber(1);
+      toast.success(`Swapped to ${alt.name}`);
+    } catch {
+      toast.error("Couldn't swap right now. Try again.");
+    } finally {
+      setSwapping(false);
+    }
+  };
 
   const handleLogSet = async () => {
     const w = Number(weight);
