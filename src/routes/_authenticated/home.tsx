@@ -103,21 +103,13 @@ function Home() {
     queryFn: () => fetchStats({ data: {} }),
   });
 
-  const { data: workout, isLoading: workoutLoading } = useQuery({
+  const { data: workout } = useQuery({
     queryKey: ["day-one-workout"],
     queryFn: () => fetchWorkout({ data: {} }),
   });
 
-
-  const firstName = profile.name?.trim().split(/\s+/)[0] ?? "";
-  const completed = stats?.completedWorkouts ?? 0;
-  const weeklyTarget = stats?.weeklyTarget ?? FREQUENCY_TARGETS[profile.frequency ?? ""] ?? 3;
-  
-  const percentage = Math.min(1, completed / weeklyTarget);
-  const dashArray = 2 * Math.PI * 44;
-  const dashOffset = dashArray * (1 - percentage);
-
-  const firstExercise = workout?.exercises[0];
+  const hasCustom = Boolean(workout?.is_custom && (workout?.exercises.length ?? 0) > 0);
+  const customNames = hasCustom ? workout!.exercises.slice(0, 3).map((e) => e.name) : [];
 
   return (
     <>
