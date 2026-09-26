@@ -305,7 +305,7 @@ export const completeWorkout = createServerFn({ method: "POST" })
         program_type: data.program_type,
         exercise_names: names,
         total_sets: logs.length,
-        total_volume_kg: Math.round(volume),
+        total_volume_kg: volume,
         started_at: startedAt.toISOString(),
       })
       .select("id, total_sets, total_volume_kg")
@@ -334,7 +334,7 @@ export const getWorkoutHistory = createServerFn({ method: "GET" })
       completedAt: r.completed_at,
       program: r.program_type as "premade" | "custom",
       sets: r.total_sets,
-      volume: Math.round(Number(r.total_volume_kg)),
+      volume: Number(r.total_volume_kg),
       exercises: r.exercise_names,
     }));
   });

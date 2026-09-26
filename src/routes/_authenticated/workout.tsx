@@ -215,7 +215,7 @@ function Workout() {
         <h1 className="mt-8 text-3xl font-semibold tracking-tight">Workout Complete!</h1>
         <p className="mt-3 text-lg text-primary">Bro Status Upgraded 🏆</p>
         <p className="mt-4 text-base text-muted-foreground">
-          {summary?.sets ?? 0} sets crushed · {summary?.volume ?? 0} kg lifted. Saved to your History.
+          {session.length} exercises · {summary?.sets ?? 0} sets crushed · {summary?.volume ?? 0} kg lifted. Saved to your History.
         </p>
         <Link
           to="/home"
