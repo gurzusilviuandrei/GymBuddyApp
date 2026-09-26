@@ -145,7 +145,7 @@ function CustomRoutine() {
             <div className="mt-5">{filterRow(true)}</div>
           </DrawerHeader>
           <div className="mx-auto w-full max-w-lg flex-1 overflow-y-auto overscroll-contain px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-            {available.length === 0 && <p className="py-8 text-sm text-muted-foreground">No more exercises in this group.</p>}
+            {available.length === 0 && <p className="py-8 text-sm text-muted-foreground">Nothing left to add here — every exercise in this group is already in your routine.</p>}
             {FILTERS.filter((item) => item.key !== "all").map((group) => {
               const items = exercises.filter((exercise) => categoryOf(exercise.movement_type) === group.key && matchesFilter(exercise));
               if (!items.length) return null;
