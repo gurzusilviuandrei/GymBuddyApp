@@ -20,8 +20,11 @@ export type Database = {
           equipment_type: string
           id: string
           instructions: string
+          movement_cue: string | null
           movement_type: string
           name: string
+          position_cue: string | null
+          setup_cue: string | null
           target: string
           video_url: string | null
         }
@@ -30,8 +33,11 @@ export type Database = {
           equipment_type?: string
           id: string
           instructions?: string
+          movement_cue?: string | null
           movement_type: string
           name: string
+          position_cue?: string | null
+          setup_cue?: string | null
           target?: string
           video_url?: string | null
         }
@@ -40,8 +46,11 @@ export type Database = {
           equipment_type?: string
           id?: string
           instructions?: string
+          movement_cue?: string | null
           movement_type?: string
           name?: string
+          position_cue?: string | null
+          setup_cue?: string | null
           target?: string
           video_url?: string | null
         }
