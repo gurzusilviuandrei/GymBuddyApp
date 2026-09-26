@@ -18,7 +18,7 @@ export const Route = createFileRoute("/onboarding")({
   component: Onboarding,
 });
 
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
 
 const EQUIPMENT_OPTIONS = [
   { id: "full-gym", label: "Full Gym Machines" },
@@ -30,6 +30,12 @@ const FREQUENCY_OPTIONS = [
   { id: "2-days", label: "2 Days / Week" },
   { id: "3-days", label: "3 Days / Week" },
   { id: "4-plus", label: "4+ Days / Week" },
+] as const;
+
+const GOAL_OPTIONS = [
+  { id: "lose-weight", label: "Lose Weight", subtext: "Burn fat and improve stamina" },
+  { id: "gain-muscle", label: "Gain Muscle", subtext: "Build strength and solid mass" },
+  { id: "sports-performance", label: "Sports Performance", subtext: "Improve speed and athletic agility" },
 ] as const;
 
 function CheckIcon() {
@@ -61,6 +67,7 @@ function Onboarding() {
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
   const [frequency, setFrequency] = useState<string | null>(null);
+  const [goal, setGoal] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
 
   const ageNumber = Number(age);
@@ -85,6 +92,12 @@ function Onboarding() {
     if (!frequency) return;
     saveProfile({ frequency });
     setStep(3);
+  };
+
+  const goToStep4 = () => {
+    if (!goal) return;
+    saveProfile({ goal });
+    setStep(4);
   };
 
   return (
@@ -204,12 +217,68 @@ function Onboarding() {
           </div>
         </section>
 
-        {/* Step 3 — Equipment */}
+        {/* Step 3 — Goal Selection */}
         <section
           aria-hidden={step !== 3}
           className={cn(
             "flex flex-1 flex-col transition-[transform,opacity] duration-500 ease-out",
-            step === 3 ? "translate-x-0 opacity-100" : "pointer-events-none absolute inset-0 translate-x-10 opacity-0",
+            step === 3 ? "translate-x-0 opacity-100" : step < 3 ? "pointer-events-none absolute inset-0 -translate-x-10 opacity-0" : "pointer-events-none absolute inset-0 translate-x-10 opacity-0",
+          )}
+        >
+          <header>
+            <h1 className="text-[2.1rem] font-semibold leading-tight">What&rsquo;s your primary goal?</h1>
+            <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+              We&rsquo;ll shape your routine around what matters most to you.
+            </p>
+          </header>
+
+          <div className="mt-12 flex flex-col gap-5" role="radiogroup" aria-label="Primary goal">
+            {GOAL_OPTIONS.map((option) => {
+              const isSelected = goal === option.id;
+              return (
+                <Button
+                  key={option.id}
+                  type="button"
+                  variant="outline"
+                  role="radio"
+                  aria-checked={isSelected}
+                  onClick={() => setGoal(option.id)}
+                  className={cn(
+                    "flex h-auto min-h-22 w-full items-center justify-between whitespace-normal rounded-lg border-2 bg-card px-7 py-6 text-left text-lg font-medium text-foreground transition-[border-color,box-shadow] duration-200 hover:bg-card hover:text-foreground",
+                    isSelected ? "border-primary shadow-neon" : "border-border hover:border-muted-foreground/60",
+                  )}
+                >
+                  <span className="flex flex-col gap-1">
+                    <span>{option.label}</span>
+                    <span className="text-sm font-normal text-muted-foreground">{option.subtext}</span>
+                  </span>
+                  <span className={cn("flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-200", isSelected ? "border-primary bg-primary" : "border-muted-foreground/40")}>
+                    {isSelected && <CheckIcon />}
+                  </span>
+                </Button>
+              );
+            })}
+          </div>
+
+          <div className="mt-auto pt-14">
+            <Button
+              type="button"
+              size="lg"
+              disabled={!goal}
+              onClick={goToStep4}
+              className="h-16 w-full rounded-lg text-lg font-semibold shadow-neon transition-transform active:scale-[0.98] disabled:opacity-40 disabled:shadow-none"
+            >
+              Next Step
+            </Button>
+          </div>
+        </section>
+
+        {/* Step 4 — Equipment */}
+        <section
+          aria-hidden={step !== 4}
+          className={cn(
+            "flex flex-1 flex-col transition-[transform,opacity] duration-500 ease-out",
+            step === 4 ? "translate-x-0 opacity-100" : "pointer-events-none absolute inset-0 -translate-x-10 opacity-0",
           )}
         >
           <header>
