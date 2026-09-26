@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { readActiveSession, writeActiveSession, clearActiveSession } from "@/lib/active-session";
 import { getDayOneWorkout, getAlternativeExercise, getLastLog, logWorkoutSet, completeWorkout } from "@/lib/gym.functions";
 
 export const Route = createFileRoute("/_authenticated/workout")({
@@ -63,13 +64,15 @@ function Workout() {
   const [swapping, setSwapping] = useState(false);
   const finish = useServerFn(completeWorkout);
   const queryClient = useQueryClient();
-  const [startedAt] = useState(() => new Date().toISOString());
+  const [startedAt, setStartedAt] = useState(() => new Date().toISOString());
   const [finishing, setFinishing] = useState(false);
   const [summary, setSummary] = useState<{ sets: number; volume: number } | null>(null);
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(90);
   const loggedSetIds = useRef<string[]>([]);
   const usedExerciseIds = useRef<Record<number, string>>({});
+  const swappedMap = useRef<Record<number, Ex>>({});
+  const [restored, setRestored] = useState(false);
 
   useEffect(() => {
     if (restEndsAt === null) return;
@@ -100,6 +103,40 @@ function Workout() {
   const setsDone = setNumber > targetSets;
   const isLastExercise = index >= session.length - 1;
 
+  // Restore an in-progress session once the program is known.
+  useEffect(() => {
+    if (!workout || restored) return;
+    const cached = readActiveSession();
+    if (cached && cached.is_custom_workout === Boolean(workout.is_custom) && cached.current_exercise_index < workout.exercises.length) {
+      setIndex(cached.current_exercise_index);
+      setSetNumber(cached.current_set_number);
+      setStartedAt(cached.session_start_time);
+      swappedMap.current = cached.swapped_exercises_map as Record<number, Ex>;
+      setSwapped((cached.swapped_exercises_map[cached.current_exercise_index] as Ex | undefined) ?? null);
+      loggedSetIds.current = cached.logged_set_ids;
+      usedExerciseIds.current = cached.used_exercise_ids;
+      toast.success(`Resumed: Exercise ${cached.current_exercise_index + 1} of ${workout.exercises.length}`);
+    }
+    setRestored(true);
+  }, [workout, restored]);
+
+  // Mirror progress to local storage after every change (once something happened).
+  useEffect(() => {
+    if (!restored || !workout || complete) return;
+    const started = loggedSetIds.current.length > 0 || index > 0 || Object.keys(swappedMap.current).length > 0;
+    if (!started) return;
+    writeActiveSession({
+      current_exercise_index: index,
+      current_set_number: setNumber,
+      is_custom_workout: Boolean(workout.is_custom),
+      swapped_exercises_map: swappedMap.current,
+      session_start_time: startedAt,
+      total_exercises: session.length,
+      logged_set_ids: loggedSetIds.current,
+      used_exercise_ids: usedExerciseIds.current,
+    });
+  }, [restored, workout, complete, index, setNumber, swapped, startedAt, session.length]);
+
   useEffect(() => {
     if (exercise?.name) document.title = `${exercise.name} — GymBuddy`;
   }, [exercise?.name]);
@@ -117,11 +154,13 @@ function Workout() {
   }, [exercise?.id]);
 
 
+
   const handleNext = async () => {
     if (isLastExercise) {
       if (finishing) return;
       setFinishing(true);
       setComplete(true);
+      clearActiveSession();
       try {
         const doneIds = session.map((e, i) => usedExerciseIds.current[i] ?? e.id);
         const saved = await finish({
@@ -161,6 +200,7 @@ function Workout() {
         toast.info("No alternative exercise available for this one.");
         return;
       }
+      swappedMap.current = { ...swappedMap.current, [index]: alt };
       setSwapped(alt);
       setSetNumber(1);
       usedExerciseIds.current[index] = alt.id;

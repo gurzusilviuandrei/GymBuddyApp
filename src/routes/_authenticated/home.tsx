@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ensureUserRow, getDayOneWorkout, getUserStats, getWorkoutHistory } from "@/lib/gym.functions";
 import { SessionCard } from "@/components/SessionCard";
 import { syncLocalProfile } from "@/lib/account-sync";
+import { readActiveSession, clearActiveSession, type ActiveSession } from "@/lib/active-session";
 
 
 const FREQUENCY_TARGETS: Record<string, number> = {
@@ -50,6 +51,10 @@ export const Route = createFileRoute("/_authenticated/home")({
 function Home() {
   const [profile, setProfile] = useState<Profile>({});
   const [signingOut, setSigningOut] = useState(false);
+  const [active, setActive] = useState<ActiveSession | null>(null);
+  useEffect(() => {
+    setActive(readActiveSession());
+  }, []);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fetchWorkout = useServerFn(getDayOneWorkout);
@@ -146,6 +151,32 @@ function Home() {
           <LogOut aria-hidden="true" />
         </Button>
       </header>
+
+      {active && (
+        <section className="mt-10 rounded-lg border-2 border-primary bg-primary/10 p-6 shadow-neon" aria-label="Workout in progress">
+          <h2 className="text-lg font-semibold text-foreground">Workout in Progress ⚡</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Resume Your Session: Exercise {active.current_exercise_index + 1} of {active.total_exercises}
+          </p>
+          <Button asChild className="mt-5 h-14 w-full rounded-lg text-base font-semibold shadow-neon">
+            <Link to="/workout" search={{ mode: active.is_custom_workout ? "custom" : "premade" }}>
+              Resume Workout <ArrowRight className="ml-2" aria-hidden="true" />
+            </Link>
+          </Button>
+          <Button
+            type="button"
+            variant="link"
+            onClick={() => {
+              clearActiveSession();
+              setActive(null);
+              toast.success("Workout abandoned.");
+            }}
+            className="mt-2 w-full text-sm text-muted-foreground hover:text-destructive"
+          >
+            Abandon Workout
+          </Button>
+        </section>
+      )}
 
       <div className="mt-16">
         <p className="text-xs font-semibold uppercase text-primary">Your training starts here</p>
