@@ -59,7 +59,11 @@ function CustomRoutine() {
     const nextIndex = index + direction;
     if (nextIndex < 0 || nextIndex >= current.length) return current;
     const next = [...current];
-    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    const first = next[index];
+    const second = next[nextIndex];
+    if (first === undefined || second === undefined) return current;
+    next[index] = second;
+    next[nextIndex] = first;
     return next;
   });
 
