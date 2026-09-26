@@ -46,6 +46,20 @@ function Workout() {
   const [setNumber, setSetNumber] = useState(1);
   const [logging, setLogging] = useState(false);
   const logSet = useServerFn(logWorkoutSet);
+  const fetchExercise = useServerFn(getActiveExercise);
+
+  let userId: string | undefined;
+  try {
+    userId = JSON.parse(localStorage.getItem("gymbuddy-profile") ?? "{}").userId;
+  } catch {
+    userId = undefined;
+  }
+
+  const { data: exercise } = useQuery({
+    queryKey: ["active-exercise", userId],
+    queryFn: () => fetchExercise({ data: { user_id: userId! } }),
+    enabled: Boolean(userId),
+  });
 
   const handleLogSet = async () => {
     const w = Number(weight);
@@ -54,14 +68,12 @@ function Workout() {
       toast.error("Enter a weight and at least 1 rep.");
       return;
     }
-    let userId: string | undefined;
-    try {
-      userId = JSON.parse(localStorage.getItem("gymbuddy-profile") ?? "{}").userId;
-    } catch {
-      userId = undefined;
-    }
     if (!userId) {
       toast.error("Finish setting up your profile first.");
+      return;
+    }
+    if (!exercise) {
+      toast.error("Your workout is still loading. Try again in a moment.");
       return;
     }
     setLogging(true);
