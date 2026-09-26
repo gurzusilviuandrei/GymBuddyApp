@@ -7,3 +7,7 @@
 - [x] Make the Home logo static and remove the sliders control.
 - [x] Block browser Back from Home without blocking explicit navigation or Sign Out.
 - [x] Verify signed-in header and browser navigation.
+- [x] Add Profile and Settings access from Home.
+- [x] Add account identification and security controls.
+- [x] Add secure password recovery and permanent account deletion.
+- [x] Verify Profile navigation and protected account controls.

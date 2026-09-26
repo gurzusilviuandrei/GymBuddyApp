@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, Dumbbell, LogOut } from "lucide-react";
+import { ArrowRight, Dumbbell, LogOut, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -77,13 +77,19 @@ function Home() {
 
   const { data: stats } = useQuery({
     queryKey: ["user-stats", profile.userId],
-    queryFn: () => fetchStats({ data: { user_id: profile.userId! } }),
+    queryFn: () => {
+      if (!profile.userId) throw new Error("Profile is missing");
+      return fetchStats({ data: { user_id: profile.userId } });
+    },
     enabled: Boolean(profile.userId),
   });
 
   const { data: workout, isLoading: workoutLoading } = useQuery({
     queryKey: ["day-one-workout", profile.userId],
-    queryFn: () => fetchWorkout({ data: { user_id: profile.userId! } }),
+    queryFn: () => {
+      if (!profile.userId) throw new Error("Profile is missing");
+      return fetchWorkout({ data: { user_id: profile.userId } });
+    },
     enabled: Boolean(profile.userId),
   });
 
@@ -102,6 +108,16 @@ function Home() {
       <header className="flex items-center justify-between">
         <span className="text-xl font-bold text-foreground">GymBuddy<span className="text-primary">.</span></span>
         <div className="flex items-center gap-3">
+          <Button
+            asChild
+            variant="outline"
+            size="icon"
+            className="size-11 rounded-lg border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <Link to="/profile" aria-label="Open Profile and Settings">
+              <UserRound aria-hidden="true" />
+            </Link>
+          </Button>
           <Button
             variant="outline"
             size="icon"
