@@ -121,6 +121,7 @@ function Workout() {
     if (isLastExercise) {
       if (finishing) return;
       setFinishing(true);
+      setComplete(true);
       try {
         const doneIds = session.map((e, i) => usedExerciseIds.current[i] ?? e.id);
         const saved = await finish({
@@ -136,6 +137,7 @@ function Workout() {
         queryClient.invalidateQueries({ queryKey: ["workout-history"] });
         setComplete(true);
       } catch {
+        setComplete(false);
         toast.error("Couldn't save your workout. Try again.");
       } finally {
         setFinishing(false);
@@ -215,14 +217,15 @@ function Workout() {
         <h1 className="mt-8 text-3xl font-semibold tracking-tight">Workout Complete!</h1>
         <p className="mt-3 text-lg text-primary">Bro Status Upgraded 🏆</p>
         <p className="mt-4 text-base text-muted-foreground">
-          {session.length} exercises · {summary?.sets ?? 0} sets crushed · {summary?.volume ?? 0} kg lifted. Saved to your History.
+          {summary
+            ? `${session.length} exercises · ${summary.sets} sets crushed · ${summary.volume} kg lifted. Saved to your History.`
+            : "Saving your workout…"}
         </p>
-        <Link
-          to="/home"
-          className="mt-12 flex h-16 w-full max-w-sm items-center justify-center rounded-2xl bg-primary text-lg font-semibold text-primary-foreground shadow-neon transition hover:brightness-110"
-        >
-          Back to Home
-        </Link>
+        {summary && (
+          <Button asChild className="mt-12 h-16 w-full max-w-sm text-lg font-semibold shadow-neon">
+            <Link to="/home">Back to Home</Link>
+          </Button>
+        )}
       </div>
     );
   }
