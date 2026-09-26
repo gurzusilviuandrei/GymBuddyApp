@@ -20,7 +20,7 @@ export const createUserProfile = createServerFn({ method: "POST" })
       .insert({
         full_name: data.full_name,
         age: data.age,
-        weekly_goal_days: FREQ_DAYS[data.frequency],
+        weekly_goal_days: FREQ_DAYS[data.frequency] ?? 3,
         primary_goal: data.primary_goal,
         equipment_type: data.equipment_type,
       })
