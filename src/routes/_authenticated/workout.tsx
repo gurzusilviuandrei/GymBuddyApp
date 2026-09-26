@@ -8,7 +8,7 @@ import { getDayOneWorkout, getAlternativeExercise, getLastLog, logWorkoutSet } f
 
 export const Route = createFileRoute("/_authenticated/workout")({
   validateSearch: (search: Record<string, unknown>) => ({
-    mode: search.mode === "premade" || search.mode === "custom" ? search.mode : undefined,
+    mode: search["mode"] === "premade" || search["mode"] === "custom" ? search["mode"] : undefined,
   }),
   head: () => ({
     meta: [
