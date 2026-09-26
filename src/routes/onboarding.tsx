@@ -315,7 +315,7 @@ function Onboarding() {
 
           <div className="mt-auto pt-14">
             <Button asChild size="lg" className={cn("h-16 w-full rounded-lg text-lg font-semibold shadow-neon transition-transform active:scale-[0.98]", !selected && "pointer-events-none opacity-40 shadow-none")}>
-              <Link to="/home" aria-disabled={!selected} tabIndex={selected ? undefined : -1}>Generate My Routine</Link>
+              <Link to="/home" aria-disabled={!selected} tabIndex={selected ? undefined : -1} onClick={() => { if (selected) saveProfile({ equipment: selected }); }}>Build My Profile</Link>
             </Button>
           </div>
         </section>
