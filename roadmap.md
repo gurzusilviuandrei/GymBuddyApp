@@ -12,3 +12,6 @@
 - [x] Add secure password recovery and permanent account deletion.
 - [x] Verify Profile navigation and protected account controls.- [x] Load the routine from the signed-in account instead of browser storage.
 - [x] Send members without a chosen equipment type back to onboarding.
+- [x] Add a fixed bottom navigation bar with Home, History and Profile tabs.
+- [x] Add a workout history screen listing past sessions.
+- [x] Move Profile access out of the Home header into the bottom bar.

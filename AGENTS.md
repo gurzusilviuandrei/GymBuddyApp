@@ -19,3 +19,5 @@ Home and Workout share one Day 1 server query that resolves the saved user's equ
 - Home blocks only browser Back navigation while mounted, not reloads or deliberate in-app links; Sign Out uses a replacement navigation to Welcome. Why: signed-in users must not return to onboarding or auth through history, while keeping intentional navigation available.
 
 - Account settings use authenticated server functions for identity-scoped reads, email changes, and deletion; password recovery uses the public reset route and the auth provider's recovery session. Why: sensitive account operations must be validated server-side and recovery links must work while signed out.
+
+- Signed-in pages (Home, History, Profile) render a shared fixed bottom tab bar from src/components/BottomNav.tsx and reserve bottom padding for it; Onboarding and the active workout screen omit it so members cannot navigate away mid-session. Why: one navigation surface, and no accidental exits during a tracked workout.
