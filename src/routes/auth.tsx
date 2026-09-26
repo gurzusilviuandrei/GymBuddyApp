@@ -40,7 +40,12 @@ function AuthPage() {
   const [leaving, setLeaving] = useState(false);
 
   const enterApp = async () => {
-    const dest = syncLocalProfile(await ensure());
+    const result = await ensure();
+    if (result.accountMissing) {
+      await supabase.auth.signOut();
+      return;
+    }
+    const dest = syncLocalProfile(result);
     setLeaving(true);
     setTimeout(() => navigate({ to: dest, replace: true }), 350);
   };

@@ -11,7 +11,23 @@ export const ensureUserRow = createServerFn({ method: "POST" })
     const { error: upErr } = await supabaseAdmin
       .from("users")
       .upsert({ id: context.userId }, { onConflict: "id", ignoreDuplicates: true });
-    if (upErr) throw new Error("Could not create account profile");
+    if (upErr) {
+      console.error("ensureUserRow upsert failed", upErr.code, upErr.message);
+      // 23503 = the signed-in account no longer exists (e.g. deleted) but the
+      // browser still holds its old session. Tell the client to sign out.
+      if (upErr.code === "23503") {
+        return {
+          userId: context.userId,
+          accountMissing: true as const,
+          onboarded: false,
+          fullName: null,
+          frequency: null,
+          goal: null,
+          equipment: null,
+        };
+      }
+      throw new Error("Could not create account profile");
+    }
     const { data: row } = await supabaseAdmin
       .from("users")
       .select("full_name, weekly_goal_days, primary_goal, equipment_type")
@@ -19,6 +35,7 @@ export const ensureUserRow = createServerFn({ method: "POST" })
       .maybeSingle();
     return {
       userId: context.userId,
+      accountMissing: false as const,
       onboarded: Boolean(row?.equipment_type),
       fullName: row?.full_name ?? null,
       frequency: row?.weekly_goal_days ? (DAYS_FREQ[row.weekly_goal_days] ?? null) : null,
