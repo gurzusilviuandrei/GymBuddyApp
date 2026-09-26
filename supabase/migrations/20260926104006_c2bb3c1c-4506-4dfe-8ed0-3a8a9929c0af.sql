@@ -1,0 +1,13 @@
+ALTER TABLE public.users ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE public.users ALTER COLUMN full_name DROP NOT NULL;
+ALTER TABLE public.users ALTER COLUMN age DROP NOT NULL;
+ALTER TABLE public.users ALTER COLUMN weekly_goal_days DROP NOT NULL;
+ALTER TABLE public.users ALTER COLUMN primary_goal DROP NOT NULL;
+ALTER TABLE public.users ALTER COLUMN equipment_type DROP NOT NULL;
+DELETE FROM public.workout_logs WHERE user_id NOT IN (SELECT id FROM auth.users);
+DELETE FROM public.users WHERE id NOT IN (SELECT id FROM auth.users);
+ALTER TABLE public.users ADD CONSTRAINT users_id_auth_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE;
+GRANT SELECT, UPDATE ON public.users TO authenticated;
+GRANT SELECT ON public.workout_logs TO authenticated;
+CREATE POLICY "Users read own profile" ON public.users FOR SELECT TO authenticated USING (auth.uid() = id);
+CREATE POLICY "Users read own logs" ON public.workout_logs FOR SELECT TO authenticated USING (auth.uid() = user_id);
