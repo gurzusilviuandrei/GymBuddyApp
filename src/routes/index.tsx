@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import gymBuddyLogo from "@/assets/gymbuddy-logo.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -19,8 +20,12 @@ export const Route = createFileRoute("/")({
 function Welcome() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col overflow-hidden bg-background px-7 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-14 text-foreground">
-      <header>
-        <h1 className="text-4xl font-bold leading-none">GymBuddy<span className="text-primary">.</span></h1>
+      <header className="text-center">
+        <img
+          src={gymBuddyLogo}
+          alt="GymBuddy"
+          className="welcome-logo mx-auto h-auto w-48 object-contain"
+        />
         <p className="mt-3 text-sm font-medium text-muted-foreground">The beginner&rsquo;s gym guide.</p>
       </header>
 
