@@ -19,17 +19,17 @@ export const Route = createFileRoute("/")({
 
 function Welcome() {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col overflow-hidden bg-background px-7 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-14 text-foreground">
-      <header className="text-center">
+    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col overflow-hidden bg-background px-7 pb-[max(2.5rem,env(safe-area-inset-bottom))] text-foreground">
+      <header className="pt-20 pb-10 text-center">
         <img
           src={gymBuddyLogo}
           alt="GymBuddy"
           className="welcome-logo mx-auto h-auto w-48 object-contain"
         />
-        <p className="mt-3 text-sm font-medium text-muted-foreground">The beginner&rsquo;s gym guide.</p>
+        <p className="mt-5 text-sm font-medium text-muted-foreground">The beginner&rsquo;s gym guide.</p>
       </header>
 
-      <div className="flex min-h-80 flex-1 items-center justify-center py-10" aria-hidden="true">
+      <div className="flex min-h-80 flex-1 items-center justify-center py-6" aria-hidden="true">
         <div className="relative flex aspect-square w-full max-w-80 items-center justify-center">
           <div className="absolute inset-3 rounded-full border border-border/70" />
           <div className="absolute inset-10 rounded-full border border-primary/40" />
@@ -42,8 +42,10 @@ function Welcome() {
         </div>
       </div>
 
-      <Button asChild size="lg" className="h-16 w-full rounded-lg text-lg font-semibold shadow-neon transition-transform active:scale-[0.98]">
-        <Link to="/onboarding">Get Started <ArrowRight className="ml-2" aria-hidden="true" /></Link>
+      <Button asChild size="lg" className="h-16 w-full justify-center rounded-lg text-center text-lg font-semibold shadow-neon transition-transform active:scale-[0.98]">
+        <Link to="/onboarding" className="justify-center">
+          Get Started <ArrowRight className="ml-2" aria-hidden="true" />
+        </Link>
       </Button>
     </main>
   );
