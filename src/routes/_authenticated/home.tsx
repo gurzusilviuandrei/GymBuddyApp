@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, Dumbbell, LogOut, UserRound } from "lucide-react";
+import { ArrowRight, Dumbbell, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { BottomNav } from "@/components/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureUserRow, getDayOneWorkout, getUserStats } from "@/lib/gym.functions";
 import { syncLocalProfile } from "@/lib/account-sync";
@@ -119,31 +120,20 @@ function Home() {
   const firstExercise = workout?.exercises[0];
 
   return (
-    <main className="home-enter mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-background px-7 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-12 text-foreground">
+    <>
+    <main className="home-enter mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-background px-7 pb-32 pt-12 text-foreground">
       <header className="flex items-center justify-between">
         <span className="text-xl font-bold text-foreground">GymBuddy<span className="text-primary">.</span></span>
-        <div className="flex items-center gap-3">
-          <Button
-            asChild
-            variant="outline"
-            size="icon"
-            className="size-11 rounded-lg border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground"
-          >
-            <Link to="/profile" aria-label="Open Profile and Settings">
-              <UserRound aria-hidden="true" />
-            </Link>
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Sign out"
-            disabled={signingOut}
-            onClick={handleSignOut}
-            className="size-11 rounded-lg border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground"
-          >
-            <LogOut aria-hidden="true" />
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Sign out"
+          disabled={signingOut}
+          onClick={handleSignOut}
+          className="size-11 rounded-lg border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground"
+        >
+          <LogOut aria-hidden="true" />
+        </Button>
       </header>
 
       <div className="mt-16">
@@ -216,5 +206,7 @@ function Home() {
         </Button>
       </div>
     </main>
+    <BottomNav />
+    </>
   );
 }

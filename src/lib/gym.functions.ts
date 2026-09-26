@@ -192,3 +192,44 @@ export const getUserStats = createServerFn({ method: "GET" })
       weeklyTarget: user?.weekly_goal_days ?? 3,
     };
   });
+
+export const getWorkoutHistory = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ user_id: z.string().optional() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: logs, error } = await supabaseAdmin
+      .from("workout_logs")
+      .select("id, exercise_id, weight_kg, reps_completed, set_number, timestamp")
+      .eq("user_id", context.userId)
+      .order("timestamp", { ascending: false })
+      .limit(400);
+    if (error) throw new Error("Could not load workout history");
+    if (!logs || logs.length === 0) return [];
+
+    const { data: exerciseRows } = await supabaseAdmin
+      .from("exercises")
+      .select("id, name")
+      .in("id", Array.from(new Set(logs.map((log) => log.exercise_id))));
+    const nameById = new Map((exerciseRows ?? []).map((row) => [row.id, row.name]));
+
+    const sessions = new Map<
+      string,
+      { date: string; sets: number; volume: number; exercises: string[] }
+    >();
+    for (const log of logs) {
+      const date = new Date(log.timestamp).toISOString().slice(0, 10);
+      const session =
+        sessions.get(date) ?? { date, sets: 0, volume: 0, exercises: [] as string[] };
+      session.sets += 1;
+      session.volume += Number(log.weight_kg) * log.reps_completed;
+      const name = nameById.get(log.exercise_id) ?? log.exercise_id;
+      if (!session.exercises.includes(name)) session.exercises.push(name);
+      sessions.set(date, session);
+    }
+
+    return Array.from(sessions.values()).map((session) => ({
+      ...session,
+      volume: Math.round(session.volume),
+    }));
+  });
