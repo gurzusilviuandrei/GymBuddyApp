@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, Dumbbell, LogOut, UserRound } from "lucide-react";
+import { ArrowRight, Dumbbell, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { BottomNav } from "@/components/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureUserRow, getDayOneWorkout, getUserStats } from "@/lib/gym.functions";
 import { syncLocalProfile } from "@/lib/account-sync";
@@ -205,5 +206,7 @@ function Home() {
         </Button>
       </div>
     </main>
+    <BottomNav />
+    </>
   );
 }

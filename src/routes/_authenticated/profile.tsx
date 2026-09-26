@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BottomNav } from "@/components/BottomNav";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteAccount, getAccountSettings, updateAccountEmail } from "@/lib/account.functions";
@@ -213,5 +214,7 @@ function ProfilePage() {
         </div>
       </section>
     </main>
+    <BottomNav />
+    </>
   );
 }
