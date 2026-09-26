@@ -1,0 +1,1 @@
+ALTER TABLE public.users ADD COLUMN is_custom boolean NOT NULL DEFAULT false, ADD COLUMN custom_exercise_ids text[] NOT NULL DEFAULT '{}';

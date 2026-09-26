@@ -53,27 +53,33 @@ export type Database = {
         Row: {
           age: number | null
           created_at: string
+          custom_exercise_ids: string[]
           equipment_type: string | null
           full_name: string | null
           id: string
+          is_custom: boolean
           primary_goal: string | null
           weekly_goal_days: number | null
         }
         Insert: {
           age?: number | null
           created_at?: string
+          custom_exercise_ids?: string[]
           equipment_type?: string | null
           full_name?: string | null
           id: string
+          is_custom?: boolean
           primary_goal?: string | null
           weekly_goal_days?: number | null
         }
         Update: {
           age?: number | null
           created_at?: string
+          custom_exercise_ids?: string[]
           equipment_type?: string | null
           full_name?: string | null
           id?: string
+          is_custom?: boolean
           primary_goal?: string | null
           weekly_goal_days?: number | null
         }
