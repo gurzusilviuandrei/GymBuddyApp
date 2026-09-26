@@ -49,7 +49,6 @@ function Workout() {
   const [reps, setReps] = useState("");
   const [setNumber, setSetNumber] = useState(1);
   const [logging, setLogging] = useState(false);
-  const [userId, setUserId] = useState<string>();
   const [index, setIndex] = useState(0);
   const [complete, setComplete] = useState(false);
   const [lastLog, setLastLog] = useState<{ weight_kg: number; reps_completed: number } | null>(null);
