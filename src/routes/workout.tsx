@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { logWorkoutSet } from "@/lib/gym.functions";
 
 export const Route = createFileRoute("/workout")({
   head: () => ({
@@ -39,6 +42,41 @@ function PlayIcon() {
 function Workout() {
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("");
+  const [setNumber, setSetNumber] = useState(1);
+  const [logging, setLogging] = useState(false);
+  const logSet = useServerFn(logWorkoutSet);
+
+  const handleLogSet = async () => {
+    const w = Number(weight);
+    const r = Number(reps);
+    if (weight === "" || !Number.isFinite(w) || w < 0 || !Number.isInteger(r) || r < 1) {
+      toast.error("Enter a weight and at least 1 rep.");
+      return;
+    }
+    let userId: string | undefined;
+    try {
+      userId = JSON.parse(localStorage.getItem("gymbuddy-profile") ?? "{}").userId;
+    } catch {
+      userId = undefined;
+    }
+    if (!userId) {
+      toast.error("Finish setting up your profile first.");
+      return;
+    }
+    setLogging(true);
+    try {
+      await logSet({
+        data: { user_id: userId, exercise_id: "lat-pulldown", weight_kg: w, reps_completed: r, set_number: setNumber },
+      });
+      toast.success(`Set ${setNumber} logged: ${w} kg × ${r}`);
+      setSetNumber((n) => n + 1);
+      setReps("");
+    } catch {
+      toast.error("Couldn't log that set. Try again.");
+    } finally {
+      setLogging(false);
+    }
+  };
 
   return (
     <div className="flex min-h-dvh flex-col bg-background px-7 pb-10 pt-14 text-foreground">
@@ -104,9 +142,11 @@ function Workout() {
       <div className="mt-8">
         <button
           type="button"
-          className="h-16 w-full rounded-2xl bg-primary text-lg font-semibold tracking-wide text-primary-foreground shadow-neon transition hover:brightness-110 active:scale-[0.98]"
+          onClick={handleLogSet}
+          disabled={logging}
+          className="h-16 w-full rounded-2xl bg-primary text-lg font-semibold tracking-wide text-primary-foreground shadow-neon transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
         >
-          Log Set
+          {logging ? "Logging…" : `Log Set ${setNumber}`}
         </button>
       </div>
 

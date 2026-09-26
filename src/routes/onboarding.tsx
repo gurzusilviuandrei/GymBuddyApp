@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { createUserProfile } from "@/lib/gym.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -69,6 +72,9 @@ function Onboarding() {
   const [frequency, setFrequency] = useState<string | null>(null);
   const [goal, setGoal] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const navigate = useNavigate();
+  const createUser = useServerFn(createUserProfile);
 
   const ageNumber = Number(age);
   const detailsValid = name.trim().length > 0 && age.trim().length > 0 && Number.isFinite(ageNumber) && ageNumber >= 10 && ageNumber <= 100;
@@ -98,6 +104,28 @@ function Onboarding() {
     if (!goal) return;
     saveProfile({ goal });
     setStep(4);
+  };
+
+  const buildProfile = async () => {
+    if (!selected || !frequency || !goal || saving) return;
+    setSaving(true);
+    saveProfile({ equipment: selected });
+    try {
+      const { id } = await createUser({
+        data: {
+          full_name: name.trim(),
+          age: ageNumber,
+          frequency: frequency as "2-days",
+          primary_goal: goal as "gain-muscle",
+          equipment_type: selected as "full-gym",
+        },
+      });
+      saveProfile({ userId: id });
+      navigate({ to: "/home" });
+    } catch {
+      toast.error("Couldn't save your profile. Please try again.");
+      setSaving(false);
+    }
   };
 
   return (
@@ -314,8 +342,8 @@ function Onboarding() {
           </div>
 
           <div className="mt-auto pt-14">
-            <Button asChild size="lg" className={cn("h-16 w-full rounded-lg text-lg font-semibold shadow-neon transition-transform active:scale-[0.98]", !selected && "pointer-events-none opacity-40 shadow-none")}>
-              <Link to="/home" aria-disabled={!selected} tabIndex={selected ? undefined : -1} onClick={() => { if (selected) saveProfile({ equipment: selected }); }}>Build My Profile</Link>
+            <Button type="button" size="lg" disabled={!selected || saving} onClick={buildProfile} className={cn("h-16 w-full rounded-lg text-lg font-semibold shadow-neon transition-transform active:scale-[0.98]", !selected && "opacity-40 shadow-none")}>
+              {saving ? "Building…" : "Build My Profile"}
             </Button>
           </div>
         </section>
