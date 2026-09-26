@@ -225,6 +225,9 @@ function Home() {
                   Start Custom Workout <ArrowRight className="ml-2" aria-hidden="true" />
                 </Link>
               </Button>
+              <Button asChild variant="outline" className="mt-3 h-11 w-full rounded-lg border-primary/60 text-sm font-semibold text-primary hover:bg-primary/10 hover:text-primary">
+                <Link to="/custom-routine">Edit Routine</Link>
+              </Button>
             </>
           ) : (
             <>

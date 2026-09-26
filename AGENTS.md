@@ -24,4 +24,6 @@ Home and Workout share one Day 1 server query that resolves the saved user's equ
 
 - Home, History, and Profile share a fixed bottom tab bar; Onboarding and Workout omit it. Why: avoid mid-session exits.
 
-- Exercise cues live on exercise rows for planned and swapped movements; sessions run all ordered exercises and total their logged-set IDs. Why: guidance stays accurate and any-length workouts count their own sets.
+- Exercise cues live on exercise rows; sessions run all exercises and total their logged-set IDs. Why: guidance and totals stay accurate.
+
+- Custom routine order lives in the signed-in user’s custom_exercise_ids; edit locally until saved. Why: unsaved changes must not alter the active plan.
