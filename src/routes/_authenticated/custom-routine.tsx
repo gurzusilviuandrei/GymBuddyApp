@@ -12,9 +12,9 @@ export const Route = createFileRoute("/_authenticated/custom-routine")({
   head: () => ({
     meta: [
       { title: "Custom Routine Builder — GymBuddy" },
-      { name: "description", content: "Pick 3 exercises to build your own GymBuddy workout day." },
+      { name: "description", content: "Pick your exercises to build your own GymBuddy workout day." },
       { property: "og:title", content: "Custom Routine Builder — GymBuddy" },
-      { property: "og:description", content: "Pick 3 exercises to build your own GymBuddy workout day." },
+      { property: "og:description", content: "Pick your exercises to build your own GymBuddy workout day." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -40,14 +40,14 @@ function CustomRoutine() {
   const { data, isLoading } = useQuery({ queryKey: ["exercise-library"], queryFn: () => fetchLib() });
 
   useEffect(() => {
-    if (data?.selected.length === 3) setSelected(data.selected);
+    if (data?.selected) setSelected(data.selected);
   }, [data]);
 
   const toggle = (id: string) =>
-    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : s.length >= 3 ? s : [...s, id]));
+    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
   const handleSave = async () => {
-    if (selected.length !== 3 || saving) return;
+    if (selected.length === 0 || saving) return;
     setSaving(true);
     try {
       await save({ data: { exercise_ids: selected } });
@@ -71,7 +71,7 @@ function CustomRoutine() {
 
       <div className="sticky top-0 z-10 -mx-7 mt-6 border-b border-border bg-background/95 px-7 py-4 backdrop-blur" aria-live="polite">
         <p className="text-sm font-semibold uppercase tracking-widest">
-          Selected: <span className={selected.length === 3 ? "text-primary" : "text-foreground"}>{selected.length}</span>/3 Exercises
+          Selected: <span className={selected.length > 0 ? "text-primary" : "text-foreground"}>{selected.length}</span> {selected.length === 1 ? "Exercise" : "Exercises"}
         </p>
       </div>
 
@@ -86,19 +86,17 @@ function CustomRoutine() {
             <ul className="space-y-2">
               {items.map((ex) => {
                 const on = selected.includes(ex.id);
-                const disabled = !on && selected.length >= 3;
                 return (
                   <li key={ex.id}>
-                    <button
+                    <Button
                       type="button"
                       role="checkbox"
                       aria-checked={on}
-                      disabled={disabled}
+                      variant="outline"
                       onClick={() => toggle(ex.id)}
                       className={cn(
-                        "flex w-full items-center justify-between rounded-lg border bg-card px-5 py-4 text-left transition-colors",
+                        "h-auto min-h-16 w-full justify-between whitespace-normal rounded-lg bg-card px-5 py-4 text-left transition-colors",
                         on ? "border-primary" : "border-border",
-                        disabled && "opacity-40",
                       )}
                     >
                       <span>
@@ -110,7 +108,7 @@ function CustomRoutine() {
                       <span className={cn("flex size-6 items-center justify-center rounded-full border-2", on ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground")}>
                         {on && <Check size={14} strokeWidth={3} aria-hidden="true" />}
                       </span>
-                    </button>
+                    </Button>
                   </li>
                 );
               })}
@@ -121,7 +119,7 @@ function CustomRoutine() {
 
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 px-7 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur">
         <div className="mx-auto max-w-lg">
-          <Button size="lg" disabled={selected.length !== 3 || saving} onClick={handleSave} className="h-16 w-full rounded-lg text-lg font-semibold shadow-neon">
+          <Button size="lg" disabled={selected.length === 0 || saving} onClick={handleSave} className="h-16 w-full rounded-lg text-lg font-semibold shadow-neon">
             {saving ? "Saving…" : "Save Custom Routine"}
           </Button>
         </div>

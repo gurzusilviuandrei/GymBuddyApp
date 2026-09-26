@@ -153,13 +153,13 @@ export const getExerciseLibrary = createServerFn({ method: "GET" })
 export const saveCustomRoutine = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) =>
-    z.object({ exercise_ids: z.array(z.string().min(1).max(64)).length(3) }).parse(data),
+    z.object({ exercise_ids: z.array(z.string().min(1).max(64)).min(1) }).parse(data),
   )
   .handler(async ({ data, context }) => {
-    if (new Set(data.exercise_ids).size !== 3) throw new Error("Pick 3 different exercises");
+    if (new Set(data.exercise_ids).size !== data.exercise_ids.length) throw new Error("Pick different exercises");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: found } = await supabaseAdmin.from("exercises").select("id").in("id", data.exercise_ids);
-    if ((found?.length ?? 0) !== 3) throw new Error("Unknown exercise");
+    if ((found?.length ?? 0) !== data.exercise_ids.length) throw new Error("Unknown exercise");
     const { error } = await supabaseAdmin
       .from("users")
       .update({ is_custom: true, custom_exercise_ids: data.exercise_ids })
@@ -259,15 +259,15 @@ export const getUserStats = createServerFn({ method: "GET" })
     };
   });
 
-// Records a finished workout. Totals are computed server-side from the sets
-// this member actually logged since the session started.
+// Records a finished workout from this session's logged set IDs, not unrelated logs.
 export const completeWorkout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) =>
     z
       .object({
         program_type: z.enum(["premade", "custom"]),
-        exercise_ids: z.array(z.string().min(1).max(60)).min(1).max(12),
+        exercise_ids: z.array(z.string().min(1).max(64)).min(1),
+        log_ids: z.array(z.string().uuid()).min(1),
         started_at: z.string().datetime(),
       })
       .parse(data),
@@ -278,19 +278,25 @@ export const completeWorkout = createServerFn({ method: "POST" })
     const earliest = new Date(Date.now() - 12 * 60 * 60 * 1000);
     const startedAt = started < earliest ? earliest : started;
 
-    const { data: logs, error: logErr } = await supabaseAdmin
-      .from("workout_logs")
-      .select("exercise_id, weight_kg, reps_completed")
-      .eq("user_id", context.userId)
-      .gte("timestamp", startedAt.toISOString());
-    if (logErr) throw new Error("Could not read logged sets");
+    if (new Set(data.log_ids).size !== data.log_ids.length) throw new Error("Duplicate logged sets");
+    const logs = [] as { exercise_id: string; weight_kg: number; reps_completed: number }[];
+    for (let offset = 0; offset < data.log_ids.length; offset += 200) {
+      const { data: batch, error: logErr } = await supabaseAdmin
+        .from("workout_logs")
+        .select("exercise_id, weight_kg, reps_completed")
+        .eq("user_id", context.userId)
+        .gte("timestamp", startedAt.toISOString())
+        .in("id", data.log_ids.slice(offset, offset + 200));
+      if (logErr || !batch || batch.length !== Math.min(200, data.log_ids.length - offset)) throw new Error("Could not read all logged sets");
+      logs.push(...batch);
+    }
 
-    const ids = Array.from(new Set([...data.exercise_ids, ...(logs ?? []).map((l) => l.exercise_id)]));
+    const ids = Array.from(new Set([...data.exercise_ids, ...logs.map((l) => l.exercise_id)]));
     const { data: rows } = await supabaseAdmin.from("exercises").select("id, name").in("id", ids);
     const nameById = new Map((rows ?? []).map((r) => [r.id, r.name]));
-    const doneIds = Array.from(new Set((logs ?? []).map((l) => l.exercise_id)));
-    const names = (doneIds.length ? doneIds : data.exercise_ids).map((id) => nameById.get(id) ?? id);
-    const volume = (logs ?? []).reduce((s, l) => s + Number(l.weight_kg) * l.reps_completed, 0);
+    const doneIds = new Set(logs.map((l) => l.exercise_id));
+    const names = data.exercise_ids.filter((id) => doneIds.has(id)).map((id) => nameById.get(id) ?? id);
+    const volume = logs.reduce((s, l) => s + Number(l.weight_kg) * l.reps_completed, 0);
 
     const { data: row, error } = await supabaseAdmin
       .from("workout_sessions")
@@ -298,8 +304,8 @@ export const completeWorkout = createServerFn({ method: "POST" })
         user_id: context.userId,
         program_type: data.program_type,
         exercise_names: names,
-        total_sets: logs?.length ?? 0,
-        total_volume_kg: Math.round(volume),
+        total_sets: logs.length,
+        total_volume_kg: volume,
         started_at: startedAt.toISOString(),
       })
       .select("id, total_sets, total_volume_kg")
@@ -328,7 +334,7 @@ export const getWorkoutHistory = createServerFn({ method: "GET" })
       completedAt: r.completed_at,
       program: r.program_type as "premade" | "custom",
       sets: r.total_sets,
-      volume: Math.round(Number(r.total_volume_kg)),
+      volume: Number(r.total_volume_kg),
       exercises: r.exercise_names,
     }));
   });

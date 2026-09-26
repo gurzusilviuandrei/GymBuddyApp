@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -44,7 +44,6 @@ function PlayIcon() {
   );
 }
 
-const EXERCISES_PER_SESSION = 3;
 const REST_DURATION_MS = 90_000;
 type Ex = { id: string; name: string; instructions: string; setup_cue: string | null; position_cue: string | null; movement_cue: string | null; video_url: string | null; alternative_exercise_id: string | null };
 
@@ -69,6 +68,8 @@ function Workout() {
   const [summary, setSummary] = useState<{ sets: number; volume: number } | null>(null);
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(90);
+  const loggedSetIds = useRef<string[]>([]);
+  const usedExerciseIds = useRef<Record<number, string>>({});
 
   useEffect(() => {
     if (restEndsAt === null) return;
@@ -92,7 +93,7 @@ function Workout() {
   });
 
 
-  const session = workout?.exercises.slice(0, EXERCISES_PER_SESSION) ?? [];
+  const session = workout?.exercises ?? [];
   const targetSets = workout?.target_sets ?? 3;
   const primary = session[index];
   const exercise = swapped ?? primary;
@@ -120,12 +121,14 @@ function Workout() {
     if (isLastExercise) {
       if (finishing) return;
       setFinishing(true);
+      setComplete(true);
       try {
-        const doneIds = session.map((e, i) => (i === index && swapped ? swapped.id : e.id));
+        const doneIds = session.map((e, i) => usedExerciseIds.current[i] ?? e.id);
         const saved = await finish({
           data: {
             program_type: workout?.is_custom ? "custom" : "premade",
             exercise_ids: doneIds,
+            log_ids: loggedSetIds.current,
             started_at: startedAt,
           },
         });
@@ -134,6 +137,7 @@ function Workout() {
         queryClient.invalidateQueries({ queryKey: ["workout-history"] });
         setComplete(true);
       } catch {
+        setComplete(false);
         toast.error("Couldn't save your workout. Try again.");
       } finally {
         setFinishing(false);
@@ -159,6 +163,7 @@ function Workout() {
       }
       setSwapped(alt);
       setSetNumber(1);
+      usedExerciseIds.current[index] = alt.id;
       toast.success(`Swapped to ${alt.name}`);
     } catch {
       toast.error("Couldn't swap right now. Try again.");
@@ -181,13 +186,17 @@ function Workout() {
     }
     if (logging || restEndsAt !== null) return;
     // Start at the tap, not after the network request completes.
-    setSecondsLeft(90);
-    setRestEndsAt(Date.now() + REST_DURATION_MS);
+    if (setNumber < targetSets) {
+      setSecondsLeft(90);
+      setRestEndsAt(Date.now() + REST_DURATION_MS);
+    }
     setLogging(true);
     try {
-      await logSet({
+      const logged = await logSet({
         data: { exercise_id: exercise.id, weight_kg: w, reps_completed: r, set_number: setNumber },
       });
+      loggedSetIds.current.push(logged.id);
+      usedExerciseIds.current[index] = exercise.id;
 
       toast.success(`Set ${setNumber} logged: ${w} kg × ${r}`);
       setLastLog({ weight_kg: w, reps_completed: r });
@@ -208,14 +217,15 @@ function Workout() {
         <h1 className="mt-8 text-3xl font-semibold tracking-tight">Workout Complete!</h1>
         <p className="mt-3 text-lg text-primary">Bro Status Upgraded 🏆</p>
         <p className="mt-4 text-base text-muted-foreground">
-          {summary?.sets ?? 0} sets crushed · {summary?.volume ?? 0} kg lifted. Saved to your History.
+          {summary
+            ? `${session.length} exercises · ${summary.sets} sets crushed · ${summary.volume} kg lifted. Saved to your History.`
+            : "Saving your workout…"}
         </p>
-        <Link
-          to="/home"
-          className="mt-12 flex h-16 w-full max-w-sm items-center justify-center rounded-2xl bg-primary text-lg font-semibold text-primary-foreground shadow-neon transition hover:brightness-110"
-        >
-          Back to Home
-        </Link>
+        {summary && (
+          <Button asChild className="mt-12 h-16 w-full max-w-sm text-lg font-semibold shadow-neon">
+            <Link to="/home">Back to Home</Link>
+          </Button>
+        )}
       </div>
     );
   }

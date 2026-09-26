@@ -19,3 +19,6 @@
 - [x] Verify both cards launch the tracker with the correct program.
 - [x] Add a 90-second rest countdown after logging sets, with Skip Rest.
 - [x] Show three exercise-specific setup and form cues for all 30 exercises.
+- [x] Run the tracker through every exercise in the selected program, with the final action finishing the session.
+- [x] Let custom routines contain any number of distinct exercises and show them all on Home.
+- [x] Total only this session's logged sets across the full routine in the recap and history.
