@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { getDayOneWorkout, getAlternativeExercise, getLastLog, logWorkoutSet } from "@/lib/gym.functions";
+import { getDayOneWorkout, getAlternativeExercise, getLastLog, logWorkoutSet, completeWorkout } from "@/lib/gym.functions";
 
 export const Route = createFileRoute("/_authenticated/workout")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -61,6 +61,11 @@ function Workout() {
   const fetchLastLog = useServerFn(getLastLog);
   const [swapped, setSwapped] = useState<Ex | null>(null);
   const [swapping, setSwapping] = useState(false);
+  const finish = useServerFn(completeWorkout);
+  const queryClient = useQueryClient();
+  const [startedAt] = useState(() => new Date().toISOString());
+  const [finishing, setFinishing] = useState(false);
+  const [summary, setSummary] = useState<{ sets: number; volume: number } | null>(null);
 
   // Identity comes from the signed-in session on the server, so this loads even
   // when the local copy of the profile is missing. `mode` picks the program:
@@ -96,9 +101,28 @@ function Workout() {
   }, [exercise?.id]);
 
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (isLastExercise) {
-      setComplete(true);
+      if (finishing) return;
+      setFinishing(true);
+      try {
+        const doneIds = session.map((e, i) => (i === index && swapped ? swapped.id : e.id));
+        const saved = await finish({
+          data: {
+            program_type: workout?.is_custom ? "custom" : "premade",
+            exercise_ids: doneIds,
+            started_at: startedAt,
+          },
+        });
+        setSummary({ sets: saved.sets, volume: saved.volume });
+        queryClient.invalidateQueries({ queryKey: ["user-stats"] });
+        queryClient.invalidateQueries({ queryKey: ["workout-history"] });
+        setComplete(true);
+      } catch {
+        toast.error("Couldn't save your workout. Try again.");
+      } finally {
+        setFinishing(false);
+      }
       return;
     }
     setIndex((i) => i + 1);
@@ -164,7 +188,7 @@ function Workout() {
         <h1 className="mt-8 text-3xl font-semibold tracking-tight">Workout Complete!</h1>
         <p className="mt-3 text-lg text-primary">Bro Status Upgraded 🏆</p>
         <p className="mt-4 text-base text-muted-foreground">
-          {session.length} exercises · {session.length * targetSets} sets crushed.
+          {summary?.sets ?? 0} sets crushed · {summary?.volume ?? 0} kg lifted. Saved to your History.
         </p>
         <Link
           to="/home"
@@ -260,7 +284,7 @@ function Workout() {
         <button
           type="button"
           onClick={handleLogSet}
-          disabled={logging || !exercise}
+          disabled={logging || finishing || !exercise}
           className="h-16 w-full rounded-2xl bg-primary text-lg font-semibold tracking-wide text-primary-foreground shadow-neon transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
         >
           {logging

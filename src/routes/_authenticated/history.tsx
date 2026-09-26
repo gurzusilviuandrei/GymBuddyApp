@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CalendarDays, Flame } from "lucide-react";
+import { CalendarDays } from "lucide-react";
+import { SessionCard } from "@/components/SessionCard";
 import { BottomNav } from "@/components/BottomNav";
 import { getWorkoutHistory } from "@/lib/gym.functions";
 
@@ -19,13 +20,6 @@ export const Route = createFileRoute("/_authenticated/history")({
   component: HistoryPage,
 });
 
-function formatDate(date: string) {
-  return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-}
 
 function HistoryPage() {
   const fetchHistory = useServerFn(getWorkoutHistory);
@@ -41,7 +35,7 @@ function HistoryPage() {
           <p className="text-xs font-semibold uppercase text-primary">Your training log</p>
           <h1 className="mt-3 text-3xl font-semibold">History</h1>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            Every session you have logged, newest first.
+            Every workout you have finished, newest first.
           </p>
         </header>
 
@@ -55,28 +49,12 @@ function HistoryPage() {
               </div>
               <h2 className="mt-5 text-lg font-semibold">No workouts yet</h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Log your first set and your sessions will show up right here.
+                Finish your first workout and it will show up right here.
               </p>
             </div>
           )}
 
-          {sessions?.map((session) => (
-            <article key={session.date} className="rounded-lg border border-border bg-card p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase text-primary">{formatDate(session.date)}</p>
-                  <h2 className="mt-3 text-lg font-semibold">
-                    {session.sets} sets <span className="mx-1 text-primary">·</span> {session.exercises.length} exercises
-                  </h2>
-                  <p className="mt-2 truncate text-sm text-muted-foreground">{session.exercises.join(" · ")}</p>
-                </div>
-                <div className="flex shrink-0 flex-col items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-primary">
-                  <Flame size={18} strokeWidth={1.8} aria-hidden="true" />
-                  <span className="text-xs font-semibold">{session.volume} kg</span>
-                </div>
-              </div>
-            </article>
-          ))}
+          {sessions?.map((session) => <SessionCard key={session.id} session={session} />)}
         </section>
       </main>
       <BottomNav />

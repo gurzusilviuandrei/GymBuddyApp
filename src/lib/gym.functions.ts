@@ -240,14 +240,13 @@ export const getUserStats = createServerFn({ method: "GET" })
     const sunday = new Date(now.setDate(diff));
     sunday.setHours(0, 0, 0, 0);
 
-    const { data: logs } = await supabaseAdmin
-      .from("workout_logs")
-      .select("timestamp")
+    // A workout counts once it has been finished (completion screen reached).
+    const { count } = await supabaseAdmin
+      .from("workout_sessions")
+      .select("id", { count: "exact", head: true })
       .eq("user_id", context.userId)
-      .gte("timestamp", sunday.toISOString());
+      .gte("completed_at", sunday.toISOString());
 
-    const uniqueDays = new Set(logs?.map((l) => new Date(l.timestamp).toDateString())).size;
-    
     const { data: user } = await supabaseAdmin
       .from("users")
       .select("weekly_goal_days")
@@ -255,48 +254,81 @@ export const getUserStats = createServerFn({ method: "GET" })
       .maybeSingle();
 
     return {
-      completedWorkouts: uniqueDays,
+      completedWorkouts: count ?? 0,
       weeklyTarget: user?.weekly_goal_days ?? 3,
     };
   });
 
-export const getWorkoutHistory = createServerFn({ method: "GET" })
+// Records a finished workout. Totals are computed server-side from the sets
+// this member actually logged since the session started.
+export const completeWorkout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ user_id: z.string().optional() }).parse(data))
+  .inputValidator((data) =>
+    z
+      .object({
+        program_type: z.enum(["premade", "custom"]),
+        exercise_ids: z.array(z.string().min(1).max(60)).min(1).max(12),
+        started_at: z.string().datetime(),
+      })
+      .parse(data),
+  )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: logs, error } = await supabaseAdmin
+    const started = new Date(data.started_at);
+    const earliest = new Date(Date.now() - 12 * 60 * 60 * 1000);
+    const startedAt = started < earliest ? earliest : started;
+
+    const { data: logs, error: logErr } = await supabaseAdmin
       .from("workout_logs")
-      .select("id, exercise_id, weight_kg, reps_completed, set_number, timestamp")
+      .select("exercise_id, weight_kg, reps_completed")
       .eq("user_id", context.userId)
-      .order("timestamp", { ascending: false })
-      .limit(400);
-    if (error) throw new Error("Could not load workout history");
-    if (!logs || logs.length === 0) return [];
+      .gte("timestamp", startedAt.toISOString());
+    if (logErr) throw new Error("Could not read logged sets");
 
-    const { data: exerciseRows } = await supabaseAdmin
-      .from("exercises")
-      .select("id, name")
-      .in("id", Array.from(new Set(logs.map((log) => log.exercise_id))));
-    const nameById = new Map((exerciseRows ?? []).map((row) => [row.id, row.name]));
+    const ids = Array.from(new Set([...data.exercise_ids, ...(logs ?? []).map((l) => l.exercise_id)]));
+    const { data: rows } = await supabaseAdmin.from("exercises").select("id, name").in("id", ids);
+    const nameById = new Map((rows ?? []).map((r) => [r.id, r.name]));
+    const doneIds = Array.from(new Set((logs ?? []).map((l) => l.exercise_id)));
+    const names = (doneIds.length ? doneIds : data.exercise_ids).map((id) => nameById.get(id) ?? id);
+    const volume = (logs ?? []).reduce((s, l) => s + Number(l.weight_kg) * l.reps_completed, 0);
 
-    const sessions = new Map<
-      string,
-      { date: string; sets: number; volume: number; exercises: string[] }
-    >();
-    for (const log of logs) {
-      const date = new Date(log.timestamp).toISOString().slice(0, 10);
-      const session =
-        sessions.get(date) ?? { date, sets: 0, volume: 0, exercises: [] as string[] };
-      session.sets += 1;
-      session.volume += Number(log.weight_kg) * log.reps_completed;
-      const name = nameById.get(log.exercise_id) ?? log.exercise_id;
-      if (!session.exercises.includes(name)) session.exercises.push(name);
-      sessions.set(date, session);
+    const { data: row, error } = await supabaseAdmin
+      .from("workout_sessions")
+      .insert({
+        user_id: context.userId,
+        program_type: data.program_type,
+        exercise_names: names,
+        total_sets: logs?.length ?? 0,
+        total_volume_kg: Math.round(volume),
+        started_at: startedAt.toISOString(),
+      })
+      .select("id, total_sets, total_volume_kg")
+      .single();
+    if (error) {
+      console.error("completeWorkout insert failed", error.code, error.message);
+      throw new Error("Could not save workout");
     }
+    return { id: row.id, sets: row.total_sets, volume: Number(row.total_volume_kg) };
+  });
 
-    return Array.from(sessions.values()).map((session) => ({
-      ...session,
-      volume: Math.round(session.volume),
+export const getWorkoutHistory = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ limit: z.number().int().min(1).max(200).optional() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("workout_sessions")
+      .select("id, program_type, exercise_names, total_sets, total_volume_kg, completed_at")
+      .eq("user_id", context.userId)
+      .order("completed_at", { ascending: false })
+      .limit(data.limit ?? 100);
+    if (error) throw new Error("Could not load workout history");
+    return (rows ?? []).map((r) => ({
+      id: r.id,
+      completedAt: r.completed_at,
+      program: r.program_type as "premade" | "custom",
+      sets: r.total_sets,
+      volume: Math.round(Number(r.total_volume_kg)),
+      exercises: r.exercise_names,
     }));
   });

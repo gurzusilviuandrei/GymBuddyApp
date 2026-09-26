@@ -7,7 +7,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
-import { ensureUserRow, getDayOneWorkout, getUserStats } from "@/lib/gym.functions";
+import { ensureUserRow, getDayOneWorkout, getUserStats, getWorkoutHistory } from "@/lib/gym.functions";
+import { SessionCard } from "@/components/SessionCard";
 import { syncLocalProfile } from "@/lib/account-sync";
 
 
@@ -53,6 +54,11 @@ function Home() {
   const queryClient = useQueryClient();
   const fetchWorkout = useServerFn(getDayOneWorkout);
   const fetchStats = useServerFn(getUserStats);
+  const fetchHistory = useServerFn(getWorkoutHistory);
+  const { data: recent } = useQuery({
+    queryKey: ["workout-history", "recent"],
+    queryFn: () => fetchHistory({ data: { limit: 3 } }),
+  });
   const ensure = useServerFn(ensureUserRow);
 
 
@@ -233,6 +239,22 @@ function Home() {
                 <Link to="/custom-routine">Assemble Custom Routine</Link>
               </Button>
             </>
+          )}
+        </div>
+      </section>
+
+      <section className="mt-14" aria-label="Recent workouts">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Recent Workouts</h2>
+          <Link to="/history" className="text-sm font-semibold text-primary hover:underline">See all</Link>
+        </div>
+        <div className="mt-4 space-y-4">
+          {recent && recent.length > 0 ? (
+            recent.map((s) => <SessionCard key={s.id} session={s} />)
+          ) : (
+            <p className="rounded-lg border border-border bg-card p-6 text-sm text-muted-foreground">
+              No finished workouts yet. Complete one and it lands here.
+            </p>
           )}
         </div>
       </section>
