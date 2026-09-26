@@ -20,23 +20,26 @@ export const Route = createFileRoute("/")({
 function Welcome() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col overflow-hidden bg-background px-7 pb-[max(2.5rem,env(safe-area-inset-bottom))] text-foreground">
-      <header className="pt-20 pb-10 text-center">
-        <img
-          src={gymBuddyLogo}
-          alt="GymBuddy"
-          className="welcome-logo mx-auto h-auto w-48 object-contain"
-        />
-        <p className="mt-5 text-sm font-medium text-muted-foreground">The beginner&rsquo;s gym guide.</p>
-      </header>
+      {/* Unified group: logo + subtitle + graphic, centered as one block with
+          even empty space above and below. 24px (gap-6) between the subtitle
+          and the top of the barbell circle. */}
+      <div className="flex flex-1 flex-col items-center justify-center gap-6 py-8">
+        <header className="text-center">
+          <img
+            src={gymBuddyLogo}
+            alt="GymBuddy"
+            className="welcome-logo mx-auto h-auto w-48 object-contain"
+          />
+          <p className="mt-4 text-sm font-medium text-muted-foreground">The beginner&rsquo;s gym guide.</p>
+        </header>
 
-      <div className="flex min-h-80 flex-1 items-center justify-center py-6" aria-hidden="true">
-        <div className="relative flex aspect-square w-full max-w-80 items-center justify-center">
+        <div className="flex aspect-square w-full max-w-72 items-center justify-center" aria-hidden="true">
           <div className="absolute inset-3 rounded-full border border-border/70" />
           <div className="absolute inset-10 rounded-full border border-primary/40" />
           <div className="absolute inset-17 rounded-full bg-card" />
           <div className="absolute left-2 top-1/2 h-px w-12 bg-primary/70" />
           <div className="absolute right-2 top-1/2 h-px w-12 bg-primary/70" />
-          <Dumbbell className="relative size-32 -rotate-35 text-primary drop-shadow-[0_0_22px_var(--primary)]" strokeWidth={1.15} />
+          <Dumbbell className="relative size-28 -rotate-35 text-primary drop-shadow-[0_0_22px_var(--primary)]" strokeWidth={1.15} />
           <span className="absolute bottom-4 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-primary" />
           <span className="absolute left-1/2 top-4 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-primary" />
         </div>
