@@ -114,3 +114,24 @@
     appearance: textfield;
   }
 }
+
+@keyframes welcome-logo-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.welcome-logo {
+  animation: welcome-logo-fade-in 900ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-logo {
+    animation: none;
+  }
+}
