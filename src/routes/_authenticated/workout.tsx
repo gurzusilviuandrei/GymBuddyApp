@@ -45,7 +45,8 @@ function PlayIcon() {
 }
 
 const EXERCISES_PER_SESSION = 3;
-type Ex = { id: string; name: string; instructions: string; video_url: string | null; alternative_exercise_id: string | null };
+const REST_DURATION_MS = 90_000;
+type Ex = { id: string; name: string; instructions: string; setup_cue: string | null; position_cue: string | null; movement_cue: string | null; video_url: string | null; alternative_exercise_id: string | null };
 
 function Workout() {
   const [weight, setWeight] = useState("");
@@ -66,6 +67,20 @@ function Workout() {
   const [startedAt] = useState(() => new Date().toISOString());
   const [finishing, setFinishing] = useState(false);
   const [summary, setSummary] = useState<{ sets: number; volume: number } | null>(null);
+  const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(90);
+
+  useEffect(() => {
+    if (restEndsAt === null) return;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((restEndsAt - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+      if (remaining === 0) setRestEndsAt(null);
+    };
+    tick();
+    const interval = window.setInterval(tick, 250);
+    return () => window.clearInterval(interval);
+  }, [restEndsAt]);
 
   // Identity comes from the signed-in session on the server, so this loads even
   // when the local copy of the profile is missing. `mode` picks the program:
@@ -164,6 +179,10 @@ function Workout() {
       toast.error("Your workout is still loading. Try again in a moment.");
       return;
     }
+    if (logging || restEndsAt !== null) return;
+    // Start at the tap, not after the network request completes.
+    setSecondsLeft(90);
+    setRestEndsAt(Date.now() + REST_DURATION_MS);
     setLogging(true);
     try {
       await logSet({
@@ -175,6 +194,7 @@ function Workout() {
       setSetNumber((n) => n + 1);
       setReps("");
     } catch {
+      setRestEndsAt(null);
       toast.error("Couldn't log that set. Try again.");
     } finally {
       setLogging(false);
@@ -227,9 +247,24 @@ function Workout() {
         <p className="mt-3 text-lg text-muted-foreground">
           {workout ? `Target: ${workout.target_sets} Sets × ${workout.target_reps} Reps` : "Loading target…"}
         </p>
-        <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-          {exercise?.instructions ?? (isLoading ? "Loading exercise details…" : "No exercise is assigned to this workout.")}
-        </p>
+        {exercise ? (
+          <section aria-label="Exercise setup and form" className="mt-6 rounded-lg border border-border bg-card p-5">
+            <ul className="space-y-5">
+              {([
+                ["Machine Setup", exercise.setup_cue || "Choose a manageable load and check your equipment."],
+                ["Starting Position", exercise.position_cue || "Get stable and brace your core before you move."],
+                ["Key Movement Cue", exercise.movement_cue || exercise.instructions || "Move slowly and with control."],
+              ] as const).map(([label, cue]) => (
+                <li key={label} className="flex gap-3 text-sm leading-relaxed">
+                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                  <span><strong className="block font-semibold text-foreground">{label}</strong><span className="text-muted-foreground">{cue}</span></span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : (
+          <p className="mt-4 text-muted-foreground">{isLoading ? "Loading exercise details…" : "No exercise is assigned to this workout."}</p>
+        )}
         {lastLog && (
           <div className="mt-6 rounded-2xl border border-primary/40 bg-card p-5" aria-live="polite">
             <p className="text-sm text-muted-foreground">
@@ -281,11 +316,11 @@ function Workout() {
 
       {/* Log Set */}
       <div className="mt-8">
-        <button
+        <Button
           type="button"
           onClick={handleLogSet}
-          disabled={logging || finishing || !exercise}
-          className="h-16 w-full rounded-2xl bg-primary text-lg font-semibold tracking-wide text-primary-foreground shadow-neon transition hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
+          disabled={logging || finishing || !exercise || restEndsAt !== null}
+          className="h-16 w-full rounded-lg text-lg font-semibold shadow-neon"
         >
           {logging
             ? "Logging…"
@@ -294,19 +329,20 @@ function Workout() {
                 ? "Finish Workout"
                 : "Next Exercise"
               : `Log Set ${setNumber}`}
-        </button>
+        </Button>
       </div>
 
       {/* Secondary swap action */}
       <div className="mt-5 flex justify-center">
-        <button
+        <Button
           type="button"
+          variant="outline"
           onClick={handleSwap}
           disabled={swapping || !exercise}
-          className="rounded-xl border border-border px-6 py-3 text-sm font-medium text-muted-foreground transition hover:border-primary/60 hover:text-foreground disabled:opacity-60"
+          className="h-auto min-h-11 whitespace-normal rounded-lg px-6 py-3 text-center text-sm text-muted-foreground hover:text-foreground"
         >
           {swapping ? "Swapping…" : "Machine Occupied? Swap Exercise"}
-        </button>
+        </Button>
       </div>
 
        <div className="mt-auto pt-10">
@@ -317,6 +353,22 @@ function Workout() {
            Back to home
         </Link>
       </div>
+       {restEndsAt !== null && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 px-7 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Rest timer">
+           <div className="w-full max-w-sm text-center">
+             <p className="text-sm font-semibold uppercase tracking-widest text-primary">Rest between sets</p>
+             <p className="mt-4 text-7xl font-semibold tabular-nums text-foreground" role="timer" aria-label={`${secondsLeft} seconds remaining`}>
+               {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, "0")}
+             </p>
+             <div className="mt-8 h-1.5 w-full overflow-hidden rounded-full bg-secondary" role="progressbar" aria-valuemin={0} aria-valuemax={90} aria-valuenow={90 - secondsLeft} aria-label="Rest progress">
+               <div className="h-full rounded-full bg-primary transition-[width] duration-200 motion-reduce:transition-none" style={{ width: `${((90 - secondsLeft) / 90) * 100}%` }} />
+             </div>
+             <Button type="button" variant="link" onClick={() => setRestEndsAt(null)} className="mt-7 text-base text-muted-foreground hover:text-primary">
+               Skip Rest
+             </Button>
+           </div>
+         </div>
+       )}
     </div>
   );
 }
