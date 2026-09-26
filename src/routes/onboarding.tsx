@@ -18,7 +18,7 @@ export const Route = createFileRoute("/onboarding")({
   component: Onboarding,
 });
 
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 4;
 
 const EQUIPMENT_OPTIONS = [
   { id: "full-gym", label: "Full Gym Machines" },
@@ -30,6 +30,12 @@ const FREQUENCY_OPTIONS = [
   { id: "2-days", label: "2 Days / Week" },
   { id: "3-days", label: "3 Days / Week" },
   { id: "4-plus", label: "4+ Days / Week" },
+] as const;
+
+const GOAL_OPTIONS = [
+  { id: "lose-weight", label: "Lose Weight", subtext: "Burn fat and improve stamina" },
+  { id: "gain-muscle", label: "Gain Muscle", subtext: "Build strength and solid mass" },
+  { id: "sports-performance", label: "Sports Performance", subtext: "Improve speed and athletic agility" },
 ] as const;
 
 function CheckIcon() {
@@ -61,6 +67,7 @@ function Onboarding() {
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
   const [frequency, setFrequency] = useState<string | null>(null);
+  const [goal, setGoal] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
 
   const ageNumber = Number(age);
@@ -85,6 +92,12 @@ function Onboarding() {
     if (!frequency) return;
     saveProfile({ frequency });
     setStep(3);
+  };
+
+  const goToStep4 = () => {
+    if (!goal) return;
+    saveProfile({ goal });
+    setStep(4);
   };
 
   return (
