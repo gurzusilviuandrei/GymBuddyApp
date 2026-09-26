@@ -17,26 +17,32 @@ export type Database = {
       exercises: {
         Row: {
           alternative_exercise_id: string | null
+          equipment_type: string
           id: string
           instructions: string
           movement_type: string
           name: string
+          target: string
           video_url: string | null
         }
         Insert: {
           alternative_exercise_id?: string | null
+          equipment_type?: string
           id: string
           instructions?: string
           movement_type: string
           name: string
+          target?: string
           video_url?: string | null
         }
         Update: {
           alternative_exercise_id?: string | null
+          equipment_type?: string
           id?: string
           instructions?: string
           movement_type?: string
           name?: string
+          target?: string
           video_url?: string | null
         }
         Relationships: [
