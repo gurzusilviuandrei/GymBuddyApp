@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, Dumbbell, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, Dumbbell, LogOut, SlidersHorizontal } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import { getDayOneWorkout, getUserStats } from "@/lib/gym.functions";
 
 const FREQUENCY_TARGETS: Record<string, number> = {
@@ -43,8 +45,25 @@ export const Route = createFileRoute("/_authenticated/home")({
 
 function Home() {
   const [profile, setProfile] = useState<Profile>({});
+  const [signingOut, setSigningOut] = useState(false);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const fetchWorkout = useServerFn(getDayOneWorkout);
   const fetchStats = useServerFn(getUserStats);
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await queryClient.cancelQueries(); // stop in-flight queries before 401s land
+      queryClient.clear(); // drop cached protected data
+      await supabase.auth.signOut(); // session cleared, account data stays in the database
+      navigate({ to: "/", replace: true }); // history REPLACE — Back must not restore /home
+    } catch {
+      setSigningOut(false);
+      toast.error("Couldn't sign you out. Try again.");
+    }
+  };
 
   useEffect(() => {
     setProfile(readProfile());
