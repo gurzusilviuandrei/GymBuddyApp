@@ -82,8 +82,13 @@ function Home() {
     setProfile(readProfile());
     let cancelled = false;
     ensure()
-      .then((result) => {
+      .then(async (result) => {
         if (cancelled) return;
+        if (result.accountMissing) {
+          await supabase.auth.signOut();
+          navigate({ to: "/", replace: true });
+          return;
+        }
         const dest = syncLocalProfile(result);
         if (dest === "/onboarding") {
           navigate({ to: "/onboarding", replace: true });
