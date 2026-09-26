@@ -6,7 +6,9 @@ import { ArrowRight, Dumbbell, LogOut, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { getDayOneWorkout, getUserStats } from "@/lib/gym.functions";
+import { ensureUserRow, getDayOneWorkout, getUserStats } from "@/lib/gym.functions";
+import { syncLocalProfile } from "@/lib/account-sync";
+
 
 const FREQUENCY_TARGETS: Record<string, number> = {
   "2-days": 2,
