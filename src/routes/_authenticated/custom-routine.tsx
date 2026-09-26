@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowDown, ArrowLeft, ArrowUp, Plus, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Check, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -49,11 +49,18 @@ function CustomRoutine() {
   const [saving, setSaving] = useState(false);
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["exercise-library"], queryFn: () => fetchLib() });
 
-  useEffect(() => { if (data?.selected) setSelected(data.selected); }, [data]);
+  useEffect(() => { if (data?.selected) setSelected([...new Set(data.selected)]); }, [data]);
   const exercises = data?.exercises ?? [];
   const exerciseById = new Map(exercises.map((exercise) => [exercise.id, exercise]));
   const available = exercises.filter((exercise) => !selected.includes(exercise.id) && (filter === "all" || categoryOf(exercise.movement_type) === filter));
-  const addExercise = (id: string) => setSelected((current) => current.includes(id) ? current : [...current, id]);
+  const matchesFilter = (exercise: { movement_type: string }) => filter === "all" || categoryOf(exercise.movement_type) === filter;
+  const addExercise = (id: string) => {
+    if (selected.includes(id)) {
+      toast.error("Already in your routine.");
+      return;
+    }
+    setSelected((current) => [...current, id]);
+  };
   const removeExercise = (id: string) => setSelected((current) => current.filter((item) => item !== id));
   const moveExercise = (index: number, direction: -1 | 1) => setSelected((current) => {
     const nextIndex = index + direction;
