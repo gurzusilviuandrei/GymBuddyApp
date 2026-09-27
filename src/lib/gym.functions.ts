@@ -211,6 +211,42 @@ export const logWorkoutSet = createServerFn({ method: "POST" })
     return row;
   });
 
+export const updateWorkoutSet = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        weight_kg: z.number().min(0).max(1000),
+        reps_completed: z.number().int().min(1).max(100),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("workout_logs")
+      .update({ weight_kg: data.weight_kg, reps_completed: data.reps_completed })
+      .eq("id", data.id)
+      .eq("user_id", context.userId);
+    if (error) throw new Error("Could not update set");
+    return { ok: true };
+  });
+
+export const deleteWorkoutSet = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("workout_logs")
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", context.userId);
+    if (error) throw new Error("Could not delete set");
+    return { ok: true };
+  });
+
 export const getLastLog = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) =>
