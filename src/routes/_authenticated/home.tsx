@@ -89,10 +89,16 @@ function Home() {
 
   // Source of truth is the signed-in account, not browser storage: refresh the
   // local copy from the backend and send unfinished accounts to onboarding.
+  // Cached through the query client so returning to Home does not re-request it.
   useEffect(() => {
     setProfile(readProfile());
     let cancelled = false;
-    ensure()
+    queryClient
+      .fetchQuery({
+        queryKey: ["ensure-user-row"],
+        queryFn: () => ensure(),
+        staleTime: 5 * 60 * 1000,
+      })
       .then(async (result) => {
         if (cancelled) return;
         if (result.accountMissing) {
