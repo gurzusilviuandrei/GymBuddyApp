@@ -18,6 +18,7 @@ export function BottomNav() {
           <li key={to} className="flex-1">
             <Link
               to={to}
+              preload="intent"
               activeProps={{ className: "text-primary", "aria-current": "page" }}
               inactiveProps={{ className: "text-muted-foreground" }}
               className="flex h-16 flex-col items-center justify-center gap-1 transition-colors hover:text-foreground"
