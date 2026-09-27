@@ -77,7 +77,7 @@ export const deleteAccount = createServerFn({ method: "POST" })
       },
     });
     const { data: check, error: checkError } = await verifier.auth.signInWithPassword({ email, password: data.password });
-    if (checkError || check.user?.id !== context.userId) throw new Error("INVALID_PASSWORD");
+    if (checkError || check.user?.id !== context.userId) return { deleted: false as const, reason: "invalid_password" as const };
     await verifier.auth.signOut({ scope: "local" }).catch(() => {});
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -99,5 +99,5 @@ export const deleteAccount = createServerFn({ method: "POST" })
     const { error: accountError } = await supabaseAdmin.auth.admin.deleteUser(context.userId);
     if (accountError) throw new Error("Could not delete login account");
 
-    return { deleted: true };
+    return { deleted: true as const, reason: null };
   });
