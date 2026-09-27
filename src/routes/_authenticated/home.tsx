@@ -89,7 +89,6 @@ function Home() {
   // local copy from the backend and send unfinished accounts to onboarding.
   // Cached through the query client so returning to Home does not re-request it.
   useEffect(() => {
-    setProfile(readProfile());
     let cancelled = false;
     queryClient
       .fetchQuery({
