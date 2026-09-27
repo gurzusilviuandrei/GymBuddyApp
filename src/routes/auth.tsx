@@ -7,6 +7,7 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureUserRow } from "@/lib/gym.functions";
 import { syncLocalProfile } from "@/lib/account-sync";
+import { SECURITY_NOTICE, SECURITY_NOTICE_KEY } from "@/components/SessionGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -51,6 +52,14 @@ function AuthPage() {
   };
 
   // Already signed in (or just confirmed email) → go straight in.
+  useEffect(() => {
+    if (sessionStorage.getItem(SECURITY_NOTICE_KEY)) {
+      sessionStorage.removeItem(SECURITY_NOTICE_KEY);
+      setMode("login");
+      toast.warning(SECURITY_NOTICE, { duration: 8000 });
+    }
+  }, []);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) enterApp().catch(() => {});
