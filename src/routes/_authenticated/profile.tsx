@@ -133,20 +133,22 @@ function ProfilePage() {
     if (!deletePassword) return;
     setDeleting(true);
     try {
-      await removeAccount({ data: { confirmation: "DELETE", password: deletePassword } });
+      const result = await removeAccount({ data: { confirmation: "DELETE", password: deletePassword } });
+      if (!result.deleted) {
+        setDeleting(false);
+        setDeletePassword("");
+        toast.error("Incorrect password. Your account was not deleted.");
+        return;
+      }
       await queryClient.cancelQueries();
       queryClient.clear();
       localStorage.removeItem("gymbuddy-profile");
       await supabase.auth.signOut({ scope: "local" });
       navigate({ to: "/", replace: true });
-    } catch (error) {
+    } catch {
       setDeleting(false);
       setDeletePassword("");
-      toast.error(
-        error instanceof Error && error.message.includes("INVALID_PASSWORD")
-          ? "Incorrect password. Your account was not deleted."
-          : "Couldn't delete your account. Your data is still safe.",
-      );
+      toast.error("Couldn't delete your account. Your data is still safe.");
     }
   };
 
