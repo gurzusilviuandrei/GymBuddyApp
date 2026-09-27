@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -51,9 +51,15 @@ function CustomRoutine() {
 
   useEffect(() => { if (data?.selected) setSelected([...new Set(data.selected)]); }, [data]);
   const exercises = data?.exercises ?? [];
-  const exerciseById = new Map(exercises.map((exercise) => [exercise.id, exercise]));
-  const available = exercises.filter((exercise) => !selected.includes(exercise.id) && (filter === "all" || categoryOf(exercise.movement_type) === filter));
+  // Derived lists are memoized so taps on filters or reorder arrows don't
+  // rebuild the whole exercise index every render.
+  const exerciseById = useMemo(() => new Map(exercises.map((exercise) => [exercise.id, exercise])), [exercises]);
   const matchesFilter = (exercise: { movement_type: string }) => filter === "all" || categoryOf(exercise.movement_type) === filter;
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
+  const available = useMemo(
+    () => exercises.filter((exercise) => !selectedSet.has(exercise.id) && (filter === "all" || categoryOf(exercise.movement_type) === filter)),
+    [exercises, selectedSet, filter],
+  );
   const addExercise = (id: string) => {
     if (selected.includes(id)) {
       toast.error("Already in your routine.");

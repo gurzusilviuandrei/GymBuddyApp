@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Check, ChevronDown, Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -78,7 +78,7 @@ export function platesPerSide(total: number) {
 
 export function PlateVisualizer({ weight }: { weight: number }) {
   const [open, setOpen] = useState(false);
-  const { plates, leftover } = platesPerSide(weight);
+  const { plates, leftover } = useMemo(() => platesPerSide(weight), [weight]);
   return (
     <section className="mt-5 rounded-lg border border-border bg-card">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center justify-between px-5 py-4 text-left text-sm font-semibold text-foreground">
@@ -125,12 +125,14 @@ export function PlateVisualizer({ weight }: { weight: number }) {
 export function WarmUpCalculator({ weight, exerciseId }: { weight: number; exerciseId: string }) {
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState<Record<string, boolean>>({});
-  const round = (n: number) => Math.round(n / 2.5) * 2.5;
-  const steps = [
-    { label: "Empty bar (20 kg) or light dumbbells", reps: 8 },
-    { label: weight > 0 ? `${round(weight * 0.5)} kg (50%)` : "50% of working weight", reps: 5 },
-    { label: weight > 0 ? `${round(weight * 0.75)} kg (75%)` : "75% of working weight", reps: 3 },
-  ];
+  const steps = useMemo(() => {
+    const round = (n: number) => Math.round(n / 2.5) * 2.5;
+    return [
+      { label: "Empty bar (20 kg) or light dumbbells", reps: 8 },
+      { label: weight > 0 ? `${round(weight * 0.5)} kg (50%)` : "50% of working weight", reps: 5 },
+      { label: weight > 0 ? `${round(weight * 0.75)} kg (75%)` : "75% of working weight", reps: 3 },
+    ];
+  }, [weight]);
   return (
     <section className="mt-5 rounded-lg border border-border bg-card">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center justify-between px-5 py-4 text-left text-sm font-semibold text-foreground">

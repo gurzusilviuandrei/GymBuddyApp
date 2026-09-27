@@ -78,9 +78,15 @@ function Workout() {
 
   useEffect(() => {
     if (restEndsAt === null) return;
+    // Only re-render when the displayed second actually changes, so the rest
+    // countdown never re-renders the tracker four times a second.
+    let shown = -1;
     const tick = () => {
       const remaining = Math.max(0, Math.ceil((restEndsAt - Date.now()) / 1000));
-      setSecondsLeft(remaining);
+      if (remaining !== shown) {
+        shown = remaining;
+        setSecondsLeft(remaining);
+      }
       if (remaining === 0) setRestEndsAt(null);
     };
     tick();

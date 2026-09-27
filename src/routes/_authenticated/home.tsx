@@ -49,12 +49,10 @@ export const Route = createFileRoute("/_authenticated/home")({
 });
 
 function Home() {
-  const [profile, setProfile] = useState<Profile>({});
+  // Read the cached copies once during mount instead of re-rendering right after.
+  const [profile, setProfile] = useState<Profile>(() => readProfile());
   const [signingOut, setSigningOut] = useState(false);
-  const [active, setActive] = useState<ActiveSession | null>(null);
-  useEffect(() => {
-    setActive(readActiveSession());
-  }, []);
+  const [active, setActive] = useState<ActiveSession | null>(() => readActiveSession());
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fetchWorkout = useServerFn(getDayOneWorkout);
@@ -91,7 +89,6 @@ function Home() {
   // local copy from the backend and send unfinished accounts to onboarding.
   // Cached through the query client so returning to Home does not re-request it.
   useEffect(() => {
-    setProfile(readProfile());
     let cancelled = false;
     queryClient
       .fetchQuery({
