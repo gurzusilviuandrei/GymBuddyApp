@@ -27,3 +27,4 @@ Home and Workout share one Day 1 server query that resolves the saved user's equ
 - Exercise cues live on exercise rows; sessions run all exercises and total their logged-set IDs. Why: guidance and totals stay accurate.
 
 - Custom routine order lives in the signed-in user’s custom_exercise_ids; edit locally until saved. Why: unsaved changes must not alter the active plan.
+- Workout sets are logged optimistically into local state (synced with retry, 'Saved locally' badge) and can be edited/deleted before Finish. Why: gym-floor connectivity must never lose or corrupt stats.
