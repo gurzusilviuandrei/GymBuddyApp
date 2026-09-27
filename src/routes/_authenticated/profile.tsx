@@ -2,7 +2,7 @@ import { useState, type FormEvent, type MouseEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, KeyRound, Mail, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import { ArrowLeft, FileDown, KeyRound, Mail, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/BottomNav";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { deleteAccount, getAccountSettings, updateAccountEmail } from "@/lib/account.functions";
+import { deleteAccount, exportMyData, getAccountSettings, updateAccountEmail } from "@/lib/account.functions";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
@@ -45,12 +45,16 @@ function ProfilePage() {
   const loadSettings = useServerFn(getAccountSettings);
   const saveEmail = useServerFn(updateAccountEmail);
   const removeAccount = useServerFn(deleteAccount);
+  const exportData = useServerFn(exportMyData);
   const [editingEmail, setEditingEmail] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [savingEmail, setSavingEmail] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
   const [deleteText, setDeleteText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [verifyStep, setVerifyStep] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   const { data: account, isLoading } = useQuery({
     queryKey: ["account-settings"],
@@ -97,20 +101,52 @@ function ProfilePage() {
     }
   };
 
+  const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const payload = await exportData();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `gymbuddy-training-history-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Your training history has been downloaded.");
+    } catch {
+      toast.error("Couldn't export your data. Try again.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const handleDelete = async (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     if (deleteText !== "DELETE" || deleting) return;
+    if (!verifyStep) {
+      setVerifyStep(true);
+      return;
+    }
+    if (!deletePassword) return;
     setDeleting(true);
     try {
+      await removeAccount({ data: { confirmation: "DELETE", password: deletePassword } });
       await queryClient.cancelQueries();
-      await removeAccount({ data: { confirmation: "DELETE" } });
       queryClient.clear();
       localStorage.removeItem("gymbuddy-profile");
       await supabase.auth.signOut({ scope: "local" });
       navigate({ to: "/", replace: true });
-    } catch {
+    } catch (error) {
       setDeleting(false);
-      toast.error("Couldn't delete your account. Your data is still safe.");
+      setDeletePassword("");
+      toast.error(
+        error instanceof Error && error.message.includes("INVALID_PASSWORD")
+          ? "Incorrect password. Your account was not deleted."
+          : "Couldn't delete your account. Your data is still safe.",
+      );
     }
   };
 
@@ -182,11 +218,24 @@ function ProfilePage() {
         </div>
       </section>
 
+      <section className="mt-10">
+        <div className="flex items-center gap-3">
+          <FileDown className="size-5 text-primary" aria-hidden="true" />
+          <h2 className="text-lg font-semibold">Data Privacy & Compliance</h2>
+        </div>
+        <div className="mt-5 rounded-lg border border-border bg-card p-5">
+          <p className="text-sm leading-relaxed text-muted-foreground">Download a copy of your profile, every logged set, and all completed workouts.</p>
+          <Button variant="outline" className="mt-4 w-full border-primary/50 text-primary hover:bg-primary/10 hover:text-primary" disabled={exporting} onClick={handleExport}>
+            <FileDown aria-hidden="true" /> {exporting ? "Preparing…" : "Export Training History (CSV/JSON)"}
+          </Button>
+        </div>
+      </section>
+
       <section className="mt-auto pt-20">
         <div className="rounded-lg border border-destructive/60 bg-destructive/5 p-5">
           <h2 className="text-lg font-semibold text-destructive">Danger Zone</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Permanently remove your profile, workout history, and login account.</p>
-          <AlertDialog onOpenChange={(open) => !open && setDeleteText("")}>
+          <AlertDialog onOpenChange={(open) => { if (!open) { setDeleteText(""); setVerifyStep(false); setDeletePassword(""); } }}>
             <AlertDialogTrigger asChild>
               <Button variant="outline" className="mt-5 w-full border-destructive/70 text-destructive hover:bg-destructive/10 hover:text-destructive">
                 <Trash2 aria-hidden="true" /> Delete Account
@@ -199,14 +248,21 @@ function ProfilePage() {
                   Are you absolutely sure you want to permanently delete your Bro profile and all workout history?
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              <label className="mt-2 space-y-2 text-sm font-medium">
-                <span>Type DELETE to confirm</span>
-                <Input value={deleteText} onChange={(event) => setDeleteText(event.target.value)} aria-label="Type DELETE to confirm" autoComplete="off" className="h-12 border-destructive/60 bg-background px-4" />
-              </label>
+              {!verifyStep ? (
+                <label className="mt-2 space-y-2 text-sm font-medium">
+                  <span>Type DELETE to confirm</span>
+                  <Input value={deleteText} onChange={(event) => setDeleteText(event.target.value)} aria-label="Type DELETE to confirm" autoComplete="off" className="h-12 border-destructive/60 bg-background px-4" />
+                </label>
+              ) : (
+                <label className="mt-2 space-y-2 text-sm font-medium">
+                  <span className="flex items-center gap-2"><KeyRound className="size-4 text-destructive" aria-hidden="true" />Verify your password to confirm identity</span>
+                  <Input type="password" autoFocus value={deletePassword} onChange={(event) => setDeletePassword(event.target.value)} aria-label="Verify your password to confirm identity" autoComplete="current-password" className="h-12 border-destructive/60 bg-background px-4" />
+                </label>
+              )}
               <AlertDialogFooter className="mt-3 gap-2">
                 <AlertDialogCancel disabled={deleting}>Keep Account</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} disabled={deleteText !== "DELETE" || deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  {deleting ? "Deleting…" : "Permanently Delete"}
+                <AlertDialogAction onClick={handleDelete} disabled={deleteText !== "DELETE" || deleting || (verifyStep && !deletePassword)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  {deleting ? "Verifying…" : verifyStep ? "Verify & Delete" : "Continue"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
