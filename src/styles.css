@@ -26,6 +26,14 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  /* Olympic plate colours (IWF standard) */
+  --color-plate-red: oklch(0.58 0.22 27);
+  --color-plate-blue: oklch(0.55 0.19 260);
+  --color-plate-yellow: oklch(0.87 0.17 95);
+  --color-plate-green: oklch(0.62 0.17 145);
+  --color-plate-white: oklch(0.96 0 0);
+  --color-plate-ink: oklch(0.18 0 0);
+  --color-plate-small: oklch(0.55 0 0);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
