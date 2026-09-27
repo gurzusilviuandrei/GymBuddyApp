@@ -64,8 +64,17 @@ export const deleteAccount = createServerFn({ method: "POST" })
 
     // Fresh re-authentication: verify the password with a throwaway client.
     const { createClient } = await import("@supabase/supabase-js");
-    const verifier = createClient(process.env["SUPABASE_URL"]!, process.env["SUPABASE_PUBLISHABLE_KEY"]!, {
+    const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
+    const verifier = createClient(process.env["SUPABASE_URL"]!, key, {
       auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: (input, init) => {
+          const h = new Headers(init?.headers);
+          if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`) h.delete("Authorization");
+          h.set("apikey", key);
+          return fetch(input, { ...init, headers: h });
+        },
+      },
     });
     const { data: check, error: checkError } = await verifier.auth.signInWithPassword({ email, password: data.password });
     if (checkError || check.user?.id !== context.userId) throw new Error("INVALID_PASSWORD");
