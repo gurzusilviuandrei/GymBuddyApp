@@ -116,7 +116,7 @@ function Home() {
 
   const { data: stats } = useQuery({
     queryKey: ["user-stats"],
-    queryFn: () => fetchStats({ data: {} }),
+    queryFn: () => fetchStats({ data: { tz_offset: new Date().getTimezoneOffset() } }),
   });
 
   const { data: workout } = useQuery({

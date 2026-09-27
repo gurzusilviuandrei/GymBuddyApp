@@ -231,16 +231,25 @@ export const getLastLog = createServerFn({ method: "GET" })
 
 export const getUserStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ user_id: z.string().optional() }).parse(data))
+  .inputValidator((data) =>
+    z
+      .object({
+        user_id: z.string().optional(),
+        // Browser's Date.getTimezoneOffset() (minutes, UTC - local).
+        tz_offset: z.number().int().min(-840).max(840).optional(),
+      })
+      .parse(data),
+  )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    
-    // Get start of current week (Sunday)
-    const now = new Date();
-    const day = now.getDay();
-    const diff = now.getDate() - day;
-    const sunday = new Date(now.setDate(diff));
-    sunday.setHours(0, 0, 0, 0);
+
+    // Start of the current week (Monday 00:00) in the member's local time.
+    const offsetMs = (data.tz_offset ?? 0) * 60_000;
+    const local = new Date(Date.now() - offsetMs); // local wall clock expressed in UTC fields
+    const daysSinceMonday = (local.getUTCDay() + 6) % 7;
+    local.setUTCDate(local.getUTCDate() - daysSinceMonday);
+    local.setUTCHours(0, 0, 0, 0);
+    const sunday = new Date(local.getTime() + offsetMs);
 
     // A workout counts once it has been finished (completion screen reached).
     const { count } = await supabaseAdmin
