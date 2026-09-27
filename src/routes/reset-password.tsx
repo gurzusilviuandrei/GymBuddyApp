@@ -49,6 +49,8 @@ function ResetPasswordPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password: parsed.data });
       if (error) throw error;
+      // Revoke every other device/tab session for this account.
+      await supabase.auth.signOut({ scope: "others" }).catch(() => {});
       setComplete(true);
     } catch {
       toast.error("This reset link is invalid or has expired.");
