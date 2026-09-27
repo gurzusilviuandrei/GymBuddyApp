@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useBlocker } from "@tanstack/react-router";
+import { Check, CloudOff, Pencil, Trash2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { readActiveSession, writeActiveSession, clearActiveSession } from "@/lib/active-session";
-import { getDayOneWorkout, getAlternativeExercise, getLastLog, logWorkoutSet, completeWorkout } from "@/lib/gym.functions";
+import { readActiveSession, writeActiveSession, clearActiveSession, type CachedSet } from "@/lib/active-session";
+import { getDayOneWorkout, getAlternativeExercise, getLastLog, logWorkoutSet, completeWorkout, updateWorkoutSet, deleteWorkoutSet } from "@/lib/gym.functions";
 import { PlateVisualizer, Stepper, WarmUpCalculator } from "@/components/workout/GymTools";
 
 export const Route = createFileRoute("/_authenticated/workout")({
@@ -47,6 +48,13 @@ function PlayIcon() {
 }
 
 const REST_OPTIONS = [45, 60, 90, 120] as const;
+const SYNC_TIMEOUT_MS = 6000;
+function withTimeout<T>(p: Promise<T>, ms = SYNC_TIMEOUT_MS): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = window.setTimeout(() => reject(new Error("timeout")), ms);
+    p.then((v) => { window.clearTimeout(t); resolve(v); }, (e) => { window.clearTimeout(t); reject(e); });
+  });
+}
 type Ex = { id: string; name: string; instructions: string; setup_cue: string | null; position_cue: string | null; movement_cue: string | null; video_url: string | null; alternative_exercise_id: string | null };
 
 function Workout() {
@@ -75,6 +83,22 @@ function Workout() {
   const usedExerciseIds = useRef<Record<number, string>>({});
   const swappedMap = useRef<Record<number, Ex>>({});
   const [restored, setRestored] = useState(false);
+  const [sets, setSets] = useState<CachedSet[]>([]);
+  const setsRef = useRef<CachedSet[]>([]);
+  const pendingDeletes = useRef<string[]>([]);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editWeight, setEditWeight] = useState("");
+  const [editReps, setEditReps] = useState("");
+  const updateSet = useServerFn(updateWorkoutSet);
+  const removeSet = useServerFn(deleteWorkoutSet);
+
+  // Single source of truth for logged sets; ids feed the completion totals.
+  const commitSets = (updater: (prev: CachedSet[]) => CachedSet[]) => {
+    const next = updater(setsRef.current);
+    setsRef.current = next;
+    loggedSetIds.current = next.flatMap((x) => (x.id ? [x.id] : []));
+    setSets(next);
+  };
 
   useEffect(() => {
     if (restEndsAt === null) return;
@@ -150,6 +174,7 @@ function Workout() {
       swappedMap.current = cached.swapped_exercises_map as Record<number, Ex>;
       setSwapped((cached.swapped_exercises_map[cached.current_exercise_index] as Ex | undefined) ?? null);
       loggedSetIds.current = cached.logged_set_ids;
+      if (cached.logged_sets?.length) commitSets(() => cached.logged_sets!);
       usedExerciseIds.current = cached.used_exercise_ids;
       toast.success(`Resumed: Exercise ${cached.current_exercise_index + 1} of ${workout.exercises.length}`);
     }
@@ -159,7 +184,7 @@ function Workout() {
   // Mirror progress to local storage after every change (once something happened).
   useEffect(() => {
     if (!restored || !workout || complete) return;
-    const started = loggedSetIds.current.length > 0 || index > 0 || Object.keys(swappedMap.current).length > 0;
+    const started = setsRef.current.length > 0 || loggedSetIds.current.length > 0 || index > 0 || Object.keys(swappedMap.current).length > 0;
     if (!started) return;
     writeActiveSession({
       current_exercise_index: index,
@@ -170,8 +195,93 @@ function Workout() {
       total_exercises: session.length,
       logged_set_ids: loggedSetIds.current,
       used_exercise_ids: usedExerciseIds.current,
+      logged_sets: setsRef.current,
     });
-  }, [restored, workout, complete, index, setNumber, swapped, startedAt, session.length]);
+  }, [restored, workout, complete, index, setNumber, swapped, startedAt, session.length, sets]);
+
+  // Exit guard: only while a session is actually in progress.
+  const sessionActive = !complete && !finishing && (sets.length > 0 || index > 0);
+  const blocker = useBlocker({
+    shouldBlockFn: () => sessionActive,
+    enableBeforeUnload: () => sessionActive,
+    withResolver: true,
+  });
+
+  const syncSet = async (key: string) => {
+    const item = setsRef.current.find((x) => x.key === key);
+    if (!item || item.id) return;
+    commitSets((prev) => prev.map((x) => (x.key === key ? { ...x, status: "syncing" } : x)));
+    try {
+      const row = await withTimeout(
+        logSet({ data: { exercise_id: item.exercise_id, weight_kg: item.weight_kg, reps_completed: item.reps, set_number: item.set_number } }),
+      );
+      const current = setsRef.current.find((x) => x.key === key);
+      if (!current) {
+        // Deleted while syncing — remove the server copy too.
+        removeSet({ data: { id: row.id } }).catch(() => pendingDeletes.current.push(row.id));
+        return;
+      }
+      commitSets((prev) => prev.map((x) => (x.key === key ? { ...x, id: row.id, status: "saved" } : x)));
+      if (current.weight_kg !== item.weight_kg || current.reps !== item.reps) {
+        updateSet({ data: { id: row.id, weight_kg: current.weight_kg, reps_completed: current.reps } }).catch(() => {});
+      }
+    } catch {
+      commitSets((prev) => prev.map((x) => (x.key === key ? { ...x, status: "local" } : x)));
+    }
+  };
+
+  // Retry anything saved only locally, e.g. when the connection comes back.
+  useEffect(() => {
+    const retry = () => setsRef.current.filter((x) => x.status === "local").forEach((x) => void syncSet(x.key));
+    window.addEventListener("online", retry);
+    const id = window.setInterval(retry, 20000);
+    return () => { window.removeEventListener("online", retry); window.clearInterval(id); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleDeleteSet = (key: string) => {
+    const target = setsRef.current.find((x) => x.key === key);
+    if (!target) return;
+    commitSets((prev) => {
+      let n = 0;
+      return prev
+        .filter((x) => x.key !== key)
+        .map((x) => (x.exercise_index === target.exercise_index ? { ...x, set_number: ++n } : x));
+    });
+    if (target.exercise_index === index) setSetNumber((n) => Math.max(1, n - 1));
+    if (editingKey === key) setEditingKey(null);
+    if (target.id) {
+      const id = target.id;
+      removeSet({ data: { id } }).catch(() => pendingDeletes.current.push(id));
+    }
+    toast.success("Set removed");
+  };
+
+  const startEdit = (x: CachedSet) => {
+    setEditingKey(x.key);
+    setEditWeight(String(x.weight_kg));
+    setEditReps(String(x.reps));
+  };
+
+  const saveEdit = () => {
+    const w = Number(editWeight);
+    const r = Number(editReps);
+    if (editWeight === "" || !Number.isFinite(w) || w < 0 || w > 1000 || !Number.isInteger(r) || r < 1 || r > 100) {
+      toast.error("Enter a weight (0–1000 kg) and 1–100 reps.");
+      return;
+    }
+    const target = setsRef.current.find((x) => x.key === editingKey);
+    if (!target) return setEditingKey(null);
+    const before = { weight_kg: target.weight_kg, reps: target.reps };
+    commitSets((prev) => prev.map((x) => (x.key === target.key ? { ...x, weight_kg: w, reps: r } : x)));
+    setEditingKey(null);
+    if (target.id) {
+      updateSet({ data: { id: target.id, weight_kg: w, reps_completed: r } }).catch(() => {
+        commitSets((prev) => prev.map((x) => (x.key === target.key ? { ...x, ...before } : x)));
+        toast.error("Couldn't save that correction. Try again.");
+      });
+    }
+  };
 
   useEffect(() => {
     if (exercise?.name) document.title = `${exercise.name} — GymBuddy`;
@@ -195,6 +305,14 @@ function Workout() {
     if (isLastExercise) {
       if (finishing) return;
       setFinishing(true);
+      // Push any locally saved sets and pending deletions before totalling.
+      await Promise.all(setsRef.current.filter((x) => !x.id).map((x) => syncSet(x.key)));
+      if (setsRef.current.some((x) => !x.id)) {
+        setFinishing(false);
+        toast.error("Some sets are only saved locally. Check your connection and try again.");
+        return;
+      }
+      await Promise.all(pendingDeletes.current.splice(0).map((id) => removeSet({ data: { id } }).catch(() => {})));
       setComplete(true);
       clearActiveSession();
       try {
@@ -266,26 +384,18 @@ function Workout() {
       setSecondsLeft(restSecs);
       setRestEndsAt(Date.now() + restSecs * 1000);
     }
-    setLogging(true);
-    try {
-      const logged = await logSet({
-        data: { exercise_id: exercise.id, weight_kg: w, reps_completed: r, set_number: setNumber },
-      });
-      loggedSetIds.current.push(logged.id);
-      usedExerciseIds.current[index] = exercise.id;
-
-      toast.success(`Set ${setNumber} logged: ${w} kg × ${r}`);
-      setLastLog({ weight_kg: w, reps_completed: r });
-      setSetNumber((n) => n + 1);
-      // Auto-fill: keep this set's numbers ready for the next one.
-      setWeight(String(w));
-      setReps(String(r));
-    } catch {
-      setRestEndsAt(null);
-      toast.error("Couldn't log that set. Try again.");
-    } finally {
-      setLogging(false);
-    }
+    const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    commitSets((prev) => [
+      ...prev,
+      { key, id: null, exercise_index: index, exercise_id: exercise.id, set_number: setNumber, weight_kg: w, reps: r, status: "syncing" },
+    ]);
+    usedExerciseIds.current[index] = exercise.id;
+    setLastLog({ weight_kg: w, reps_completed: r });
+    setSetNumber((n) => n + 1);
+    // Auto-fill: keep this set's numbers ready for the next one.
+    setWeight(String(w));
+    setReps(String(r));
+    void syncSet(key);
   };
 
   if (complete) {
@@ -376,6 +486,45 @@ function Workout() {
       </div>
       <PlateVisualizer weight={Number(weight) || 0} />
 
+      {/* Logged sets for this exercise */}
+      {sets.some((x) => x.exercise_index === index) && (
+        <section aria-label="Logged sets" className="mt-8 divide-y divide-border rounded-lg border border-border bg-card">
+          {sets.filter((x) => x.exercise_index === index).map((x) => (
+            <div key={x.key} className="px-4 py-3">
+              {editingKey === x.key ? (
+                <div className="flex items-center gap-2">
+                  <span className="w-12 shrink-0 text-sm font-semibold text-muted-foreground">Set {x.set_number}</span>
+                  <input aria-label="Corrected weight in kg" inputMode="decimal" value={editWeight} onChange={(e) => setEditWeight(e.target.value)} className="h-10 w-full min-w-0 rounded-md border border-primary/50 bg-background px-3 text-sm text-foreground outline-none focus:border-primary" />
+                  <span className="text-xs text-muted-foreground">kg</span>
+                  <input aria-label="Corrected reps" inputMode="numeric" value={editReps} onChange={(e) => setEditReps(e.target.value)} className="h-10 w-full min-w-0 rounded-md border border-primary/50 bg-background px-3 text-sm text-foreground outline-none focus:border-primary" />
+                  <span className="text-xs text-muted-foreground">reps</span>
+                  <Button type="button" size="sm" onClick={saveEdit}>Save</Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                  <span className="text-sm font-semibold text-foreground">Set {x.set_number}</span>
+                  <span className="text-sm tabular-nums text-muted-foreground">{x.weight_kg} kg × {x.reps}</span>
+                  {x.status !== "saved" && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
+                      <CloudOff className="size-3" aria-hidden="true" /> Saved locally
+                    </span>
+                  )}
+                  <div className="ml-auto flex items-center gap-1">
+                    <button type="button" onClick={() => startEdit(x)} aria-label={`Edit set ${x.set_number}`} className="flex size-9 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-primary">
+                      <Pencil className="size-4" aria-hidden="true" />
+                    </button>
+                    <button type="button" onClick={() => handleDeleteSet(x.key)} aria-label={`Delete set ${x.set_number}`} className="flex size-9 items-center justify-center rounded-md text-destructive/70 transition hover:bg-destructive/10 hover:text-destructive">
+                      <Trash2 className="size-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </section>
+      )}
+
       {/* Log Set */}
       <div className="mt-8">
         <Button
@@ -415,6 +564,16 @@ function Workout() {
            Back to home
         </Link>
       </div>
+       {blocker.status === "blocked" && (
+         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background/90 px-6 backdrop-blur-sm" role="alertdialog" aria-modal="true" aria-labelledby="exit-title">
+           <div className="w-full max-w-sm rounded-lg border border-primary/40 bg-card p-6 text-center">
+             <p id="exit-title" className="text-xl font-semibold text-foreground">Active Workout in Progress!</p>
+             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Are you sure you want to abandon your workout? Progressive stats for this session will not be saved.</p>
+             <Button type="button" onClick={() => blocker.reset?.()} className="mt-6 h-12 w-full font-semibold shadow-neon">Continue Training</Button>
+             <Button type="button" variant="outline" onClick={() => { clearActiveSession(); blocker.proceed?.(); }} className="mt-3 h-12 w-full border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive">Abandon Session</Button>
+           </div>
+         </div>
+       )}
        {restEndsAt !== null && (
          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 px-7 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Rest timer">
            <div className="w-full max-w-sm text-center">
