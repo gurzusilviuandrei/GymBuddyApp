@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { readActiveSession, writeActiveSession, clearActiveSession } from "@/lib/active-session";
 import { getDayOneWorkout, getAlternativeExercise, getLastLog, logWorkoutSet, completeWorkout } from "@/lib/gym.functions";
+import { PlateVisualizer, Stepper, WarmUpCalculator } from "@/components/workout/GymTools";
 
 export const Route = createFileRoute("/_authenticated/workout")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -45,7 +46,7 @@ function PlayIcon() {
   );
 }
 
-const REST_DURATION_MS = 90_000;
+const REST_OPTIONS = [45, 60, 90, 120] as const;
 type Ex = { id: string; name: string; instructions: string; setup_cue: string | null; position_cue: string | null; movement_cue: string | null; video_url: string | null; alternative_exercise_id: string | null };
 
 function Workout() {
@@ -69,6 +70,7 @@ function Workout() {
   const [summary, setSummary] = useState<{ sets: number; volume: number } | null>(null);
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(90);
+  const [restSecs, setRestSecs] = useState<number>(90);
   const loggedSetIds = useRef<string[]>([]);
   const usedExerciseIds = useRef<Record<number, string>>({});
   const swappedMap = useRef<Record<number, Ex>>({});
@@ -85,6 +87,34 @@ function Workout() {
     const interval = window.setInterval(tick, 250);
     return () => window.clearInterval(interval);
   }, [restEndsAt]);
+
+  // Keep the screen awake while training; released on finish or leaving the page.
+  useEffect(() => {
+    if (complete) return;
+    type Sentinel = { release: () => Promise<void> };
+    const nav = navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<Sentinel> } };
+    if (!nav.wakeLock) return;
+    let lock: Sentinel | null = null;
+    let active = true;
+    const acquire = async () => {
+      if (!active || document.visibilityState !== "visible") return;
+      try {
+        lock = await nav.wakeLock!.request("screen");
+        if (!active) void lock.release().catch(() => {});
+      } catch {
+        // Unsupported, denied or low battery — the workout still works normally.
+      }
+    };
+    // The browser drops the lock when the tab is hidden, so re-acquire on return.
+    const onVisible = () => void acquire();
+    void acquire();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      active = false;
+      document.removeEventListener("visibilitychange", onVisible);
+      void lock?.release().catch(() => {});
+    };
+  }, [complete]);
 
   // Identity comes from the signed-in session on the server, so this loads even
   // when the local copy of the profile is missing. `mode` picks the program:
@@ -227,8 +257,8 @@ function Workout() {
     if (logging || restEndsAt !== null) return;
     // Start at the tap, not after the network request completes.
     if (setNumber < targetSets) {
-      setSecondsLeft(90);
-      setRestEndsAt(Date.now() + REST_DURATION_MS);
+      setSecondsLeft(restSecs);
+      setRestEndsAt(Date.now() + restSecs * 1000);
     }
     setLogging(true);
     try {
@@ -241,7 +271,9 @@ function Workout() {
       toast.success(`Set ${setNumber} logged: ${w} kg × ${r}`);
       setLastLog({ weight_kg: w, reps_completed: r });
       setSetNumber((n) => n + 1);
-      setReps("");
+      // Auto-fill: keep this set's numbers ready for the next one.
+      setWeight(String(w));
+      setReps(String(r));
     } catch {
       setRestEndsAt(null);
       toast.error("Couldn't log that set. Try again.");
@@ -312,6 +344,9 @@ function Workout() {
               ))}
             </ul>
           </section>
+        ) : null}
+        {exercise ? (
+          <WarmUpCalculator key={exercise.id} exerciseId={exercise.id} weight={Number(weight) || 0} />
         ) : (
           <p className="mt-4 text-muted-foreground">{isLoading ? "Loading exercise details…" : "No exercise is assigned to this workout."}</p>
         )}
@@ -329,40 +364,11 @@ function Workout() {
       </div>
 
       {/* Set logging inputs */}
-      <div className="mt-10 grid grid-cols-2 gap-5" role="group" aria-label="Log a set">
-        <label className="flex flex-col gap-3">
-          <span className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
-            Weight (kg)
-          </span>
-          <input
-            type="number"
-            inputMode="decimal"
-            min={0}
-            max={500}
-            step={0.5}
-            value={weight}
-            onChange={(e) => setWeight(e.target.value)}
-            placeholder="0"
-            className="h-16 w-full rounded-2xl border-2 border-input bg-card px-6 text-lg font-medium text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-hidden focus:ring-3 focus:ring-primary/25"
-          />
-        </label>
-        <label className="flex flex-col gap-3">
-          <span className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
-            Reps
-          </span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={100}
-            step={1}
-            value={reps}
-            onChange={(e) => setReps(e.target.value)}
-            placeholder="0"
-            className="h-16 w-full rounded-2xl border-2 border-input bg-card px-6 text-lg font-medium text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-hidden focus:ring-3 focus:ring-primary/25"
-          />
-        </label>
+      <div className="mt-10 grid grid-cols-1 gap-5 min-[380px]:grid-cols-2 min-[380px]:gap-3" role="group" aria-label="Log a set">
+        <Stepper label="Weight (kg)" unit="kg" value={weight} onChange={setWeight} step={2.5} min={0} max={500} inputMode="decimal" />
+        <Stepper label="Reps" unit="rep" value={reps} onChange={setReps} step={1} min={0} max={100} inputMode="numeric" />
       </div>
+      <PlateVisualizer weight={Number(weight) || 0} />
 
       {/* Log Set */}
       <div className="mt-8">
@@ -410,10 +416,27 @@ function Workout() {
              <p className="mt-4 text-7xl font-semibold tabular-nums text-foreground" role="timer" aria-label={`${secondsLeft} seconds remaining`}>
                {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, "0")}
              </p>
-             <div className="mt-8 h-1.5 w-full overflow-hidden rounded-full bg-secondary" role="progressbar" aria-valuemin={0} aria-valuemax={90} aria-valuenow={90 - secondsLeft} aria-label="Rest progress">
-               <div className="h-full rounded-full bg-primary transition-[width] duration-200 motion-reduce:transition-none" style={{ width: `${((90 - secondsLeft) / 90) * 100}%` }} />
+             <div className="mt-8 h-1.5 w-full overflow-hidden rounded-full bg-secondary" role="progressbar" aria-valuemin={0} aria-valuemax={restSecs} aria-valuenow={restSecs - secondsLeft} aria-label="Rest progress">
+               <div className="h-full rounded-full bg-primary transition-[width] duration-200 motion-reduce:transition-none" style={{ width: `${Math.min(100, ((restSecs - secondsLeft) / restSecs) * 100)}%` }} />
              </div>
-             <Button type="button" variant="link" onClick={() => setRestEndsAt(null)} className="mt-7 text-base text-muted-foreground hover:text-primary">
+             <div className="mt-7 flex justify-center gap-2" role="radiogroup" aria-label="Rest length">
+               {REST_OPTIONS.map((s) => (
+                 <button
+                   key={s}
+                   type="button"
+                   role="radio"
+                   aria-checked={restSecs === s}
+                   onClick={() => {
+                     setRestEndsAt((end) => (end === null ? end : end - restSecs * 1000 + s * 1000));
+                     setRestSecs(s);
+                   }}
+                   className={`h-10 rounded-full border-2 px-4 text-sm font-semibold transition ${restSecs === s ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground"}`}
+                 >
+                   {s}s
+                 </button>
+               ))}
+             </div>
+             <Button type="button" variant="link" onClick={() => setRestEndsAt(null)} className="mt-5 text-base text-muted-foreground hover:text-primary">
                Skip Rest
              </Button>
            </div>
