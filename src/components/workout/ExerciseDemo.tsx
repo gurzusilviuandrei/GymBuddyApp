@@ -166,7 +166,7 @@ export function ExerciseDemo({
               </button>
             </div>
             <div className="relative mt-4 aspect-[4/3] w-full overflow-hidden rounded-2xl border-2 border-primary/40 bg-card">
-              <Loop frames={frames} name={label} ready onReady={() => {}} />
+              <Loop frames={frames} name={label} ready paused={paused} onReady={() => {}} />
             </div>
             <ul className="mt-5 space-y-5 pb-8">
               {cues.map(([cueLabel, cue]) => (
