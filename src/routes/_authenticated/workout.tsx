@@ -673,7 +673,7 @@ function Workout() {
       )}
       <OfflineSyncBadge className="mb-4" />
       {/* Exercise demonstration */}
-      <ExerciseDemo exerciseId={exercise?.id} name={exercise?.name} cues={formCues} />
+      <ExerciseDemo exerciseId={exercise?.id} name={exercise?.name} cues={buildCues(exercise)} />
 
 
       {/* Exercise title & target */}
