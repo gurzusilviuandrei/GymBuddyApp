@@ -80,7 +80,9 @@ function Workout() {
     const t = setTimeout(() => setPr(null), 3500);
     return () => clearTimeout(t);
   }, [pr]);
-  const [lastLog, setLastLog] = useState<{ weight_kg: number; reps_completed: number } | null>(null);
+  const [lastLog, setLastLog] = useState<{ weight_kg: number; reps_completed: number; sets_completed?: number; min_reps?: number; top_weight_kg?: number } | null>(null);
+  const [chimeMuted, setChimeMutedState] = useState(false);
+
   const logSet = useServerFn(logWorkoutSet);
   const fetchWorkout = useServerFn(getDayOneWorkout);
   const fetchOptions = useServerFn(getAlternativeOptions);
