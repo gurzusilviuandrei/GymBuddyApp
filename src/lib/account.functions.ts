@@ -11,7 +11,7 @@ export const getAccountSettings = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: profile, error } = await context.supabase
       .from("users")
-      .select("full_name")
+      .select("full_name, subscription_tier")
       .eq("id", context.userId)
       .maybeSingle();
 
@@ -20,7 +20,7 @@ export const getAccountSettings = createServerFn({ method: "GET" })
     return {
       fullName: profile?.full_name ?? "GymBuddy Member",
       email: typeof context.claims.email === "string" ? context.claims.email : "",
-      tier: data?.subscription_tier === "pro" ? ("pro" as const) : ("free" as const),
+      tier: profile?.subscription_tier === "pro" ? ("pro" as const) : ("free" as const),
     };
   });
 
