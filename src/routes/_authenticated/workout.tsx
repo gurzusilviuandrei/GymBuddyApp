@@ -705,11 +705,8 @@ function Workout() {
         {exercise ? (
           <section aria-label="Exercise setup and form" className="mt-6 rounded-lg border border-border bg-card p-5">
             <ul className="space-y-5">
-              {([
-                ["Machine Setup", exercise.setup_cue || "Choose a manageable load and check your equipment."],
-                ["Starting Position", exercise.position_cue || "Get stable and brace your core before you move."],
-                ["Key Movement Cue", exercise.movement_cue || exercise.instructions || "Move slowly and with control."],
-              ] as const).map(([label, cue]) => (
+              {buildCues(exercise).map(([label, cue]) => (
+
                 <li key={label} className="flex gap-3 text-sm leading-relaxed">
                   <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
                   <span><strong className="block font-semibold text-foreground">{label}</strong><span className="text-muted-foreground">{cue}</span></span>
