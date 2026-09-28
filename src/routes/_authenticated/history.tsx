@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { CalendarDays } from "lucide-react";
+import { toast } from "sonner";
 import { SessionCard } from "@/components/SessionCard";
 import { BottomNav } from "@/components/BottomNav";
-import { getWorkoutHistory } from "@/lib/gym.functions";
+import { deleteWorkoutSession, getWorkoutHistory } from "@/lib/gym.functions";
 
 export const Route = createFileRoute("/_authenticated/history")({
   head: () => ({
