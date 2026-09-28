@@ -35,5 +35,7 @@ export function initializePaddle(onEvent?: (e: { name?: string }) => void) {
 }
 
 export async function getPaddlePriceId(priceId: string): Promise<string> {
-  return resolvePaddlePrice({ data: { priceId, environment: getPaddleEnvironment() } });
+  return resolvePaddlePrice({
+    data: { priceId: priceId as "gymbuddy_pro_monthly", environment: getPaddleEnvironment() },
+  });
 }
