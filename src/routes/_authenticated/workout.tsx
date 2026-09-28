@@ -17,6 +17,8 @@ import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } f
 import { useIdleNudge } from "@/hooks/use-idle-nudge";
 import { createBroCardBlob, downloadBroCard, type BroCardStats } from "@/lib/bro-card";
 import { ExerciseDemo } from "@/components/workout/ExerciseDemo";
+import { isChimeMuted, playRestOverChime, setChimeMuted, unlockChime } from "@/lib/rest-chime";
+
 
 
 export const Route = createFileRoute("/_authenticated/workout")({
