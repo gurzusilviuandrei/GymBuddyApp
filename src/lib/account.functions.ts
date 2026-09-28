@@ -82,7 +82,11 @@ export const deleteAccount = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    await supabaseAdmin.from("workout_sessions").delete().eq("user_id", context.userId);
+    const { error: sessionsError } = await supabaseAdmin
+      .from("workout_sessions")
+      .delete()
+      .eq("user_id", context.userId);
+    if (sessionsError) throw new Error("Could not delete workout history");
 
     const { error: logsError } = await supabaseAdmin
       .from("workout_logs")
