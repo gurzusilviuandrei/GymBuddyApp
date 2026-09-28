@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { CalendarDays } from "lucide-react";
+import { toast } from "sonner";
 import { SessionCard } from "@/components/SessionCard";
 import { BottomNav } from "@/components/BottomNav";
-import { getWorkoutHistory } from "@/lib/gym.functions";
+import { deleteWorkoutSession, getWorkoutHistory } from "@/lib/gym.functions";
 
 export const Route = createFileRoute("/_authenticated/history")({
   head: () => ({
@@ -23,9 +24,24 @@ export const Route = createFileRoute("/_authenticated/history")({
 
 function HistoryPage() {
   const fetchHistory = useServerFn(getWorkoutHistory);
+  const removeSession = useServerFn(deleteWorkoutSession);
+  const queryClient = useQueryClient();
   const { data: sessions, isLoading } = useQuery({
     queryKey: ["workout-history"],
     queryFn: () => fetchHistory({ data: {} }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (sessionId: string) => removeSession({ data: { session_id: sessionId } }),
+    onSuccess: async () => {
+      // The weekly ring counts sessions since Monday, so refreshing stats deducts it.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["workout-history"] }),
+        queryClient.invalidateQueries({ queryKey: ["user-stats"] }),
+      ]);
+      toast.success("Workout deleted");
+    },
+    onError: () => toast.error("Could not delete that workout. Try again, Bro."),
   });
 
   return (
@@ -54,7 +70,14 @@ function HistoryPage() {
             </div>
           )}
 
-          {sessions?.map((session) => <SessionCard key={session.id} session={session} />)}
+          {sessions?.map((session) => (
+            <SessionCard
+              key={session.id}
+              session={session}
+              onDelete={(id) => deleteMutation.mutate(id)}
+              deleting={deleteMutation.isPending && deleteMutation.variables === session.id}
+            />
+          ))}
         </section>
       </main>
       <BottomNav />

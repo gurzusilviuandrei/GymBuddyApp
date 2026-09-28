@@ -1,4 +1,15 @@
-import { Flame } from "lucide-react";
+import { useState } from "react";
+import { Flame, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export type SessionSummary = {
   id: string;
@@ -13,7 +24,17 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
 }
 
-export function SessionCard({ session }: { session: SessionSummary }) {
+export function SessionCard({
+  session,
+  onDelete,
+  deleting = false,
+}: {
+  session: SessionSummary;
+  onDelete?: (id: string) => void;
+  deleting?: boolean;
+}) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   return (
     <article className="rounded-lg border border-border bg-card p-6">
       <div className="flex items-start justify-between gap-4">
@@ -28,11 +49,47 @@ export function SessionCard({ session }: { session: SessionSummary }) {
           </h2>
           <p className="mt-2 truncate text-sm text-muted-foreground">{session.exercises.join(" · ")}</p>
         </div>
-        <div className="flex shrink-0 flex-col items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-primary">
-          <Flame size={18} strokeWidth={1.8} aria-hidden="true" />
-          <span className="text-xs font-semibold">{session.volume} kg</span>
+        <div className="flex shrink-0 flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-primary">
+            <Flame size={18} strokeWidth={1.8} aria-hidden="true" />
+            <span className="text-xs font-semibold">{session.volume} kg</span>
+          </div>
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => setConfirmOpen(true)}
+              disabled={deleting}
+              aria-label="Delete this workout"
+              className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+            >
+              <Trash2 size={16} strokeWidth={1.8} aria-hidden="true" />
+            </button>
+          )}
         </div>
       </div>
+
+      {onDelete && (
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent className="border-border bg-card">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this workout?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Your session from {formatDate(session.completedAt)} will be removed for good. If it was logged this
+                week, your weekly count drops by one.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => onDelete(session.id)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </article>
   );
 }

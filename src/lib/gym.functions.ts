@@ -392,3 +392,38 @@ export const getWorkoutHistory = createServerFn({ method: "GET" })
       exercises: r.exercise_names,
     }));
   });
+
+// Removes one finished session the member picked in History. The weekly ring
+// counts rows in workout_sessions, so deleting here deducts it automatically.
+export const deleteWorkoutSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ session_id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: session, error: readErr } = await supabaseAdmin
+      .from("workout_sessions")
+      .select("id, started_at, completed_at")
+      .eq("id", data.session_id)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (readErr) throw new Error("Could not load that workout");
+    if (!session) return { deleted: false as const };
+
+    // Clear the sets recorded during that session so test data does not skew stats.
+    const { error: logErr } = await supabaseAdmin
+      .from("workout_logs")
+      .delete()
+      .eq("user_id", context.userId)
+      .gte("timestamp", session.started_at)
+      .lte("timestamp", session.completed_at);
+    if (logErr) console.error("deleteWorkoutSession logs failed", logErr.code, logErr.message);
+
+    const { error } = await supabaseAdmin
+      .from("workout_sessions")
+      .delete()
+      .eq("id", session.id)
+      .eq("user_id", context.userId);
+    if (error) throw new Error("Could not delete that workout");
+    return { deleted: true as const };
+  });
