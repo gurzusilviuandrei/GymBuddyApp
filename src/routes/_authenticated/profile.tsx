@@ -70,6 +70,24 @@ function ProfilePage() {
   const exportData = useServerFn(exportMyData);
   const [editingEmail, setEditingEmail] = useState(false);
   const [newEmail, setNewEmail] = useState("");
+  const createPortal = useServerFn(createCustomerPortalSession);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const openPortal = async (kind: "manage" | "cancel") => {
+    // Open the tab synchronously so mobile browsers don't block it as a popup.
+    const tab = window.open("about:blank", "_blank");
+    setPortalLoading(true);
+    try {
+      const urls = await createPortal({ data: { environment: getPaddleEnvironment() } });
+      const url = kind === "cancel" && urls.cancelUrl ? urls.cancelUrl : urls.overviewUrl;
+      if (tab) tab.location.href = url;
+      else window.location.href = url;
+    } catch (err) {
+      tab?.close();
+      toast.error(err instanceof Error ? err.message : "Could not open subscription settings");
+    } finally {
+      setPortalLoading(false);
+    }
+  };
   const [savingEmail, setSavingEmail] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
   const [deleteText, setDeleteText] = useState("");
@@ -219,6 +237,24 @@ function ProfilePage() {
               <span className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground">See Pro</span>
             </div>
           </button>
+        </section>
+      )}
+
+      {loaded && isPro && (
+        <section className="mt-8 rounded-lg border border-primary/40 bg-card p-5">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+              <CreditCard className="size-6" aria-hidden="true" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-semibold text-foreground">Your Pro subscription</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Update your card, view invoices or cancel anytime.</p>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <Button disabled={portalLoading} onClick={() => openPortal("manage")}>Manage</Button>
+            <Button variant="outline" disabled={portalLoading} onClick={() => openPortal("cancel")}>Cancel plan</Button>
+          </div>
         </section>
       )}
 
