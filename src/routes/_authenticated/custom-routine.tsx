@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowDown, ArrowLeft, ArrowUp, Check, Plus, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, Check, LineChart, Plus, X } from "lucide-react";
+import { ExerciseProgressChart } from "@/components/ExerciseProgressChart";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -49,6 +50,7 @@ function CustomRoutine() {
   const [filter, setFilter] = useState<Filter>("all");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [chartId, setChartId] = useState<string | null>(null);
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["exercise-library"], queryFn: () => fetchLib() });
 
   useEffect(() => { if (data?.selected) setSelected([...new Set(data.selected)]); }, [data]);
@@ -128,14 +130,20 @@ function CustomRoutine() {
             const exercise = exerciseById.get(id);
             if (!exercise) return null;
             return (
-              <li key={id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-lg border border-border bg-card px-2 py-3.5 sm:gap-3 sm:px-3">
+              <li key={id} className="rounded-lg border border-border bg-card px-2 py-3.5 sm:px-3">
+                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:gap-3">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-sm font-bold text-primary">{index + 1}</span>
-                <div className="min-w-0"><p className="truncate text-sm font-semibold">{exercise.name}</p><p className="truncate text-xs text-muted-foreground">{exercise.movement_type} · {exercise.equipment_type}</p></div>
+                <button type="button" onClick={() => setChartId((c) => (c === id ? null : id))} aria-expanded={chartId === id} aria-label={`Show strength progress for ${exercise.name}`} className="min-w-0 text-left">
+                  <p className="truncate text-sm font-semibold">{exercise.name}</p>
+                  <p className="flex items-center gap-1 truncate text-xs text-muted-foreground"><LineChart className={cn("size-3", chartId === id ? "text-primary" : "")} aria-hidden="true" /> {exercise.movement_type} · {exercise.equipment_type}</p>
+                </button>
                 <div className="flex shrink-0 items-center gap-0.5">
                   <Button type="button" size="icon" variant="ghost" disabled={index === 0} onClick={() => moveExercise(index, -1)} aria-label={`Move ${exercise.name} up`} title="Move up" className="size-8 text-muted-foreground hover:text-primary"><ArrowUp aria-hidden="true" /></Button>
                   <Button type="button" size="icon" variant="ghost" disabled={index === selected.length - 1} onClick={() => moveExercise(index, 1)} aria-label={`Move ${exercise.name} down`} title="Move down" className="size-8 text-muted-foreground hover:text-primary"><ArrowDown aria-hidden="true" /></Button>
                   <Button type="button" size="icon" variant="ghost" onClick={() => removeExercise(id)} aria-label={`Remove ${exercise.name}`} title="Remove exercise" className="size-8 text-muted-foreground hover:text-destructive"><X aria-hidden="true" /></Button>
                 </div>
+                </div>
+                {chartId === id && <div className="animate-fade-in"><ExerciseProgressChart exerciseId={id} /></div>}
               </li>
             );
           })}

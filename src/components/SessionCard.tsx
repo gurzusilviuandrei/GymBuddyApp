@@ -27,16 +27,25 @@ function formatDate(iso: string) {
 export function SessionCard({
   session,
   onDelete,
+  onOpen,
   deleting = false,
 }: {
   session: SessionSummary;
   onDelete?: (id: string) => void;
+  onOpen?: (session: SessionSummary) => void;
   deleting?: boolean;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   return (
-    <article className="rounded-lg border border-border bg-card p-6">
+    <article
+      className={`rounded-lg border border-border bg-card p-6 ${onOpen ? "cursor-pointer transition hover:border-primary/60" : ""}`}
+      onClick={onOpen ? () => onOpen(session) : undefined}
+      onKeyDown={onOpen ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(session); } } : undefined}
+      role={onOpen ? "button" : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      aria-label={onOpen ? `View details of workout from ${formatDate(session.completedAt)}` : undefined}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase text-primary">
@@ -57,7 +66,8 @@ export function SessionCard({
           {onDelete && (
             <button
               type="button"
-              onClick={() => setConfirmOpen(true)}
+              onClick={(e) => { e.stopPropagation(); setConfirmOpen(true); }}
+              onKeyDown={(e) => e.stopPropagation()}
               disabled={deleting}
               aria-label="Delete this workout"
               className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
@@ -70,7 +80,7 @@ export function SessionCard({
 
       {onDelete && (
         <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-          <AlertDialogContent className="border-border bg-card">
+          <AlertDialogContent className="border-border bg-card" onClick={(e) => e.stopPropagation()}>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete this workout?</AlertDialogTitle>
               <AlertDialogDescription>
