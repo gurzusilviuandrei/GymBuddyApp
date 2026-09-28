@@ -309,7 +309,9 @@ function Workout() {
     };
 
     const kick = () => { delay = 5000; void retry(); };
+    kickSyncRef.current = kick;
     window.addEventListener("online", kick);
+
     return () => {
       cancelled = true;
       window.removeEventListener("online", kick);
