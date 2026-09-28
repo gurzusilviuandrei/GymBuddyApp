@@ -231,7 +231,7 @@ function Workout() {
     commitSets((prev) => prev.map((x) => (x.key === key ? { ...x, status: "syncing" } : x)));
     try {
       const row = await withTimeout(
-        logSet({ data: { exercise_id: item.exercise_id, weight_kg: item.weight_kg, reps_completed: item.reps, set_number: item.set_number } }),
+        logSet({ data: { exercise_id: item.exercise_id, weight_kg: item.weight_kg, reps_completed: item.reps, set_number: item.set_number, client_key: item.key } }),
       );
       const current = setsRef.current.find((x) => x.key === key);
       if (!current) {
