@@ -94,8 +94,33 @@ function AuthPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const sendResetLink = async (event: FormEvent) => {
+    event.preventDefault();
+    const parsed = z.string().trim().email("Enter a valid email").max(255).safeParse(forgotEmail);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message ?? "Enter a valid email");
+      return;
+    }
+    setSendingReset(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setResetSentTo(parsed.data);
+    } catch {
+      toast.error("Couldn't send the reset link. Try again in a moment.");
+    } finally {
+      setSendingReset(false);
+    }
+  };
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (locked) {
+      toast.error(`Too many attempts. Try again in ${lockRemaining}s.`);
+      return;
+    }
     const parsed = schema.safeParse({ email, password });
     if (!parsed.success) {
       toast.error(parsed.error.issues[0]?.message ?? "Check your details");
@@ -118,15 +143,35 @@ function AuthPage() {
           password: parsed.data.password,
         });
         if (error) throw error;
+        setFailures(0);
+        localStorage.removeItem(LOCKOUT_KEY);
         await enterApp();
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
-      toast.error(msg.includes("Invalid login") ? "Wrong email or password" : msg);
+      const wrongCredentials = mode === "login" && (msg.includes("Invalid login") || msg.includes("Invalid credentials"));
+      if (wrongCredentials) {
+        const next = failures + 1;
+        setFailures(next);
+        if (next >= MAX_ATTEMPTS) {
+          // Escalating cooldown: 60s, then 120s, 180s… for each further block.
+          const blocks = Math.max(1, next - MAX_ATTEMPTS + 1);
+          const until = Date.now() + blocks * 60_000;
+          localStorage.setItem(LOCKOUT_KEY, String(until));
+          setLockedUntil(until);
+          setNow(Date.now());
+          toast.error(`Too many failed attempts. Locked for ${blocks * 60}s.`);
+        } else {
+          toast.error(`Wrong email or password. ${MAX_ATTEMPTS - next} attempts left.`);
+        }
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setBusy(false);
     }
   };
+
 
   const isSignup = mode === "signup";
 
