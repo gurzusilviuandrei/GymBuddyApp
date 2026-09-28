@@ -96,14 +96,27 @@ function Home() {
   const ensure = useServerFn(ensureUserRow);
   const logSet = useServerFn(logWorkoutSet);
 
-  // Background sync loop for sets left in the offline queue after leaving a workout.
+  // Background sync for sets left in the offline queue after leaving a workout.
+  // Event-driven with backoff: no timer runs while the queue is empty.
   useEffect(() => {
     let running = false;
+    let timer = 0;
+    let delay = 5000;
+    let cancelled = false;
+
+    const schedule = () => {
+      if (cancelled || timer) return;
+      timer = window.setTimeout(() => { timer = 0; void flush(); }, delay);
+    };
+
     const flush = async () => {
-      if (running || !navigator.onLine) return;
+      if (cancelled || running) return;
+      const queue = readOfflineQueue();
+      if (queue.length === 0) { delay = 5000; return; }
+      if (!navigator.onLine) { schedule(); return; }
       running = true;
       try {
-        for (const item of readOfflineQueue()) {
+        for (const item of queue) {
           if (!navigator.onLine) break;
           const row = await logSet({ data: { exercise_id: item.exercise_id, weight_kg: item.weight_kg, reps_completed: item.reps, set_number: item.set_number, client_key: item.key } });
           writeOfflineQueue(readOfflineQueue().filter((x) => x.key !== item.key));
@@ -116,18 +129,28 @@ function Home() {
             });
           }
         }
+        delay = 5000;
       } catch {
-        /* still spotty — try again on the next tick */
+        delay = Math.min(delay * 2, 60000); // still spotty — back off
       } finally {
         running = false;
+        if (readOfflineQueue().length > 0) schedule();
       }
     };
+
+    const kick = () => { delay = 5000; void flush(); };
     void flush();
-    window.addEventListener("online", flush);
-    const id = window.setInterval(flush, 5000);
-    return () => { window.removeEventListener("online", flush); window.clearInterval(id); };
+    window.addEventListener("online", kick);
+    window.addEventListener(QUEUE_EVENT, kick);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("online", kick);
+      window.removeEventListener(QUEUE_EVENT, kick);
+      if (timer) window.clearTimeout(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
 
 
