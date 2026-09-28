@@ -612,9 +612,9 @@ function Workout() {
             </ul>
           </section>
         ) : null}
-        {exercise ? <MachineAlignment key={exercise.id} exerciseId={exercise.id} /> : null}
+        {exercise ? <MachineAlignment key={`machine-${exercise.id}`} exerciseId={exercise.id} /> : null}
         {exercise ? (
-          <WarmUpCalculator key={exercise.id} exerciseId={exercise.id} weight={Number(weight) || 0} />
+          <WarmUpCalculator key={`warmup-${exercise.id}`} exerciseId={exercise.id} weight={Number(weight) || 0} />
         ) : (
           <p className="mt-4 text-muted-foreground">{isLoading ? "Loading exercise details…" : "No exercise is assigned to this workout."}</p>
         )}
