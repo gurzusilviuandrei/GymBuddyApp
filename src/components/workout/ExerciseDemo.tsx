@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Expand, Pause, Play, X } from "lucide-react";
 import { getExerciseFrames } from "@/lib/exercise-media";
 
@@ -27,6 +27,21 @@ function PlaceholderIcon() {
 function Loop({ frames, name, ready, paused, onReady }: { frames: readonly [string, string]; name: string; ready: boolean; paused: boolean; onReady: () => void }) {
   const [flip, setFlip] = useState(false);
   const [reduced, setReduced] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const firstRef = useRef<HTMLImageElement>(null);
+
+  // Cached images can finish loading before hydration attaches onLoad.
+  useEffect(() => {
+    if (firstRef.current?.complete) onReady();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [frames[0]]);
+
+  useEffect(() => {
+    const onVis = () => setHidden(document.hidden);
+    onVis();
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -37,16 +52,17 @@ function Loop({ frames, name, ready, paused, onReady }: { frames: readonly [stri
   }, []);
 
   useEffect(() => {
-    if (reduced || !ready || paused) return;
+    if (reduced || !ready || paused || hidden) return;
     const id = window.setInterval(() => setFlip((f) => !f), FRAME_MS);
     return () => window.clearInterval(id);
-  }, [reduced, ready, paused]);
+  }, [reduced, ready, paused, hidden]);
 
   return (
     <>
       {frames.map((src, i) => (
         <img
           key={src}
+          ref={i === 0 ? firstRef : undefined}
           src={src}
           alt={i === 0 ? `${name} starting position` : `${name} finishing position`}
           loading="lazy"
@@ -73,7 +89,10 @@ export function ExerciseDemo({
   const frames = getExerciseFrames(exerciseId);
   const [ready, setReady] = useState(false);
   const [open, setOpen] = useState(false);
-  const [paused, setPaused] = useState(readPaused);
+  const [paused, setPaused] = useState(false);
+
+  // Read after mount so server and browser render the same icon first.
+  useEffect(() => { setPaused(readPaused()); }, []);
 
   const togglePaused = () => {
     setPaused((p) => {
@@ -92,9 +111,14 @@ export function ExerciseDemo({
 
   useEffect(() => {
     if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [open]);
 
   if (!frames) {
@@ -120,7 +144,7 @@ export function ExerciseDemo({
         role="button"
         tabIndex={0}
         onClick={() => setOpen(true)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(true); } }}
+        onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(true); } }}
         aria-label={`Expand ${label} demonstration`}
         className="relative aspect-[4/3] w-full cursor-pointer overflow-hidden rounded-3xl border-2 border-border bg-card"
       >
@@ -137,6 +161,7 @@ export function ExerciseDemo({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); togglePaused(); }}
+          onKeyDown={(e) => e.stopPropagation()}
           aria-label={paused ? `Play ${label} demonstration` : `Pause ${label} demonstration`}
           aria-pressed={paused}
           className="absolute right-3 top-3 flex size-8 items-center justify-center rounded-full border border-border bg-background/80 text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
