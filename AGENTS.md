@@ -22,3 +22,4 @@ GymBuddy uses separate typed routes for Welcome, Onboarding, Home, and Workout. 
 - Sets update optimistically, retry locally, and remain editable before Finish. Why: poor gym connectivity must not corrupt stats.
 - Bro Cards render in-browser as 1080×1920 PNGs. Why: personal workout metrics remain on-device.
 - Pro access lives on `users.subscription_tier` + `subscription_environment`, written only by the signed payments webhook; Pro server functions call `assertPro` with the client's payment env. Why: the paywall UI is cosmetic and test purchases must not unlock live.
+- Capacitor shell (`capacitor.config.ts`) loads the published site via `server.url`; native projects are generated locally with `npx cap add ios|android`. Why: the app is server-rendered, so there is no static bundle to ship.
