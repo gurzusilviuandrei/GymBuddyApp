@@ -2,9 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+const ALLOWED_PRICE_IDS = ["gymbuddy_pro_monthly"] as const;
+
 export const resolvePaddlePrice = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data) =>
-    z.object({ priceId: z.string().min(1).max(64), environment: z.enum(["sandbox", "live"]) }).parse(data),
+    z.object({ priceId: z.enum(ALLOWED_PRICE_IDS), environment: z.enum(["sandbox", "live"]) }).parse(data),
   )
   .handler(async ({ data }) => {
     const { gatewayFetch } = await import("@/lib/paddle.server");
