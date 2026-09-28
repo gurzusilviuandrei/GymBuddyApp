@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, Dumbbell, LogOut } from "lucide-react";
+import { ArrowRight, ChevronDown, Dumbbell, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/BottomNav";
@@ -11,6 +11,8 @@ import { ensureUserRow, getDayOneWorkout, getUserStats, getWorkoutHistory } from
 import { SessionCard } from "@/components/SessionCard";
 import { syncLocalProfile } from "@/lib/account-sync";
 import { readActiveSession, clearActiveSession, type ActiveSession } from "@/lib/active-session";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 
 const FREQUENCY_TARGETS: Record<string, number> = {
@@ -23,6 +25,25 @@ interface Profile {
   name?: string;
   frequency?: string;
   userId?: string;
+}
+
+const BAG_ITEMS = [
+  ["water", "Water Bottle", "Stay hydrated, Bro"],
+  ["padlock", "Locker Padlock", "Secure your gear"],
+  ["shoes", "Flat-Soled Shoes", "For solid lifting stability"],
+  ["towel", "Small Towel", "Wipe down your setups"],
+] as const;
+
+type BagItemId = (typeof BAG_ITEMS)[number][0];
+
+function readBagChecklist(): BagItemId[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const saved = JSON.parse(localStorage.getItem("gymbuddy-bag-checklist") ?? "[]") as string[];
+    return BAG_ITEMS.flatMap(([id]) => (saved.includes(id) ? [id] : []));
+  } catch {
+    return [];
+  }
 }
 
 function readProfile(): Profile {
@@ -53,6 +74,8 @@ function Home() {
   const [profile, setProfile] = useState<Profile>(() => readProfile());
   const [signingOut, setSigningOut] = useState(false);
   const [active, setActive] = useState<ActiveSession | null>(() => readActiveSession());
+  const [bagOpen, setBagOpen] = useState(true);
+  const [bagChecked, setBagChecked] = useState<BagItemId[]>(() => readBagChecklist());
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fetchWorkout = useServerFn(getDayOneWorkout);
@@ -154,6 +177,39 @@ function Home() {
           <LogOut aria-hidden="true" />
         </Button>
       </header>
+
+      {stats?.totalLoggedSets === 0 && (
+        <Collapsible open={bagOpen} onOpenChange={setBagOpen} className="mt-10 rounded-lg border-2 border-primary/50 bg-card shadow-neon">
+          <CollapsibleTrigger asChild>
+            <Button type="button" variant="ghost" className="h-auto w-full justify-between whitespace-normal rounded-lg px-5 py-5 text-left hover:bg-secondary/60">
+              <span className="text-base font-semibold text-foreground">🎒 Your Gym Bag Checklist (Before Workout #1)</span>
+              <ChevronDown className={`size-5 shrink-0 text-primary transition-transform ${bagOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="border-t border-border px-5 py-2">
+              {BAG_ITEMS.map(([id, label, detail]) => (
+                <label key={id} className="flex cursor-pointer items-start gap-4 border-b border-border py-4 last:border-b-0">
+                  <Checkbox
+                    checked={bagChecked.includes(id)}
+                    onCheckedChange={(checked) => {
+                      const next = checked ? [...bagChecked, id] : bagChecked.filter((item) => item !== id);
+                      setBagChecked(next);
+                      localStorage.setItem("gymbuddy-bag-checklist", JSON.stringify(next));
+                    }}
+                    aria-label={label}
+                    className="mt-0.5 size-5"
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold text-foreground">{label}</span>
+                    <span className="mt-1 block text-sm text-muted-foreground">{detail}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
 
       {active && (
         <section className="mt-10 rounded-lg border-2 border-primary bg-primary/10 p-6 shadow-neon" aria-label="Workout in progress">

@@ -27,7 +27,7 @@
 - [x] Edit the ordered custom routine with remove and move controls.
 - [x] Save the edited order to the signed-in account and confirm it on Home.
 - [x] Mid-workout recovery: cache progress, Resume/Abandon banner on Home, clear on finish.
-- [ ] Show a persistent first-workout gym bag checklist while the member has no logged sets.
-- [ ] Add the searchable 15-term Gym Lingo Decoder to Profile.
-- [ ] Add immediate recovery advice to the completed-workout summary.
-- [ ] Generate, share, and download a 1080×1920 Bro Card from a completed workout.
+- [x] Show a persistent first-workout gym bag checklist while the member has no logged sets.
+- [x] Add the searchable 15-term Gym Lingo Decoder to Profile.
+- [x] Add immediate recovery advice to the completed-workout summary.
+- [x] Generate, share, and download a 1080×1920 Bro Card from a completed workout.

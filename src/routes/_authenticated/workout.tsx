@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useBlocker } from "@tanstack/react-router";
-import { Check, CloudOff, Pencil, Trash2 } from "lucide-react";
+import { Check, CloudOff, Download, Pencil, Share2, Trash2, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { readActiveSession, writeActiveSession, clearActiveSession, type CachedSet } from "@/lib/active-session";
-import { getDayOneWorkout, getAlternativeExercise, getLastLog, logWorkoutSet, completeWorkout, updateWorkoutSet, deleteWorkoutSet } from "@/lib/gym.functions";
+import { getDayOneWorkout, getAlternativeExercise, getLastLog, getUserStats, logWorkoutSet, completeWorkout, updateWorkoutSet, deleteWorkoutSet } from "@/lib/gym.functions";
 import { PlateVisualizer, Stepper, WarmUpCalculator } from "@/components/workout/GymTools";
+import { createBroCardBlob, downloadBroCard, type BroCardStats } from "@/lib/bro-card";
 
 export const Route = createFileRoute("/_authenticated/workout")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -75,7 +76,7 @@ function Workout() {
   const queryClient = useQueryClient();
   const [startedAt, setStartedAt] = useState(() => new Date().toISOString());
   const [finishing, setFinishing] = useState(false);
-  const [summary, setSummary] = useState<{ sets: number; volume: number } | null>(null);
+  const [summary, setSummary] = useState<{ sets: number; volume: number; durationMinutes: number; weeklyWorkouts: number } | null>(null);
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(90);
   const [restSecs, setRestSecs] = useState<number>(90);
@@ -91,6 +92,10 @@ function Workout() {
   const [editReps, setEditReps] = useState("");
   const updateSet = useServerFn(updateWorkoutSet);
   const removeSet = useServerFn(deleteWorkoutSet);
+  const fetchStats = useServerFn(getUserStats);
+  const [broCardUrl, setBroCardUrl] = useState<string | null>(null);
+  const [broCardBlob, setBroCardBlob] = useState<Blob | null>(null);
+  const [creatingCard, setCreatingCard] = useState(false);
 
   // Single source of truth for logged sets; ids feed the completion totals.
   const commitSets = (updater: (prev: CachedSet[]) => CachedSet[]) => {
@@ -325,7 +330,10 @@ function Workout() {
             started_at: startedAt,
           },
         });
-        setSummary({ sets: saved.sets, volume: saved.volume });
+        const freshStats = await fetchStats({ data: { tz_offset: new Date().getTimezoneOffset() } });
+        const startedMs = new Date(startedAt).getTime();
+        const durationMinutes = Math.max(1, Math.round((Date.now() - startedMs) / 60_000));
+        setSummary({ sets: saved.sets, volume: saved.volume, durationMinutes, weeklyWorkouts: freshStats.completedWorkouts });
         queryClient.invalidateQueries({ queryKey: ["user-stats"] });
         queryClient.invalidateQueries({ queryKey: ["workout-history"] });
         setComplete(true);
@@ -343,6 +351,52 @@ function Workout() {
     setWeight("");
     setReps("");
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  useEffect(() => () => {
+    if (broCardUrl) URL.revokeObjectURL(broCardUrl);
+  }, [broCardUrl]);
+
+  const makeCard = async () => {
+    if (!summary || creatingCard) return null;
+    setCreatingCard(true);
+    try {
+      const stats: BroCardStats = {
+        date: new Intl.DateTimeFormat(undefined, { day: "numeric", month: "long", year: "numeric" }).format(new Date()),
+        durationMinutes: summary.durationMinutes,
+        volumeKg: summary.volume,
+        weeklyWorkouts: summary.weeklyWorkouts,
+      };
+      const blob = await createBroCardBlob(stats);
+      if (broCardUrl) URL.revokeObjectURL(broCardUrl);
+      const url = URL.createObjectURL(blob);
+      setBroCardBlob(blob);
+      setBroCardUrl(url);
+      return blob;
+    } catch {
+      toast.error("Couldn't create your Bro Card. Try again.");
+      return null;
+    } finally {
+      setCreatingCard(false);
+    }
+  };
+
+  const handleShareCard = async () => {
+    const blob = broCardBlob ?? await makeCard();
+    if (!blob) return;
+    const file = new File([blob], "gymbuddy-bro-card.png", { type: "image/png" });
+    if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+      try {
+        await navigator.share({ files: [file], title: "My GymBuddy Bro Card" });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
+    }
+  };
+
+  const handleDownloadCard = async () => {
+    const blob = broCardBlob ?? await makeCard();
+    if (blob) downloadBroCard(blob);
   };
 
   const handleSwap = async () => {
@@ -400,7 +454,7 @@ function Workout() {
 
   if (complete) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-7 text-center text-foreground home-enter">
+      <div className="flex min-h-dvh flex-col items-center bg-background px-7 py-14 text-center text-foreground home-enter">
         <div className="text-7xl" aria-hidden="true">🏆</div>
         <h1 className="mt-8 text-3xl font-semibold tracking-tight">Workout Complete!</h1>
         <p className="mt-3 text-lg text-primary">Bro Status Upgraded 🏆</p>
@@ -410,9 +464,34 @@ function Workout() {
             : "Saving your workout…"}
         </p>
         {summary && (
-          <Button asChild className="mt-12 h-16 w-full max-w-sm text-lg font-semibold shadow-neon">
-            <Link to="/home">Back to Home</Link>
-          </Button>
+          <>
+            <section className="mt-8 w-full max-w-sm rounded-lg border-2 border-primary/60 bg-primary/5 p-5 text-left shadow-neon">
+              <h2 className="font-semibold text-primary">⚡ Immediate Recovery Targets</h2>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Great lift! To optimize muscle repair, aim to consume roughly 500ml of water and 25–30g of protein within the next 2 hours.</p>
+            </section>
+            <Button type="button" onClick={handleShareCard} disabled={creatingCard} className="mt-6 h-16 w-full max-w-sm text-lg font-semibold shadow-neon">
+              <Share2 aria-hidden="true" /> {creatingCard ? "Creating Bro Card…" : "📸 Share My Bro Card"}
+            </Button>
+            <Button type="button" variant="link" onClick={handleDownloadCard} disabled={creatingCard} className="mt-2 text-muted-foreground hover:text-primary">
+              <Download aria-hidden="true" /> Save to Device Photos
+            </Button>
+            <Button asChild variant="outline" className="mt-6 h-14 w-full max-w-sm text-base font-semibold">
+              <Link to="/home">Back to Home</Link>
+            </Button>
+          </>
+        )}
+        {broCardUrl && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-background/95 px-7 py-8 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Your Bro Card preview">
+            <div className="flex max-h-full w-full max-w-sm flex-col items-center">
+              <div className="flex w-full items-center justify-between">
+                <p className="font-semibold text-foreground">Your Bro Card</p>
+                <Button type="button" variant="ghost" size="icon" onClick={() => setBroCardUrl(null)} aria-label="Close Bro Card preview"><X aria-hidden="true" /></Button>
+              </div>
+              <img src={broCardUrl} alt="Your GymBuddy workout Bro Card" className="mt-4 max-h-[65vh] w-auto rounded-lg border border-primary/50 shadow-neon" />
+              <Button type="button" onClick={handleShareCard} className="mt-5 h-12 w-full font-semibold"><Share2 aria-hidden="true" /> Share Card</Button>
+              <Button type="button" variant="outline" onClick={handleDownloadCard} className="mt-3 h-12 w-full"><Download aria-hidden="true" /> Save to Device Photos</Button>
+            </div>
+          </div>
         )}
       </div>
     );

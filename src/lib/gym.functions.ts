@@ -288,11 +288,17 @@ export const getUserStats = createServerFn({ method: "GET" })
     const sunday = new Date(local.getTime() + offsetMs);
 
     // A workout counts once it has been finished (completion screen reached).
-    const { count } = await supabaseAdmin
-      .from("workout_sessions")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", context.userId)
-      .gte("completed_at", sunday.toISOString());
+    const [{ count }, { count: totalLoggedSets }] = await Promise.all([
+      supabaseAdmin
+        .from("workout_sessions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", context.userId)
+        .gte("completed_at", sunday.toISOString()),
+      supabaseAdmin
+        .from("workout_logs")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", context.userId),
+    ]);
 
     const { data: user } = await supabaseAdmin
       .from("users")
@@ -302,6 +308,7 @@ export const getUserStats = createServerFn({ method: "GET" })
 
     return {
       completedWorkouts: count ?? 0,
+      totalLoggedSets: totalLoggedSets ?? 0,
       weeklyTarget: user?.weekly_goal_days ?? 3,
     };
   });
