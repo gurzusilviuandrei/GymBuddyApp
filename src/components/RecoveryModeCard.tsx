@@ -105,7 +105,7 @@ function MobilityGuide({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/85 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-label="Recovery mobility guide">
-      <div className="max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-primary/50 bg-card p-6 shadow-neon animate-fade-in sm:rounded-2xl">
+      <div className="max-h-[85dvh] w-full max-w-md -translate-y-[25px] overflow-y-auto rounded-t-2xl border border-primary/50 bg-card p-6 shadow-neon animate-fade-in sm:rounded-2xl">
 
         <div className="flex items-start justify-between">
           <h3 className="text-lg font-semibold">5-Min Recovery Mobility</h3>
