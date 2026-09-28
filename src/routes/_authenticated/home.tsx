@@ -155,7 +155,7 @@ function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const { data: stats } = useQuery({
+  const { data: stats, isError: statsError, refetch: refetchStats } = useQuery({
     queryKey: ["user-stats"],
     queryFn: () => fetchStats({ data: { tz_offset: new Date().getTimezoneOffset() } }),
   });
@@ -197,6 +197,12 @@ function Home() {
         </Button>
       </header>
       <OfflineSyncBadge className="mt-4" />
+      {statsError && (
+        <div role="alert" className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-foreground">
+          <span>{stats ? "Showing your last known weekly count." : "Couldn't load your weekly count."}</span>
+          <button type="button" onClick={() => void refetchStats()} className="font-semibold text-primary">Retry</button>
+        </div>
+      )}
 
 
       {stats?.totalLoggedSets === 0 && (
