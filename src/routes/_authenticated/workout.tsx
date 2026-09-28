@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { readActiveSession, writeActiveSession, clearActiveSession, type CachedSet } from "@/lib/active-session";
 import { getDayOneWorkout, getAlternativeOptions, getLastLog, getUserStats, logWorkoutSet, completeWorkout, updateWorkoutSet, deleteWorkoutSet } from "@/lib/gym.functions";
+import { MachineAlignment } from "@/components/workout/MachineAlignment";
 import { writeOfflineQueue } from "@/lib/offline-queue";
 import { OfflineSyncBadge } from "@/components/OfflineSyncBadge";
 import { PlateVisualizer, Stepper, WarmUpCalculator } from "@/components/workout/GymTools";
@@ -588,6 +589,7 @@ function Workout() {
             </ul>
           </section>
         ) : null}
+        {exercise ? <MachineAlignment key={exercise.id} exerciseId={exercise.id} /> : null}
         {exercise ? (
           <WarmUpCalculator key={exercise.id} exerciseId={exercise.id} weight={Number(weight) || 0} />
         ) : (

@@ -282,6 +282,56 @@ export const getLastLog = createServerFn({ method: "GET" })
     return row ? { weight_kg: Number(row.weight_kg), reps_completed: row.reps_completed } : null;
   });
 
+export const getMachineSetting = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ exercise_id: z.string().min(1).max(64) }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [{ data: ex }, { data: row }] = await Promise.all([
+      supabaseAdmin.from("exercises").select("equipment_type").eq("id", data.exercise_id).maybeSingle(),
+      supabaseAdmin
+        .from("user_machine_settings")
+        .select("seat_notch, pad_notch, custom_setting_notes")
+        .eq("user_id", context.userId)
+        .eq("exercise_id", data.exercise_id)
+        .maybeSingle(),
+    ]);
+    return {
+      is_machine: /machine|cable/i.test(ex?.equipment_type ?? ""),
+      seat_notch: row?.seat_notch ?? "",
+      pad_notch: row?.pad_notch ?? "",
+      custom_setting_notes: row?.custom_setting_notes ?? "",
+    };
+  });
+
+export const saveMachineSetting = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) =>
+    z
+      .object({
+        exercise_id: z.string().min(1).max(64),
+        seat_notch: z.string().trim().max(8),
+        pad_notch: z.string().trim().max(8),
+        custom_setting_notes: z.string().trim().max(120),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("user_machine_settings").upsert(
+      {
+        user_id: context.userId,
+        exercise_id: data.exercise_id,
+        seat_notch: data.seat_notch || null,
+        pad_notch: data.pad_notch || null,
+        custom_setting_notes: data.custom_setting_notes || null,
+      },
+      { onConflict: "user_id,exercise_id" },
+    );
+    if (error) throw new Error("Could not save your machine setup. Try again.");
+    return { saved: true };
+  });
+
 export const getUserStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) =>
