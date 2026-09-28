@@ -1,19 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useBlocker } from "@tanstack/react-router";
-import { Camera, Check, CloudOff, Download, Pencil, Share2, Trash2, X } from "lucide-react";
+import { ArrowRightLeft, Camera, Check, Zap, CloudOff, Download, Pencil, Share2, Trash2, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { readActiveSession, writeActiveSession, clearActiveSession, type CachedSet } from "@/lib/active-session";
-import { getDayOneWorkout, getAlternativeExercise, getLastLog, getUserStats, logWorkoutSet, completeWorkout, updateWorkoutSet, deleteWorkoutSet } from "@/lib/gym.functions";
+import { getDayOneWorkout, getAlternativeOptions, getLastLog, getUserStats, logWorkoutSet, completeWorkout, updateWorkoutSet, deleteWorkoutSet } from "@/lib/gym.functions";
 import { PlateVisualizer, Stepper, WarmUpCalculator } from "@/components/workout/GymTools";
+import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { useIdleNudge } from "@/hooks/use-idle-nudge";
 import { createBroCardBlob, downloadBroCard, type BroCardStats } from "@/lib/bro-card";
 
 export const Route = createFileRoute("/_authenticated/workout")({
   validateSearch: (search: Record<string, unknown>) => ({
     mode: search["mode"] === "premade" || search["mode"] === "custom" ? search["mode"] : undefined,
-  }),
+    sore: search["sore"] === "fresh" || search["sore"] === "little" || search["sore"] === "super" ? search["sore"] : undefined,
+  }) as { mode?: "premade" | "custom"; sore?: "fresh" | "little" | "super" },
   head: () => ({
     meta: [
       { title: "Active Workout — GymBuddy" },
@@ -68,7 +71,8 @@ function Workout() {
   const [lastLog, setLastLog] = useState<{ weight_kg: number; reps_completed: number } | null>(null);
   const logSet = useServerFn(logWorkoutSet);
   const fetchWorkout = useServerFn(getDayOneWorkout);
-  const fetchAlternative = useServerFn(getAlternativeExercise);
+  const fetchOptions = useServerFn(getAlternativeOptions);
+  const [swapOpen, setSwapOpen] = useState(false);
   const fetchLastLog = useServerFn(getLastLog);
   const [swapped, setSwapped] = useState<Ex | null>(null);
   const [swapping, setSwapping] = useState(false);
@@ -79,7 +83,9 @@ function Workout() {
   const [summary, setSummary] = useState<{ sets: number; volume: number; durationMinutes: number; weeklyWorkouts: number } | null>(null);
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(90);
-  const [restSecs, setRestSecs] = useState<number>(90);
+  const { mode, sore } = Route.useSearch();
+  const superSore = sore === "super";
+  const [restSecs, setRestSecs] = useState<number>(superSore ? 120 : 90);
   const loggedSetIds = useRef<string[]>([]);
   const usedExerciseIds = useRef<Record<number, string>>({});
   const swappedMap = useRef<Record<number, Ex>>({});
@@ -154,7 +160,6 @@ function Workout() {
   // Identity comes from the signed-in session on the server, so this loads even
   // when the local copy of the profile is missing. `mode` picks the program:
   // premade plan, saved custom routine, or the active default.
-  const { mode } = Route.useSearch();
   const { data: workout, isLoading } = useQuery({
     queryKey: ["day-one-workout", mode ?? "auto"],
     queryFn: () => fetchWorkout({ data: { mode } }),
@@ -162,7 +167,8 @@ function Workout() {
 
 
   const session = workout?.exercises ?? [];
-  const targetSets = workout?.target_sets ?? 3;
+  // Super sore: auto-regulate down to 2 working sets (and 120s rest above).
+  const targetSets = superSore ? Math.min(2, workout?.target_sets ?? 3) : (workout?.target_sets ?? 3);
   const primary = session[index];
   const exercise = swapped ?? primary;
   const setsDone = setNumber > targetSets;
@@ -328,6 +334,7 @@ function Workout() {
             exercise_ids: doneIds,
             log_ids: loggedSetIds.current,
             started_at: startedAt,
+            split_day: workout?.is_custom ? undefined : workout?.split_day,
           },
         });
         const freshStats = await fetchStats({ data: { tz_offset: new Date().getTimezoneOffset() } });
@@ -336,6 +343,8 @@ function Workout() {
         setSummary({ sets: saved.sets, volume: saved.volume, durationMinutes, weeklyWorkouts: freshStats.completedWorkouts });
         queryClient.invalidateQueries({ queryKey: ["user-stats"] });
         queryClient.invalidateQueries({ queryKey: ["workout-history"] });
+        // Next split day loads when Home mounts; don't swap this screen's plan now.
+        queryClient.invalidateQueries({ queryKey: ["day-one-workout"], refetchType: "none" });
         setComplete(true);
       } catch {
         setComplete(false);
@@ -399,26 +408,28 @@ function Workout() {
     if (blob) downloadBroCard(blob);
   };
 
-  const handleSwap = async () => {
-    if (!exercise || swapping) return;
+  const { data: swapOptions, isFetching: loadingOptions } = useQuery({
+    queryKey: ["swap-options", exercise?.id],
+    queryFn: () => fetchOptions({ data: { exercise_id: exercise!.id, exclude: session.map((e) => e.id) } }),
+    enabled: swapOpen && Boolean(exercise),
+  });
+
+  const handleSwap = (alt: Ex) => {
+    if (swapping) return;
     setSwapping(true);
     try {
-      const alt = await fetchAlternative({ data: { exercise_id: exercise.id } });
-      if (!alt) {
-        toast.info("No alternative exercise available for this one.");
-        return;
-      }
       swappedMap.current = { ...swappedMap.current, [index]: alt };
       setSwapped(alt);
       setSetNumber(1);
       usedExerciseIds.current[index] = alt.id;
       toast.success(`Swapped to ${alt.name}`);
-    } catch {
-      toast.error("Couldn't swap right now. Try again.");
+      setSwapOpen(false);
     } finally {
       setSwapping(false);
     }
   };
+
+  const idle = useIdleNudge(!complete && restEndsAt === null && Boolean(exercise), [sets.length, restEndsAt === null, index]);
 
   const handleLogSet = async () => {
     if (setsDone) return handleNext();
@@ -499,6 +510,13 @@ function Workout() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background px-7 pb-10 pt-14 text-foreground">
+      {idle.show && (
+        <div role="status" className="fixed inset-x-4 top-4 z-40 mx-auto flex max-w-md items-center gap-3 rounded-lg border border-primary/60 bg-card/95 px-4 py-3 shadow-neon backdrop-blur animate-fade-in">
+          <Zap className="size-5 shrink-0 text-primary" aria-hidden="true" />
+          <p className="flex-1 text-sm text-foreground">Ready for the next set, Bro? Let's keep your momentum going.</p>
+          <button type="button" onClick={idle.dismiss} aria-label="Dismiss reminder" className="rounded-md p-1 text-muted-foreground hover:text-foreground"><X className="size-4" aria-hidden="true" /></button>
+        </div>
+      )}
       {/* Exercise video placeholder */}
       <div
         className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-5 rounded-3xl border-2 border-border bg-card"
@@ -522,8 +540,13 @@ function Workout() {
           {exercise?.name ?? "Your Workout"}
         </h1>
         <p className="mt-3 text-lg text-muted-foreground">
-          {workout ? `Target: ${workout.target_sets} Sets × ${workout.target_reps} Reps` : "Loading target…"}
+          {workout ? `Target: ${targetSets} Sets × ${workout.target_reps} Reps` : "Loading target…"}
         </p>
+        {superSore && (
+          <p className="mt-3 inline-flex rounded-full border border-primary/50 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+            Recovery mode · 2 sets · 120s rest
+          </p>
+        )}
         {exercise ? (
           <section aria-label="Exercise setup and form" className="mt-6 rounded-lg border border-border bg-card p-5">
             <ul className="space-y-5">
@@ -627,13 +650,40 @@ function Workout() {
         <Button
           type="button"
           variant="outline"
-          onClick={handleSwap}
+          onClick={() => setSwapOpen(true)}
           disabled={swapping || !exercise}
           className="h-auto min-h-11 whitespace-normal rounded-lg px-6 py-3 text-center text-sm text-muted-foreground hover:text-foreground"
         >
-          {swapping ? "Swapping…" : "Machine Occupied? Swap Exercise"}
+          <ArrowRightLeft aria-hidden="true" /> Both Machines Occupied? Swap Exercise
         </Button>
       </div>
+
+      <Drawer open={swapOpen} onOpenChange={setSwapOpen} shouldScaleBackground={false}>
+        <DrawerContent className="max-h-[85dvh] rounded-t-lg border-primary/40 bg-background">
+          <DrawerHeader className="mx-auto w-full max-w-lg px-6 text-left">
+            <DrawerTitle className="text-xl">Choose an Alternative Setup</DrawerTitle>
+            <DrawerDescription>Same movement pattern as {exercise?.name ?? "this exercise"}.</DrawerDescription>
+          </DrawerHeader>
+          <div className="mx-auto w-full max-w-lg space-y-3 overflow-y-auto px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+            {loadingOptions && <p className="py-4 text-sm text-muted-foreground">Finding alternatives…</p>}
+            {!loadingOptions && swapOptions?.length === 0 && <p className="py-4 text-sm text-muted-foreground">No alternatives for this one, Bro. Wait a minute for the machine.</p>}
+            {swapOptions?.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => handleSwap(opt)}
+                className="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-4 text-left transition hover:border-primary hover:shadow-neon"
+              >
+                <span className="min-w-0">
+                  <span className="block font-semibold text-foreground">{opt.name}</span>
+                  <span className="block text-xs text-muted-foreground">{opt.equipment_type} · {opt.movement_type}</span>
+                </span>
+                <ArrowRightLeft className="size-4 shrink-0 text-primary" aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        </DrawerContent>
+      </Drawer>
 
        <div className="mt-auto pt-10">
         <Link

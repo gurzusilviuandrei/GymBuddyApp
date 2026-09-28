@@ -75,6 +75,15 @@ export const createUserProfile = createServerFn({ method: "POST" })
     return { id: context.userId };
   });
 
+export type SplitDay = "A" | "B" | "C";
+const SPLIT_DAY_NUMBER: Record<SplitDay, number> = { A: 1, B: 2, C: 3 };
+const NEXT_SPLIT: Record<SplitDay, SplitDay> = { A: "B", B: "C", C: "A" };
+const SPLIT_FOCUS: Record<SplitDay, string> = {
+  A: "Squat Focus · Horizontal Press · Horizontal Pull",
+  B: "Hip Hinge Focus · Vertical Press · Vertical Pull",
+  C: "Leg Press / Machine Squat · Incline Press · Arms & Core",
+};
+
 // mode "premade"/"custom" lets the dashboard launch either program on demand;
 // "auto" keeps the previous behaviour (custom when active, else pre-made).
 export const getDayOneWorkout = createServerFn({ method: "GET" })
@@ -91,16 +100,17 @@ export const getDayOneWorkout = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: user, error: userError } = await supabaseAdmin
       .from("users")
-      .select("equipment_type, is_custom, custom_exercise_ids")
+      .select("equipment_type, is_custom, custom_exercise_ids, next_split_day")
       .eq("id", context.userId)
       .maybeSingle();
     if (userError) throw new Error("Could not load profile");
     if (!user?.equipment_type) return null;
+    const splitDay = (["A", "B", "C"].includes(user.next_split_day) ? user.next_split_day : "A") as SplitDay;
     const { data: baseProgram, error: programError } = await supabaseAdmin
       .from("workout_programs")
       .select("id, day_number, exercise_ids_list, target_sets, target_reps")
       .eq("equipment_type", user.equipment_type)
-      .eq("day_number", 1)
+      .eq("day_number", SPLIT_DAY_NUMBER[splitDay])
       .maybeSingle();
     if (programError) throw new Error("Could not load workout program");
     const hasCustom = user.is_custom && (user.custom_exercise_ids?.length ?? 0) > 0;
@@ -136,6 +146,8 @@ export const getDayOneWorkout = createServerFn({ method: "GET" })
       exercise_ids: program.exercise_ids_list,
       exercises,
       is_custom: useCustom,
+      split_day: splitDay,
+      split_focus: SPLIT_FOCUS[splitDay],
     };
   });
 
@@ -323,6 +335,7 @@ export const completeWorkout = createServerFn({ method: "POST" })
         exercise_ids: z.array(z.string().min(1).max(64)).min(1),
         log_ids: z.array(z.string().uuid()).min(1),
         started_at: z.string().datetime(),
+        split_day: z.enum(["A", "B", "C"]).optional(),
       })
       .parse(data),
   )
@@ -367,6 +380,16 @@ export const completeWorkout = createServerFn({ method: "POST" })
     if (error) {
       console.error("completeWorkout insert failed", error.code, error.message);
       throw new Error("Could not save workout");
+    }
+    // Rotate the pre-made split forward (A → B → C → A) as soon as it's finished.
+    if (data.program_type === "premade") {
+      const { data: u } = await supabaseAdmin.from("users").select("next_split_day").eq("id", context.userId).maybeSingle();
+      const done = (data.split_day ?? u?.next_split_day ?? "A") as SplitDay;
+      const { error: rotErr } = await supabaseAdmin
+        .from("users")
+        .update({ next_split_day: NEXT_SPLIT[done] ?? "A" })
+        .eq("id", context.userId);
+      if (rotErr) console.error("split rotation failed", rotErr.code, rotErr.message);
     }
     return { id: row.id, sets: row.total_sets, volume: Number(row.total_volume_kg) };
   });
@@ -426,4 +449,114 @@ export const deleteWorkoutSession = createServerFn({ method: "POST" })
       .eq("user_id", context.userId);
     if (error) throw new Error("Could not delete that workout");
     return { deleted: true as const };
+  });
+
+const EX_FIELDS = "id, name, instructions, setup_cue, position_cue, movement_cue, video_url, alternative_exercise_id";
+
+// Up to 4 alternatives sharing the movement pattern; the curated alternative comes first.
+export const getAlternativeOptions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) =>
+    z.object({ exercise_id: z.string().min(1).max(64), exclude: z.array(z.string().max(64)).max(50).optional() }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: current } = await context.supabase
+      .from("exercises")
+      .select("movement_type, alternative_exercise_id")
+      .eq("id", data.exercise_id)
+      .maybeSingle();
+    if (!current) return [];
+    const { data: rows } = await context.supabase
+      .from("exercises")
+      .select(`${EX_FIELDS}, equipment_type, movement_type`)
+      .eq("movement_type", current.movement_type)
+      .neq("id", data.exercise_id)
+      .order("name");
+    const skip = new Set(data.exclude ?? []);
+    const list = (rows ?? []).filter((r) => !skip.has(r.id));
+    list.sort((a, b) => Number(b.id === current.alternative_exercise_id) - Number(a.id === current.alternative_exercise_id));
+    return list.slice(0, 4);
+  });
+
+// Local calendar dates (YYYY-MM-DD) with at least one logged set, last ~20 weeks.
+export const getActivityDays = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ tz_offset: z.number().int().min(-840).max(840) }).parse(data))
+  .handler(async ({ data, context }) => {
+    const since = new Date(Date.now() - 20 * 7 * 86_400_000).toISOString();
+    const { data: rows, error } = await context.supabase
+      .from("workout_logs")
+      .select("timestamp")
+      .eq("user_id", context.userId)
+      .gte("timestamp", since)
+      .limit(5000);
+    if (error) throw new Error("Could not load activity");
+    const days = new Set<string>();
+    for (const r of rows ?? []) {
+      const local = new Date(new Date(r.timestamp).getTime() - data.tz_offset * 60_000);
+      days.add(local.toISOString().slice(0, 10));
+    }
+    return [...days];
+  });
+
+// Every set recorded during one finished session.
+export const getSessionDetail = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ session_id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { data: session } = await context.supabase
+      .from("workout_sessions")
+      .select("started_at, completed_at")
+      .eq("id", data.session_id)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (!session) return [];
+    const { data: logs, error } = await context.supabase
+      .from("workout_logs")
+      .select("id, exercise_id, set_number, weight_kg, reps_completed, timestamp, exercises(name)")
+      .eq("user_id", context.userId)
+      .gte("timestamp", session.started_at)
+      .lte("timestamp", session.completed_at)
+      .order("timestamp");
+    if (error) throw new Error("Could not load workout details");
+    const groups: { exercise_id: string; name: string; sets: { id: string; set_number: number; weight_kg: number; reps: number }[] }[] = [];
+    for (const l of logs ?? []) {
+      let g = groups.find((x) => x.exercise_id === l.exercise_id);
+      if (!g) {
+        const ex = l.exercises as { name: string } | { name: string }[] | null;
+        const name = Array.isArray(ex) ? ex[0]?.name : ex?.name;
+        g = { exercise_id: l.exercise_id, name: name ?? l.exercise_id, sets: [] };
+        groups.push(g);
+      }
+      g.sets.push({ id: l.id, set_number: l.set_number, weight_kg: Number(l.weight_kg), reps: l.reps_completed });
+    }
+    return groups;
+  });
+
+// Best estimated 1RM (Epley) per training day over the last 8 weeks.
+export const getExerciseProgress = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) =>
+    z.object({ exercise_id: z.string().min(1).max(64), tz_offset: z.number().int().min(-840).max(840) }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const since = new Date(Date.now() - 8 * 7 * 86_400_000).toISOString();
+    const { data: rows, error } = await context.supabase
+      .from("workout_logs")
+      .select("weight_kg, reps_completed, timestamp")
+      .eq("user_id", context.userId)
+      .eq("exercise_id", data.exercise_id)
+      .gte("timestamp", since)
+      .order("timestamp")
+      .limit(2000);
+    if (error) throw new Error("Could not load progress");
+    const byDay = new Map<string, { date: string; e1rm: number; weight: number; reps: number }>();
+    for (const r of rows ?? []) {
+      const w = Number(r.weight_kg);
+      const e1rm = Math.round(w * (1 + r.reps_completed / 30) * 10) / 10;
+      const date = new Date(new Date(r.timestamp).getTime() - data.tz_offset * 60_000).toISOString().slice(0, 10);
+      const prev = byDay.get(date);
+      if (!prev || e1rm > prev.e1rm) byDay.set(date, { date, e1rm, weight: w, reps: r.reps_completed });
+    }
+    return [...byDay.values()];
   });

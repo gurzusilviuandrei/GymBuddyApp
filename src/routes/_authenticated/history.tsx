@@ -5,7 +5,11 @@ import { CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { SessionCard } from "@/components/SessionCard";
 import { BottomNav } from "@/components/BottomNav";
-import { deleteWorkoutSession, getWorkoutHistory } from "@/lib/gym.functions";
+import { useState } from "react";
+import { deleteWorkoutSession, getActivityDays, getWorkoutHistory } from "@/lib/gym.functions";
+import { ActivityHeatmap } from "@/components/history/ActivityHeatmap";
+import { SessionDetailSheet } from "@/components/history/SessionDetailSheet";
+import type { SessionSummary } from "@/components/SessionCard";
 
 export const Route = createFileRoute("/_authenticated/history")({
   head: () => ({
@@ -26,6 +30,12 @@ function HistoryPage() {
   const fetchHistory = useServerFn(getWorkoutHistory);
   const removeSession = useServerFn(deleteWorkoutSession);
   const queryClient = useQueryClient();
+  const fetchActivity = useServerFn(getActivityDays);
+  const [openSession, setOpenSession] = useState<SessionSummary | null>(null);
+  const { data: activeDays } = useQuery({
+    queryKey: ["workout-history", "activity"],
+    queryFn: () => fetchActivity({ data: { tz_offset: new Date().getTimezoneOffset() } }),
+  });
   const { data: sessions, isLoading } = useQuery({
     queryKey: ["workout-history"],
     queryFn: () => fetchHistory({ data: {} }),
@@ -54,6 +64,7 @@ function HistoryPage() {
             Every workout you have finished, newest first.
           </p>
         </header>
+        <ActivityHeatmap days={activeDays ?? []} />
 
         <section className="mt-10 space-y-4">
           {isLoading && <p className="text-sm text-muted-foreground">Loading your sessions…</p>}
@@ -75,11 +86,13 @@ function HistoryPage() {
               key={session.id}
               session={session}
               onDelete={(id) => deleteMutation.mutate(id)}
+              onOpen={setOpenSession}
               deleting={deleteMutation.isPending && deleteMutation.variables === session.id}
             />
           ))}
         </section>
       </main>
+      <SessionDetailSheet session={openSession} onClose={() => setOpenSession(null)} />
       <BottomNav />
     </>
   );

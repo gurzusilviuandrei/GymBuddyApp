@@ -31,3 +31,9 @@
 - [x] Add the searchable 15-term Gym Lingo Decoder to Profile.
 - [x] Add immediate recovery advice to the completed-workout summary.
 - [x] Generate, share, and download a 1080×1920 Bro Card from a completed workout.
+- [x] Rotate the pre-made plan through Day A → B → C after each finished workout.
+- [x] Swap drawer with 3–4 same-pattern alternatives.
+- [x] Pre-workout soreness check-in; Super Sore = 2 sets, 120s rest.
+- [x] 3-minute idle nudge banner in the tracker.
+- [x] History activity heatmap, tap-to-open workout detail sheet.
+- [x] 8-week estimated 1RM chart per exercise in the custom routine builder.
