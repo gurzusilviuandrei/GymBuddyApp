@@ -30,6 +30,15 @@ const schema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters").max(72),
 });
 
+const LOCKOUT_KEY = "gymbuddy-login-lockout";
+const MAX_ATTEMPTS = 5;
+
+function readLockoutUntil(): number {
+  if (typeof window === "undefined") return 0;
+  const raw = Number(localStorage.getItem(LOCKOUT_KEY) ?? 0);
+  return Number.isFinite(raw) && raw > Date.now() ? raw : 0;
+}
+
 function AuthPage() {
   const navigate = useNavigate();
   const ensure = useServerFn(ensureUserRow);
@@ -39,6 +48,24 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
+  const [failures, setFailures] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState<number>(() => readLockoutUntil());
+  const [now, setNow] = useState(() => Date.now());
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [sendingReset, setSendingReset] = useState(false);
+  const [resetSentTo, setResetSentTo] = useState<string | null>(null);
+
+  const lockRemaining = Math.max(0, Math.ceil((lockedUntil - now) / 1000));
+  const locked = lockRemaining > 0;
+
+  // Only tick while a cooldown is actually counting down.
+  useEffect(() => {
+    if (lockedUntil <= Date.now()) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [lockedUntil]);
+
 
   const enterApp = async () => {
     const result = await ensure();
