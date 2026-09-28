@@ -276,7 +276,7 @@ function Home() {
       </div>
 
       <section className="mt-14 rounded-lg border border-border bg-card p-8">
-        <h2 className="text-center text-sm font-semibold uppercase tracking-widest text-muted-foreground">Weekly Consistency</h2>
+        <h2 className="text-center text-sm font-semibold uppercase tracking-widest text-muted-foreground">Workouts Completed</h2>
         <div className="mt-6 flex justify-center">
           <div className="relative size-40">
             <svg viewBox="0 0 100 100" className="size-full -rotate-90">
@@ -311,7 +311,7 @@ function Home() {
         <p className="mt-4 text-center text-sm text-muted-foreground">
           {completed >= weeklyTarget
             ? "Weekly goal smashed, Bro! Extra sessions still count."
-            : `Weekly Consistency: ${completed} / ${weeklyTarget} Workouts`}
+            : `${completed} / ${weeklyTarget} Workouts Completed`}
         </p>
         <p className="mt-2 text-center text-xs text-muted-foreground">Resets every Monday</p>
       </section>
