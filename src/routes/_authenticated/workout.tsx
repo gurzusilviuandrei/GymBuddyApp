@@ -41,18 +41,15 @@ export const Route = createFileRoute("/_authenticated/workout")({
   component: Workout,
 });
 
-function PlayIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className="size-10 text-primary"
-      aria-hidden="true"
-    >
-      <path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14Z" />
-    </svg>
-  );
+function buildCues(exercise: Ex | undefined): ReadonlyArray<readonly [string, string]> {
+  if (!exercise) return [];
+  return [
+    ["Machine Setup", exercise.setup_cue || "Choose a manageable load and check your equipment."],
+    ["Starting Position", exercise.position_cue || "Get stable and brace your core before you move."],
+    ["Key Movement Cue", exercise.movement_cue || exercise.instructions || "Move slowly and with control."],
+  ] as const;
 }
+
 
 const REST_OPTIONS = [45, 60, 90, 120] as const;
 const SYNC_TIMEOUT_MS = 6000;
