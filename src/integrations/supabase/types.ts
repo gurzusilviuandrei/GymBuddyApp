@@ -153,6 +153,7 @@ export type Database = {
       }
       workout_logs: {
         Row: {
+          auto_regulated: boolean
           client_key: string | null
           exercise_id: string
           id: string
@@ -164,6 +165,7 @@ export type Database = {
           weight_kg: number
         }
         Insert: {
+          auto_regulated?: boolean
           client_key?: string | null
           exercise_id: string
           id?: string
@@ -175,6 +177,7 @@ export type Database = {
           weight_kg: number
         }
         Update: {
+          auto_regulated?: boolean
           client_key?: string | null
           exercise_id?: string
           id?: string
@@ -231,6 +234,7 @@ export type Database = {
       }
       workout_sessions: {
         Row: {
+          auto_regulated: boolean
           completed_at: string
           exercise_names: string[]
           id: string
@@ -241,6 +245,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          auto_regulated?: boolean
           completed_at?: string
           exercise_names?: string[]
           id?: string
@@ -251,6 +256,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          auto_regulated?: boolean
           completed_at?: string
           exercise_names?: string[]
           id?: string
