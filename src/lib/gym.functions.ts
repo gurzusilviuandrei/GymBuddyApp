@@ -281,14 +281,18 @@ export const getLastLog = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: row } = await supabaseAdmin
-      .from("workout_logs")
-      .select("weight_kg, reps_completed")
-      .eq("user_id", context.userId)
-      .eq("exercise_id", data.exercise_id)
-      .order("timestamp", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Baseline ignores auto-regulated (recovery) sets so a light day never lowers next week's weights.
+    const lastLog = (baselineOnly: boolean) => {
+      let q = supabaseAdmin
+        .from("workout_logs")
+        .select("weight_kg, reps_completed")
+        .eq("user_id", context.userId)
+        .eq("exercise_id", data.exercise_id);
+      if (baselineOnly) q = q.eq("auto_regulated", false);
+      return q.order("timestamp", { ascending: false }).limit(1).maybeSingle();
+    };
+    const { data: base } = await lastLog(true);
+    const row = base ?? (await lastLog(false)).data;
     return row ? { weight_kg: Number(row.weight_kg), reps_completed: row.reps_completed } : null;
   });
 
@@ -401,6 +405,7 @@ export const completeWorkout = createServerFn({ method: "POST" })
         log_ids: z.array(z.string().uuid()).min(1),
         started_at: z.string().datetime(),
         split_day: z.enum(["A", "B", "C"]).optional(),
+        auto_regulated: z.boolean().optional(),
       })
       .parse(data),
   )
@@ -430,6 +435,15 @@ export const completeWorkout = createServerFn({ method: "POST" })
     const names = data.exercise_ids.filter((id) => doneIds.has(id)).map((id) => nameById.get(id) ?? id);
     const volume = logs.reduce((s, l) => s + Number(l.weight_kg) * l.reps_completed, 0);
 
+    if (data.auto_regulated) {
+      for (let offset = 0; offset < data.log_ids.length; offset += 200) {
+        await supabaseAdmin
+          .from("workout_logs")
+          .update({ auto_regulated: true })
+          .eq("user_id", context.userId)
+          .in("id", data.log_ids.slice(offset, offset + 200));
+      }
+    }
     const { data: row, error } = await supabaseAdmin
       .from("workout_sessions")
       .insert({
@@ -439,6 +453,7 @@ export const completeWorkout = createServerFn({ method: "POST" })
         total_sets: logs.length,
         total_volume_kg: volume,
         started_at: startedAt.toISOString(),
+        auto_regulated: Boolean(data.auto_regulated),
       })
       .select("id, total_sets, total_volume_kg")
       .single();
