@@ -2,7 +2,7 @@ import { useState, type FormEvent, type MouseEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, FileDown, KeyRound, Mail, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import { ArrowLeft, BookOpen, FileDown, KeyRound, Mail, Search, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
@@ -39,6 +39,24 @@ export const Route = createFileRoute("/_authenticated/profile")({
 
 const emailSchema = z.string().trim().email("Enter a valid email address").max(255);
 
+const GYM_LINGO = [
+  ["PR", "Personal Record. The heaviest weight or most reps you have ever successfully lifted."],
+  ["RPE", "Rate of Perceived Exertion. A scale from 1-10 measuring how hard a set felt."],
+  ["Superset", "Performing two different exercises back-to-back with zero rest in between."],
+  ["AMRAP", "As Many Reps As Possible. Lifting until your muscles completely fatigue."],
+  ["Deload", "A planned week of lighter weights to let your joints and nervous system recover."],
+  ["Spotter", "A gym buddy who stands nearby to safely catch the weight if you fail a rep."],
+  ["Rep", "One complete movement of an exercise, from the start position and back again."],
+  ["Set", "A group of reps performed together before you take a rest."],
+  ["Failure", "The point where you cannot complete another clean rep with good form."],
+  ["Form", "The way you position and move your body while performing an exercise safely."],
+  ["Compound Exercise", "A movement that trains several joints and muscle groups at the same time."],
+  ["Isolation Exercise", "A movement designed to focus mainly on one muscle group."],
+  ["DOMS", "Delayed Onset Muscle Soreness. The stiffness that can appear one or two days after training."],
+  ["Progressive Overload", "Gradually asking your body to do more by adding weight, reps, or better control."],
+  ["Tempo", "The speed you use for each part of a rep, including lifting, pausing, and lowering."],
+] as const;
+
 function ProfilePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -55,11 +73,14 @@ function ProfilePage() {
   const [verifyStep, setVerifyStep] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [lingoSearch, setLingoSearch] = useState("");
 
   const { data: account, isLoading } = useQuery({
     queryKey: ["account-settings"],
     queryFn: () => loadSettings(),
   });
+  const normalizedSearch = lingoSearch.trim().toLowerCase();
+  const filteredLingo = GYM_LINGO.filter(([term, definition]) => `${term} ${definition}`.toLowerCase().includes(normalizedSearch));
 
   const beginEmailEdit = () => {
     setNewEmail(account?.email ?? "");
@@ -216,6 +237,28 @@ function ProfilePage() {
             <Button variant="outline" size="sm" disabled={sendingReset || !account?.email} onClick={handlePasswordReset}>
               {sendingReset ? "Sending…" : "Reset Password"}
             </Button>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <div className="flex items-center gap-3">
+          <BookOpen className="size-5 text-primary" aria-hidden="true" />
+          <h2 className="text-lg font-semibold">Gym Lingo Decoder</h2>
+        </div>
+        <div className="mt-5 rounded-lg border border-border bg-card p-5">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <Input value={lingoSearch} onChange={(event) => setLingoSearch(event.target.value)} type="search" aria-label="Search gym terms" placeholder="Search a term or meaning" className="h-12 bg-background pl-11 pr-4" />
+          </div>
+          <div className="mt-4 divide-y divide-border" aria-live="polite">
+            {filteredLingo.map(([term, definition]) => (
+              <div key={term} className="py-4 first:pt-1 last:pb-0">
+                <h3 className="font-semibold text-primary">{term}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{definition}</p>
+              </div>
+            ))}
+            {filteredLingo.length === 0 && <p className="py-5 text-sm text-muted-foreground">No gym term matches that search.</p>}
           </div>
         </div>
       </section>
