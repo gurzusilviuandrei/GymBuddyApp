@@ -126,6 +126,18 @@ function Workout() {
     setSets(next);
   };
 
+  // Audio needs a real tap before it is allowed to play on phones.
+  useEffect(() => {
+    setChimeMutedState(isChimeMuted());
+    const arm = () => unlockChime();
+    window.addEventListener("pointerdown", arm, { once: true });
+    window.addEventListener("touchstart", arm, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", arm);
+      window.removeEventListener("touchstart", arm);
+    };
+  }, []);
+
   useEffect(() => {
     if (restEndsAt === null) return;
     // Only re-render when the displayed second actually changes, so the rest
@@ -137,12 +149,18 @@ function Workout() {
         shown = remaining;
         setSecondsLeft(remaining);
       }
-      if (remaining === 0) setRestEndsAt(null);
+      if (remaining === 0) {
+        setRestEndsAt(null);
+        // Chime for headphones, buzz for pockets — rest is over.
+        playRestOverChime();
+        try { navigator.vibrate?.([120, 80, 120]); } catch { /* unsupported */ }
+      }
     };
     tick();
     const interval = window.setInterval(tick, 250);
     return () => window.clearInterval(interval);
   }, [restEndsAt]);
+
 
   // Keep the screen awake while training; released on finish or leaving the page.
   useEffect(() => {
