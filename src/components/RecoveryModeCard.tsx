@@ -68,6 +68,30 @@ function MobilityGuide({ onClose }: { onClose: () => void }) {
   const [running, setRunning] = useState(true);
   const [checked, setChecked] = useState<boolean[]>([false, false, false]);
 
+  // Lock background scrolling while the guide is open; restore on close.
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prev = {
+      htmlOverflow: html.style.overflow,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyWidth: body.style.width,
+      scrollY: window.scrollY,
+    };
+    html.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${prev.scrollY}px`;
+    body.style.width = "100%";
+    return () => {
+      html.style.overflow = prev.htmlOverflow;
+      body.style.position = prev.bodyPosition;
+      body.style.top = prev.bodyTop;
+      body.style.width = prev.bodyWidth;
+      window.scrollTo(0, prev.scrollY);
+    };
+  }, []);
+
   useEffect(() => {
     if (!running || left <= 0) return;
     const id = window.setInterval(() => setLeft((s) => Math.max(0, s - 1)), 1000);
@@ -81,7 +105,8 @@ function MobilityGuide({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/85 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-label="Recovery mobility guide">
-      <div className="w-full max-w-md rounded-t-2xl border border-primary/50 bg-card p-6 shadow-neon animate-fade-in sm:rounded-2xl">
+      <div className="max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-primary/50 bg-card p-6 shadow-neon animate-fade-in sm:rounded-2xl">
+
         <div className="flex items-start justify-between">
           <h3 className="text-lg font-semibold">5-Min Recovery Mobility</h3>
           <button type="button" onClick={onClose} aria-label="Close" className="text-muted-foreground hover:text-foreground"><X size={20} /></button>
