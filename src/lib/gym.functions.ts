@@ -215,15 +215,25 @@ export const logWorkoutSet = createServerFn({ method: "POST" })
   .inputValidator((data) => logSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const values = { exercise_id: data.exercise_id, weight_kg: data.weight_kg, reps_completed: data.reps_completed, set_number: data.set_number, user_id: context.userId };
+    // All-time peak for this exercise, ignoring this same set on retries.
+    const { data: peaks } = await supabaseAdmin
+      .from("workout_logs")
+      .select("weight_kg, client_key")
+      .eq("user_id", context.userId)
+      .eq("exercise_id", data.exercise_id)
+      .order("weight_kg", { ascending: false })
+      .limit(2);
+    const prev = (peaks ?? []).find((p) => !data.client_key || p.client_key !== data.client_key);
+    const is_personal_record = Boolean(prev) && data.weight_kg > Number(prev!.weight_kg);
+    const values = { exercise_id: data.exercise_id, weight_kg: data.weight_kg, reps_completed: data.reps_completed, set_number: data.set_number, user_id: context.userId, is_personal_record };
     // Idempotent: a retried set with the same client key updates the one row instead of duplicating it.
     const { data: row, error } = data.client_key
       ? await supabaseAdmin
           .from("workout_logs")
           .upsert({ ...values, client_key: data.client_key }, { onConflict: "user_id,client_key" })
-          .select("id, set_number")
+          .select("id, set_number, is_personal_record")
           .single()
-      : await supabaseAdmin.from("workout_logs").insert(values).select("id, set_number").single();
+      : await supabaseAdmin.from("workout_logs").insert(values).select("id, set_number, is_personal_record").single();
     if (error) throw new Error("Could not log set");
     return row;
   });

@@ -156,6 +156,7 @@ export type Database = {
           client_key: string | null
           exercise_id: string
           id: string
+          is_personal_record: boolean
           reps_completed: number
           set_number: number
           timestamp: string
@@ -166,6 +167,7 @@ export type Database = {
           client_key?: string | null
           exercise_id: string
           id?: string
+          is_personal_record?: boolean
           reps_completed: number
           set_number: number
           timestamp?: string
@@ -176,6 +178,7 @@ export type Database = {
           client_key?: string | null
           exercise_id?: string
           id?: string
+          is_personal_record?: boolean
           reps_completed?: number
           set_number?: number
           timestamp?: string
