@@ -2,6 +2,19 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+const envSchema = z.enum(["sandbox", "live"]).default("live");
+
+// Server-side Pro gate: the paywall in the browser is UX only.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function assertPro(supabase: any, userId: string, env: "sandbox" | "live") {
+  const { data } = await supabase
+    .from("users")
+    .select("subscription_tier, subscription_environment")
+    .eq("id", userId)
+    .maybeSingle();
+  if (data?.subscription_tier !== "pro" || data?.subscription_environment !== env) throw new Error("PRO_REQUIRED");
+}
+
 const DAYS_FREQ: Record<number, string> = { 2: "2-days", 3: "3-days", 4: "4-plus" };
 
 export const ensureUserRow = createServerFn({ method: "POST" })
@@ -165,9 +178,10 @@ export const getExerciseLibrary = createServerFn({ method: "GET" })
 export const saveCustomRoutine = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data) =>
-    z.object({ exercise_ids: z.array(z.string().min(1).max(64)).min(1) }).parse(data),
+    z.object({ exercise_ids: z.array(z.string().min(1).max(64)).min(1), env: envSchema }).parse(data),
   )
   .handler(async ({ data, context }) => {
+    await assertPro(context.supabase, context.userId, data.env);
     if (new Set(data.exercise_ids).size !== data.exercise_ids.length) throw new Error("Pick different exercises");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: found, error: lookupError } = await supabaseAdmin.from("exercises").select("id").in("id", data.exercise_ids);
@@ -624,9 +638,10 @@ const EX_FIELDS = "id, name, instructions, setup_cue, position_cue, movement_cue
 export const getAlternativeOptions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((data) =>
-    z.object({ exercise_id: z.string().min(1).max(64), exclude: z.array(z.string().max(64)).max(50).optional() }).parse(data),
+    z.object({ exercise_id: z.string().min(1).max(64), exclude: z.array(z.string().max(64)).max(50).optional(), env: envSchema }).parse(data),
   )
   .handler(async ({ data, context }) => {
+    await assertPro(context.supabase, context.userId, data.env);
     const { data: current } = await context.supabase
       .from("exercises")
       .select("movement_type, alternative_exercise_id")
@@ -715,9 +730,10 @@ export const getSessionDetail = createServerFn({ method: "GET" })
 export const getExerciseProgress = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((data) =>
-    z.object({ exercise_id: z.string().min(1).max(64), tz_offset: z.number().int().min(-840).max(840) }).parse(data),
+    z.object({ exercise_id: z.string().min(1).max(64), tz_offset: z.number().int().min(-840).max(840), env: envSchema }).parse(data),
   )
   .handler(async ({ data, context }) => {
+    await assertPro(context.supabase, context.userId, data.env);
     const since = new Date(Date.now() - 8 * 7 * 86_400_000).toISOString();
     const { data: rows, error } = await context.supabase
       .from("workout_logs")

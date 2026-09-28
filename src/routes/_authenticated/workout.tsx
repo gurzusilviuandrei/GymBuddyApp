@@ -6,6 +6,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { readActiveSession, writeActiveSession, clearActiveSession, type CachedSet } from "@/lib/active-session";
+import { usePro } from "@/components/pro/ProProvider";
+import { getPaddleEnvironment } from "@/lib/paddle";
 import { getDayOneWorkout, getAlternativeOptions, getLastLog, getUserStats, logWorkoutSet, completeWorkout, updateWorkoutSet, deleteWorkoutSet } from "@/lib/gym.functions";
 import { MachineAlignment } from "@/components/workout/MachineAlignment";
 import { writeOfflineQueue, addPendingDelete, readPendingDeletes, removePendingDelete, clearPendingDeletes } from "@/lib/offline-queue";
@@ -82,6 +84,7 @@ function Workout() {
   const fetchWorkout = useServerFn(getDayOneWorkout);
   const fetchOptions = useServerFn(getAlternativeOptions);
   const [swapOpen, setSwapOpen] = useState(false);
+  const { isPro, requirePro } = usePro();
   const fetchLastLog = useServerFn(getLastLog);
   const [swapped, setSwapped] = useState<Ex | null>(null);
   const [swapping, setSwapping] = useState(false);
@@ -551,8 +554,8 @@ function Workout() {
 
   const { data: swapOptions, isFetching: loadingOptions } = useQuery({
     queryKey: ["swap-options", exercise?.id],
-    queryFn: () => fetchOptions({ data: { exercise_id: exercise!.id, exclude: session.map((e) => e.id) } }),
-    enabled: swapOpen && Boolean(exercise),
+    queryFn: () => fetchOptions({ data: { exercise_id: exercise!.id, exclude: session.map((e) => e.id), env: getPaddleEnvironment() } }),
+    enabled: swapOpen && isPro && Boolean(exercise),
   });
 
   const handleSwap = (alt: Ex) => {
@@ -802,11 +805,11 @@ function Workout() {
         <Button
           type="button"
           variant="outline"
-          onClick={() => setSwapOpen(true)}
+          onClick={() => requirePro(() => setSwapOpen(true))}
           disabled={swapping || !exercise}
           className="h-auto min-h-11 whitespace-normal rounded-lg px-6 py-3 text-center text-sm text-muted-foreground hover:text-foreground"
         >
-          <ArrowRightLeft aria-hidden="true" /> Both Machines Occupied? Swap Exercise
+          <ArrowRightLeft aria-hidden="true" /> Both Machines Occupied? Swap Exercise{!isPro && " ⚡"}
         </Button>
       </div>
 

@@ -21,3 +21,4 @@ GymBuddy uses separate typed routes for Welcome, Onboarding, Home, and Workout. 
 - Custom routine order lives in `custom_exercise_ids` and edits stay local until save. Why: drafts must not alter the active plan.
 - Sets update optimistically, retry locally, and remain editable before Finish. Why: poor gym connectivity must not corrupt stats.
 - Bro Cards render in-browser as 1080×1920 PNGs. Why: personal workout metrics remain on-device.
+- Pro access lives on `users.subscription_tier` + `subscription_environment`, written only by the signed payments webhook; Pro server functions call `assertPro` with the client's payment env. Why: the paywall UI is cosmetic and test purchases must not unlock live.

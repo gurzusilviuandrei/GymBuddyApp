@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { getExerciseLibrary, saveCustomRoutine } from "@/lib/gym.functions";
 import { cn } from "@/lib/utils";
+import { usePro } from "@/components/pro/ProProvider";
+import { getPaddleEnvironment } from "@/lib/paddle";
 
 export const Route = createFileRoute("/_authenticated/custom-routine")({
   head: () => ({ meta: [
@@ -42,6 +44,24 @@ function categoryOf(type: string): Exclude<Filter, "all"> {
 }
 
 function CustomRoutine() {
+  const { isPro, loaded, openPaywall } = usePro();
+  useEffect(() => { if (loaded && !isPro) openPaywall(); }, [loaded, isPro, openPaywall]);
+  if (!loaded) return <div className="min-h-screen bg-background" />;
+  if (!isPro) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-5 bg-background px-6 text-center">
+        <p className="text-4xl" aria-hidden="true">⚡</p>
+        <h1 className="text-2xl font-bold text-foreground">The custom editor is a Pro feature, Bro.</h1>
+        <p className="text-sm text-muted-foreground">Upgrade to build your own routine and see advanced strength graphs.</p>
+        <Button type="button" onClick={openPaywall} className="h-14 w-full max-w-xs rounded-lg text-base font-semibold shadow-neon">See Pro</Button>
+        <Button asChild variant="ghost" className="text-muted-foreground"><Link to="/home">Back to Home</Link></Button>
+      </main>
+    );
+  }
+  return <CustomRoutineEditor />;
+}
+
+function CustomRoutineEditor() {
   const fetchLib = useServerFn(getExerciseLibrary);
   const save = useServerFn(saveCustomRoutine);
   const navigate = useNavigate();
@@ -88,7 +108,7 @@ function CustomRoutine() {
     if (selected.length === 0 || saving || !data) return;
     setSaving(true);
     try {
-      await save({ data: { exercise_ids: selected } });
+      await save({ data: { exercise_ids: selected, env: getPaddleEnvironment() } });
       await queryClient.invalidateQueries({ queryKey: ["day-one-workout"] });
       await queryClient.invalidateQueries({ queryKey: ["exercise-library"] });
       toast.success("Custom Routine Updated, Bro! 🔧");
