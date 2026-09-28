@@ -2,7 +2,7 @@ import { useState, type FormEvent, type MouseEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, BookOpen, FileDown, KeyRound, Mail, Search, ShieldCheck, Trash2, UserRound, Zap } from "lucide-react";
+import { ArrowLeft, BookOpen, FileDown, KeyRound, Mail, Search, ShieldCheck, Trash2, UserRound, Zap, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
@@ -23,6 +23,8 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteAccount, exportMyData, getAccountSettings, updateAccountEmail } from "@/lib/account.functions";
 import { usePro } from "@/components/pro/ProProvider";
+import { createCustomerPortalSession } from "@/lib/payments.functions";
+import { getPaddleEnvironment } from "@/lib/paddle";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
