@@ -383,8 +383,9 @@ function Home() {
                 key={key}
                 type="button"
                 onClick={() => {
-                  setCheckInOpen(false);
-                  navigate({ to: "/workout", search: { mode: "premade", sore: key } });
+                  const mode = checkInMode;
+                  setCheckInMode(null);
+                  navigate({ to: "/workout", search: { mode, sore: key } });
                 }}
                 className="flex items-center gap-4 rounded-lg border-2 border-primary/40 bg-background px-4 py-4 text-left transition hover:border-primary hover:shadow-neon"
               >
@@ -396,7 +397,7 @@ function Home() {
               </button>
             ))}
           </div>
-          <Button type="button" variant="ghost" onClick={() => setCheckInOpen(false)} className="mt-3 w-full text-muted-foreground">Cancel</Button>
+          <Button type="button" variant="ghost" onClick={() => setCheckInMode(null)} className="mt-3 w-full text-muted-foreground">Cancel</Button>
         </div>
       </div>
     )}
