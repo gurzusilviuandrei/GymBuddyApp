@@ -271,7 +271,19 @@ function Home() {
             </div>
           </div>
         </div>
-        <p className="mt-6 text-center text-sm text-muted-foreground">Weekly Consistency: {completed} / {weeklyTarget} Workouts</p>
+        {completed > weeklyTarget && (
+          <p className="mt-6 text-center">
+            <span className="rounded-full border border-primary/50 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary">
+              +{completed - weeklyTarget} bonus {completed - weeklyTarget === 1 ? "workout" : "workouts"}
+            </span>
+          </p>
+        )}
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          {completed >= weeklyTarget
+            ? "Weekly goal smashed, Bro! Extra sessions still count."
+            : `Weekly Consistency: ${completed} / ${weeklyTarget} Workouts`}
+        </p>
+        <p className="mt-2 text-center text-xs text-muted-foreground">Resets every Monday</p>
       </section>
 
       <section className="mt-14 space-y-6" aria-label="Your programs">
