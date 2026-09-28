@@ -200,6 +200,14 @@ function Workout() {
       loggedSetIds.current = cached.logged_set_ids;
       if (cached.logged_sets?.length) commitSets(() => cached.logged_sets!);
       usedExerciseIds.current = cached.used_exercise_ids;
+      // Auto-fill from the last set logged for this exercise, like live progression does.
+      const previous = [...(cached.logged_sets ?? [])]
+        .reverse()
+        .find((s) => s.exercise_index === cached.current_exercise_index);
+      if (previous) {
+        setWeight(String(previous.weight_kg));
+        setReps(String(previous.reps));
+      }
       toast.success(`Resumed: Exercise ${cached.current_exercise_index + 1} of ${workout.exercises.length}`);
     }
     setRestored(true);
