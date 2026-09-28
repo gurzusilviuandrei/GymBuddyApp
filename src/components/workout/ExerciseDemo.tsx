@@ -1,8 +1,17 @@
 import { useEffect, useState } from "react";
-import { Expand, X } from "lucide-react";
+import { Expand, Pause, Play, X } from "lucide-react";
 import { getExerciseFrames } from "@/lib/exercise-media";
 
 const FRAME_MS = 900;
+const PAUSED_KEY = "gymbuddy-demo-paused";
+
+function readPaused(): boolean {
+  try {
+    return window.localStorage.getItem(PAUSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 type Cue = readonly [string, string];
 
