@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { readActiveSession, writeActiveSession, clearActiveSession, type CachedSet } from "@/lib/active-session";
 import { getDayOneWorkout, getAlternativeOptions, getLastLog, getUserStats, logWorkoutSet, completeWorkout, updateWorkoutSet, deleteWorkoutSet } from "@/lib/gym.functions";
+import { writeOfflineQueue } from "@/lib/offline-queue";
+import { OfflineSyncBadge } from "@/components/OfflineSyncBadge";
 import { PlateVisualizer, Stepper, WarmUpCalculator } from "@/components/workout/GymTools";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useIdleNudge } from "@/hooks/use-idle-nudge";
@@ -221,6 +223,11 @@ function Workout() {
   const syncSet = async (key: string) => {
     const item = setsRef.current.find((x) => x.key === key);
     if (!item || item.id) return;
+    // No signal: keep it local instantly instead of waiting for a timeout.
+    if (!navigator.onLine) {
+      commitSets((prev) => prev.map((x) => (x.key === key ? { ...x, status: "local" } : x)));
+      return;
+    }
     commitSets((prev) => prev.map((x) => (x.key === key ? { ...x, status: "syncing" } : x)));
     try {
       const row = await withTimeout(
@@ -241,11 +248,28 @@ function Workout() {
     }
   };
 
-  // Retry anything saved only locally, e.g. when the connection comes back.
+  // Mirror every unsynced set into the offline queue so the badge (and Home) can see it.
   useEffect(() => {
-    const retry = () => setsRef.current.filter((x) => x.status === "local").forEach((x) => void syncSet(x.key));
+    writeOfflineQueue(sets.filter((x) => x.status !== "saved"));
+  }, [sets]);
+
+  // Background sync loop: fire on the 'online' event and poll quietly; push sets one by one.
+  useEffect(() => {
+    let running = false;
+    const retry = async () => {
+      if (running || !navigator.onLine) return;
+      running = true;
+      try {
+        for (const x of setsRef.current.filter((s) => s.status === "local")) {
+          if (!navigator.onLine) break;
+          await syncSet(x.key);
+        }
+      } finally {
+        running = false;
+      }
+    };
     window.addEventListener("online", retry);
-    const id = window.setInterval(retry, 20000);
+    const id = window.setInterval(retry, 5000);
     return () => { window.removeEventListener("online", retry); window.clearInterval(id); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -517,6 +541,7 @@ function Workout() {
           <button type="button" onClick={idle.dismiss} aria-label="Dismiss reminder" className="rounded-md p-1 text-muted-foreground hover:text-foreground"><X className="size-4" aria-hidden="true" /></button>
         </div>
       )}
+      <OfflineSyncBadge className="mb-4" />
       {/* Exercise video placeholder */}
       <div
         className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-5 rounded-3xl border-2 border-border bg-card"
