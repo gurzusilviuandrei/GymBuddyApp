@@ -73,6 +73,17 @@ export function ExerciseDemo({
   const frames = getExerciseFrames(exerciseId);
   const [ready, setReady] = useState(false);
   const [open, setOpen] = useState(false);
+  const [paused, setPaused] = useState(readPaused);
+
+  const togglePaused = () => {
+    setPaused((p) => {
+      const next = !p;
+      try {
+        window.localStorage.setItem(PAUSED_KEY, next ? "1" : "0");
+      } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   useEffect(() => {
     setReady(false);
@@ -105,23 +116,34 @@ export function ExerciseDemo({
 
   return (
     <>
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setOpen(true)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(true); } }}
         aria-label={`Expand ${label} demonstration`}
-        className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl border-2 border-border bg-card"
+        className="relative aspect-[4/3] w-full cursor-pointer overflow-hidden rounded-3xl border-2 border-border bg-card"
       >
         {!ready && (
           <div className="absolute inset-0 animate-pulse bg-muted/40" aria-hidden="true" />
         )}
-        <Loop frames={frames} name={label} ready={ready} onReady={() => setReady(true)} />
+        <Loop frames={frames} name={label} ready={ready} paused={paused} onReady={() => setReady(true)} />
         <span className="absolute bottom-3 left-3 rounded-full border border-primary/50 bg-background/80 px-3 py-1 text-xs font-semibold text-primary backdrop-blur">
           Form Demo
         </span>
         <span className="absolute bottom-3 right-3 flex size-8 items-center justify-center rounded-full border border-border bg-background/80 text-muted-foreground backdrop-blur">
           <Expand className="size-4" aria-hidden="true" />
         </span>
-      </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); togglePaused(); }}
+          aria-label={paused ? `Play ${label} demonstration` : `Pause ${label} demonstration`}
+          aria-pressed={paused}
+          className="absolute right-3 top-3 flex size-8 items-center justify-center rounded-full border border-border bg-background/80 text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
+        >
+          {paused ? <Play className="size-4" aria-hidden="true" /> : <Pause className="size-4" aria-hidden="true" />}
+        </button>
+      </div>
 
       {open && (
         <div
