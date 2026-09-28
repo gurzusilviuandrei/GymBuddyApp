@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useBlocker } from "@tanstack/react-router";
-import { ArrowRightLeft, Camera, Check, Zap, CloudOff, Download, Pencil, Share2, Trash2, X } from "lucide-react";
+import { ArrowRightLeft, Camera, Check, Zap, CloudOff, Download, Pencil, Share2, Trash2, Volume2, VolumeX, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
