@@ -20,6 +20,7 @@ import { ExerciseDemo } from "@/components/workout/ExerciseDemo";
 
 
 export const Route = createFileRoute("/_authenticated/workout")({
+  staticData: { sitemap: false },
   validateSearch: (search: Record<string, unknown>) => ({
     mode: search["mode"] === "premade" || search["mode"] === "custom" ? search["mode"] : undefined,
     sore: search["sore"] === "fresh" || search["sore"] === "little" || search["sore"] === "super" ? search["sore"] : undefined,

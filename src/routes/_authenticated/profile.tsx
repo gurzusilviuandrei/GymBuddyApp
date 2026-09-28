@@ -27,6 +27,7 @@ import { createCustomerPortalSession } from "@/lib/payments.functions";
 import { getPaddleEnvironment } from "@/lib/paddle";
 
 export const Route = createFileRoute("/_authenticated/profile")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Profile & Settings — GymBuddy" },

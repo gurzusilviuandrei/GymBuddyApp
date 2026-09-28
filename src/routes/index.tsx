@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import gymBuddyLogo from "@/assets/gymbuddy-logo.png";
 
 export const Route = createFileRoute("/")({
+  staticData: { sitemap: true },
   head: () => ({
     meta: [
       { title: "Welcome to GymBuddy" },

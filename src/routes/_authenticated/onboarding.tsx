@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Get Started — GymBuddy" },

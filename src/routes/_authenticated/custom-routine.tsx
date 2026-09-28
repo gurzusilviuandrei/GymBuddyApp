@@ -13,6 +13,7 @@ import { usePro } from "@/components/pro/ProProvider";
 import { getPaddleEnvironment } from "@/lib/paddle";
 
 export const Route = createFileRoute("/_authenticated/custom-routine")({
+  staticData: { sitemap: false },
   head: () => ({ meta: [
     { title: "Custom Workout Editor — GymBuddy" },
     { name: "description", content: "Arrange and edit your own GymBuddy workout routine." },

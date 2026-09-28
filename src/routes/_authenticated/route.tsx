@@ -4,6 +4,7 @@ import { OfflineSyncWorker } from "@/components/OfflineSyncWorker";
 
 
 export const Route = createFileRoute("/_authenticated")({
+  staticData: { sitemap: "exclude-subtree" },
   ssr: false,
   beforeLoad: async () => {
     // Fast path: the locally stored session avoids a network round-trip on
