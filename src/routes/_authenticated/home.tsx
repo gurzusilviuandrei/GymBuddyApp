@@ -75,6 +75,7 @@ function Home() {
   const [signingOut, setSigningOut] = useState(false);
   const [active, setActive] = useState<ActiveSession | null>(() => readActiveSession());
   const [bagOpen, setBagOpen] = useState(true);
+  const [checkInOpen, setCheckInOpen] = useState(false);
   const [bagChecked, setBagChecked] = useState<BagItemId[]>(() => readBagChecklist());
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -294,17 +295,21 @@ function Home() {
               <p className="text-xs font-semibold uppercase text-primary">Guided Program</p>
               <h3 className="mt-3 text-xl font-semibold">The GymBuddy Pre-Made Plan</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                 Day 1 · Full Body Compound ({workout?.is_custom ? "Guided workout" : `${workout?.exercises.length ?? 0} movements`})
+                <span className="font-semibold text-foreground">Next up: Day {workout?.split_day ?? "A"}</span>
+                <span className="block">{workout?.split_focus ?? "Squat Focus · Horizontal Press · Horizontal Pull"}</span>
               </p>
+              <div className="mt-3 flex gap-1.5" aria-label="3-day split rotation">
+                {(["A", "B", "C"] as const).map((d) => (
+                  <span key={d} className={`rounded-md border px-2.5 py-1 text-xs font-semibold ${d === (workout?.split_day ?? "A") ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"}`}>Day {d}</span>
+                ))}
+              </div>
             </div>
             <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-primary/40 bg-primary/10 text-primary">
               <Dumbbell size={22} strokeWidth={1.7} aria-hidden="true" />
             </div>
           </div>
-          <Button asChild className="mt-6 h-14 w-full rounded-lg text-base font-semibold shadow-neon transition-transform active:scale-[0.98]">
-            <Link to="/workout" search={{ mode: "premade" }}>
-              Start Pre-Made Workout <ArrowRight className="ml-2" aria-hidden="true" />
-            </Link>
+          <Button type="button" onClick={() => setCheckInOpen(true)} className="mt-6 h-14 w-full rounded-lg text-base font-semibold shadow-neon transition-transform active:scale-[0.98]">
+            Start Day {workout?.split_day ?? "A"} Workout <ArrowRight className="ml-2" aria-hidden="true" />
           </Button>
         </div>
 
@@ -365,6 +370,38 @@ function Home() {
       </section>
     </main>
     <BottomNav />
+    {checkInOpen && (
+      <div className="fixed inset-0 z-[60] flex items-end justify-center bg-background/90 px-5 pb-8 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="checkin-title" onClick={() => setCheckInOpen(false)}>
+        <div className="w-full max-w-md rounded-lg border border-primary/40 bg-card p-6 animate-scale-in" onClick={(e) => e.stopPropagation()}>
+          <p id="checkin-title" className="text-xl font-semibold text-foreground">Muscle Status Check-in</p>
+          <p className="mt-2 text-sm text-muted-foreground">How do your muscles feel today? One tap and we'll tune your session.</p>
+          <div className="mt-5 grid gap-3">
+            {([
+              ["fresh", "💪", "Fresh", "Full session as planned"],
+              ["little", "🙂", "A Little Sore", "Normal session — warm up well"],
+              ["super", "🥵", "Super Sore", "Auto-adjusted: 2 sets, 120s rest"],
+            ] as const).map(([key, emoji, label, detail]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  setCheckInOpen(false);
+                  navigate({ to: "/workout", search: { mode: "premade", sore: key } });
+                }}
+                className="flex items-center gap-4 rounded-lg border-2 border-primary/40 bg-background px-4 py-4 text-left transition hover:border-primary hover:shadow-neon"
+              >
+                <span className="text-2xl" aria-hidden="true">{emoji}</span>
+                <span>
+                  <span className="block font-semibold text-foreground">{label}</span>
+                  <span className="block text-xs text-muted-foreground">{detail}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+          <Button type="button" variant="ghost" onClick={() => setCheckInOpen(false)} className="mt-3 w-full text-muted-foreground">Cancel</Button>
+        </div>
+      </div>
+    )}
     </>
   );
 }

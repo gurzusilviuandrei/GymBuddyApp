@@ -27,11 +27,13 @@ const FILTERS = [
   { label: "Back (Pull)", key: "back" },
   { label: "Legs (Squat/Hinge)", key: "legs" },
   { label: "Shoulders (Vertical Press)", key: "shoulders" },
+  { label: "Arms & Core", key: "arms" },
 ] as const;
 type Filter = (typeof FILTERS)[number]["key"];
 
 function categoryOf(type: string): Exclude<Filter, "all"> {
   const value = type.toLowerCase();
+  if (value.includes("arms") || value.includes("core")) return "arms";
   if (value.includes("horizontal press")) return "chest";
   if (value.includes("vertical press")) return "shoulders";
   if (value.includes("pull") || value.includes("row")) return "back";
