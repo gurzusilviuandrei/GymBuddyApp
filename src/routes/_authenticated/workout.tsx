@@ -71,6 +71,13 @@ function Workout() {
   const [logging, setLogging] = useState(false);
   const [index, setIndex] = useState(0);
   const [complete, setComplete] = useState(false);
+  const [pr, setPr] = useState<{ weight: number; name: string } | null>(null);
+  const prShown = useRef(new Set<string>());
+  useEffect(() => {
+    if (!pr) return;
+    const t = setTimeout(() => setPr(null), 3500);
+    return () => clearTimeout(t);
+  }, [pr]);
   const [lastLog, setLastLog] = useState<{ weight_kg: number; reps_completed: number } | null>(null);
   const logSet = useServerFn(logWorkoutSet);
   const fetchWorkout = useServerFn(getDayOneWorkout);
@@ -241,6 +248,12 @@ function Workout() {
         return;
       }
       commitSets((prev) => prev.map((x) => (x.key === key ? { ...x, id: row.id, status: "saved" } : x)));
+      if (row.is_personal_record && !prShown.current.has(key)) {
+        prShown.current.add(key);
+        const name = session.find((e) => e.id === item.exercise_id)?.name ?? (exercise?.id === item.exercise_id ? exercise.name : "lift");
+        try { navigator.vibrate?.(50); } catch { /* unsupported */ }
+        setPr({ weight: item.weight_kg, name });
+      }
       if (current.weight_kg !== item.weight_kg || current.reps !== item.reps) {
         updateSet({ data: { id: row.id, weight_kg: current.weight_kg, reps_completed: current.reps } }).catch(() => {});
       }
@@ -535,6 +548,16 @@ function Workout() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background px-7 pb-10 pt-14 text-foreground">
+      {pr && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 px-6 backdrop-blur-sm animate-fade-in" onClick={() => setPr(null)}>
+          <div role="alertdialog" aria-live="assertive" aria-label="New personal record" className="w-full max-w-sm rounded-2xl border-2 border-primary bg-card p-7 text-center shadow-neon" onClick={(e) => e.stopPropagation()}>
+            <p className="text-5xl" aria-hidden="true">🏆</p>
+            <p className="mt-4 text-2xl font-bold text-primary">New Personal Record! 🔥</p>
+            <p className="mt-3 text-base leading-relaxed text-foreground">{pr.weight}kg is your heaviest {pr.name} to date, Bro!</p>
+            <Button type="button" onClick={() => setPr(null)} className="mt-6 h-12 w-full rounded-lg text-base font-semibold shadow-neon">Let's Go!</Button>
+          </div>
+        </div>
+      )}
       {idle.show && (
         <div role="status" className="fixed inset-x-4 top-4 z-40 mx-auto flex max-w-md items-center gap-3 rounded-lg border border-primary/60 bg-card/95 px-4 py-3 shadow-neon backdrop-blur animate-fade-in">
           <Zap className="size-5 shrink-0 text-primary" aria-hidden="true" />
