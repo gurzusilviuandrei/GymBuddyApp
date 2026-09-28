@@ -726,17 +726,48 @@ function Workout() {
         ) : (
           <p className="mt-4 text-muted-foreground">{isLoading ? "Loading exercise details…" : "No exercise is assigned to this workout."}</p>
         )}
-        {lastLog && (
-          <div className="mt-6 rounded-2xl border border-primary/40 bg-card p-5" aria-live="polite">
-            <p className="text-sm text-muted-foreground">
-              Last time: {lastLog.weight_kg} kg × {lastLog.reps_completed}
-            </p>
-            <p className="mt-1 text-base font-medium text-foreground">
-              Today: Try to hit <span className="text-primary">{lastLog.reps_completed + 1} reps</span> or add{" "}
-              <span className="text-primary">2.5kg</span>.
-            </p>
-          </div>
-        )}
+        {lastLog && (() => {
+          // Step-Up Progression: only suggest more weight when every target set
+          // and rep landed last time; otherwise repeat the weight and clean up form.
+          const base = lastLog.top_weight_kg ?? lastLog.weight_kg;
+          const setsLast = lastLog.sets_completed ?? 1;
+          const repsLast = lastLog.min_reps ?? lastLog.reps_completed;
+          const hitAll = setsLast >= targetSets && repsLast >= targetReps;
+          const stepUp = Math.round((base + 2.5) * 100) / 100;
+          const suggested = hitAll ? stepUp : base;
+          return (
+            <div className="mt-6 rounded-2xl border border-primary/40 bg-card p-5" aria-live="polite">
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+                {hitAll ? "Step-Up Progression ⚡" : "Today's Target"}
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {hitAll
+                  ? `Last time you crushed ${setsLast}×${repsLast} @ ${base} kg.`
+                  : `Last time: ${base} kg × ${lastLog.reps_completed} ${lastLog.reps_completed === 1 ? "rep" : "reps"}.`}
+              </p>
+              <p className="mt-1 text-base font-medium text-foreground">
+                {hitAll ? (
+                  <>Ready to step up to <span className="text-primary">{stepUp} kg</span> today, Bro?</>
+                ) : (
+                  <>Lock in form at <span className="text-primary">{base} kg</span> and aim for {targetReps} clean reps.</>
+                )}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setWeight(String(suggested));
+                  setReps(String(targetReps));
+                  toast.success(hitAll ? `Loaded ${stepUp} kg. Let's go, Bro!` : `Loaded ${base} kg. Smooth reps today.`);
+                }}
+                className="mt-4 h-12 w-full rounded-lg border-primary/60 text-sm font-semibold text-primary hover:bg-primary/10 hover:text-primary"
+              >
+                {hitAll ? "Accept Step-Up (+2.5 kg)" : `Use ${base} kg again`}
+              </Button>
+            </div>
+          );
+        })()}
+
       </div>
 
       {/* Set logging inputs */}
