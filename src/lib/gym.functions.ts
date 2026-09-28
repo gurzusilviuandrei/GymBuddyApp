@@ -207,6 +207,7 @@ const logSchema = z.object({
   weight_kg: z.number().min(0).max(1000),
   reps_completed: z.number().int().min(1).max(100),
   set_number: z.number().int().min(1).max(50),
+  client_key: z.string().min(1).max(100).optional(),
 });
 
 export const logWorkoutSet = createServerFn({ method: "POST" })
@@ -214,11 +215,15 @@ export const logWorkoutSet = createServerFn({ method: "POST" })
   .inputValidator((data) => logSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: row, error } = await supabaseAdmin
-      .from("workout_logs")
-      .insert({ exercise_id: data.exercise_id, weight_kg: data.weight_kg, reps_completed: data.reps_completed, set_number: data.set_number, user_id: context.userId })
-      .select("id, set_number")
-      .single();
+    const values = { exercise_id: data.exercise_id, weight_kg: data.weight_kg, reps_completed: data.reps_completed, set_number: data.set_number, user_id: context.userId };
+    // Idempotent: a retried set with the same client key updates the one row instead of duplicating it.
+    const { data: row, error } = data.client_key
+      ? await supabaseAdmin
+          .from("workout_logs")
+          .upsert({ ...values, client_key: data.client_key }, { onConflict: "user_id,client_key" })
+          .select("id, set_number")
+          .single()
+      : await supabaseAdmin.from("workout_logs").insert(values).select("id, set_number").single();
     if (error) throw new Error("Could not log set");
     return row;
   });

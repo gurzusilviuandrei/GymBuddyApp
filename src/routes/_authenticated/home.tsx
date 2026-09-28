@@ -100,7 +100,7 @@ function Home() {
       try {
         for (const item of readOfflineQueue()) {
           if (!navigator.onLine) break;
-          const row = await logSet({ data: { exercise_id: item.exercise_id, weight_kg: item.weight_kg, reps_completed: item.reps, set_number: item.set_number } });
+          const row = await logSet({ data: { exercise_id: item.exercise_id, weight_kg: item.weight_kg, reps_completed: item.reps, set_number: item.set_number, client_key: item.key } });
           writeOfflineQueue(readOfflineQueue().filter((x) => x.key !== item.key));
           const s = readActiveSession();
           if (s) {
