@@ -244,7 +244,7 @@ function ProfilePage() {
       <section className="mt-10">
         <div className="flex items-center gap-3">
           <BookOpen className="size-5 text-primary" aria-hidden="true" />
-          <h2 className="text-lg font-semibold">📖 Gym Lingo Decoder</h2>
+          <h2 className="text-lg font-semibold">Gym Lingo Decoder</h2>
         </div>
         <div className="mt-5 rounded-lg border border-border bg-card p-5">
           <div className="relative">

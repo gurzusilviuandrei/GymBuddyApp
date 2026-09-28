@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useBlocker } from "@tanstack/react-router";
-import { Check, CloudOff, Download, Pencil, Share2, Trash2, X } from "lucide-react";
+import { Camera, Check, CloudOff, Download, Pencil, Share2, Trash2, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -470,7 +470,7 @@ function Workout() {
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Great lift! To optimize muscle repair, aim to consume roughly 500ml of water and 25–30g of protein within the next 2 hours.</p>
             </section>
             <Button type="button" onClick={handleShareCard} disabled={creatingCard} className="mt-6 h-16 w-full max-w-sm text-lg font-semibold shadow-neon">
-              <Share2 aria-hidden="true" /> {creatingCard ? "Creating Bro Card…" : "📸 Share My Bro Card"}
+              <Camera aria-hidden="true" /> {creatingCard ? "Creating Bro Card…" : "Share My Bro Card"}
             </Button>
             <Button type="button" variant="link" onClick={handleDownloadCard} disabled={creatingCard} className="mt-2 text-muted-foreground hover:text-primary">
               <Download aria-hidden="true" /> Save to Device Photos
