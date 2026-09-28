@@ -19,6 +19,7 @@ export function OfflineSyncBadge({ className = "" }: { className?: string }) {
       wasPending.current = true;
       setShowSynced(false);
     }
+    return undefined;
   }, [online, count]);
 
   if (!online) {
