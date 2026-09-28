@@ -368,8 +368,8 @@ function Home() {
       </section>
     </main>
     <BottomNav />
-    {checkInOpen && (
-      <div className="fixed inset-0 z-[60] flex items-end justify-center bg-background/90 px-5 pb-8 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="checkin-title" onClick={() => setCheckInOpen(false)}>
+    {checkInMode && (
+      <div className="fixed inset-0 z-[60] flex items-end justify-center bg-background/90 px-5 pb-8 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="checkin-title" onClick={() => setCheckInMode(null)}>
         <div className="w-full max-w-md rounded-lg border border-primary/40 bg-card p-6 animate-scale-in" onClick={(e) => e.stopPropagation()}>
           <p id="checkin-title" className="text-xl font-semibold text-foreground">Muscle Status Check-in</p>
           <p className="mt-2 text-sm text-muted-foreground">How do your muscles feel today? One tap and we'll tune your session.</p>
