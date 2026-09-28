@@ -122,7 +122,13 @@ export type Database = {
           id: string
           is_custom: boolean
           next_split_day: string
+          paddle_customer_id: string | null
+          paddle_subscription_id: string | null
           primary_goal: string | null
+          subscription_environment: string | null
+          subscription_period_end: string | null
+          subscription_status: string | null
+          subscription_tier: string
           weekly_goal_days: number | null
         }
         Insert: {
@@ -134,7 +140,13 @@ export type Database = {
           id: string
           is_custom?: boolean
           next_split_day?: string
+          paddle_customer_id?: string | null
+          paddle_subscription_id?: string | null
           primary_goal?: string | null
+          subscription_environment?: string | null
+          subscription_period_end?: string | null
+          subscription_status?: string | null
+          subscription_tier?: string
           weekly_goal_days?: number | null
         }
         Update: {
@@ -146,7 +158,13 @@ export type Database = {
           id?: string
           is_custom?: boolean
           next_split_day?: string
+          paddle_customer_id?: string | null
+          paddle_subscription_id?: string | null
           primary_goal?: string | null
+          subscription_environment?: string | null
+          subscription_period_end?: string | null
+          subscription_status?: string | null
+          subscription_tier?: string
           weekly_goal_days?: number | null
         }
         Relationships: []
@@ -291,7 +309,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_pro: { Args: { _env?: string; _user_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
