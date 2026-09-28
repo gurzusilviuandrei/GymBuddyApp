@@ -24,9 +24,24 @@ export const Route = createFileRoute("/_authenticated/history")({
 
 function HistoryPage() {
   const fetchHistory = useServerFn(getWorkoutHistory);
+  const removeSession = useServerFn(deleteWorkoutSession);
+  const queryClient = useQueryClient();
   const { data: sessions, isLoading } = useQuery({
     queryKey: ["workout-history"],
     queryFn: () => fetchHistory({ data: {} }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (sessionId: string) => removeSession({ data: { session_id: sessionId } }),
+    onSuccess: async () => {
+      // The weekly ring counts sessions since Monday, so refreshing stats deducts it.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["workout-history"] }),
+        queryClient.invalidateQueries({ queryKey: ["user-stats"] }),
+      ]);
+      toast.success("Workout deleted");
+    },
+    onError: () => toast.error("Could not delete that workout. Try again, Bro."),
   });
 
   return (
