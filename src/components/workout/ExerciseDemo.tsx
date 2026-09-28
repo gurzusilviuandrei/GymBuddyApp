@@ -24,7 +24,7 @@ function PlaceholderIcon() {
 }
 
 /** Cross-fading two-frame loop: silent, never interrupts the user's music. */
-function Loop({ frames, name, ready, onReady }: { frames: readonly [string, string]; name: string; ready: boolean; onReady: () => void }) {
+function Loop({ frames, name, ready, paused, onReady }: { frames: readonly [string, string]; name: string; ready: boolean; paused: boolean; onReady: () => void }) {
   const [flip, setFlip] = useState(false);
   const [reduced, setReduced] = useState(false);
 
@@ -37,10 +37,10 @@ function Loop({ frames, name, ready, onReady }: { frames: readonly [string, stri
   }, []);
 
   useEffect(() => {
-    if (reduced || !ready) return;
+    if (reduced || !ready || paused) return;
     const id = window.setInterval(() => setFlip((f) => !f), FRAME_MS);
     return () => window.clearInterval(id);
-  }, [reduced, ready]);
+  }, [reduced, ready, paused]);
 
   return (
     <>
