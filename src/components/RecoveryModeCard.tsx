@@ -104,13 +104,14 @@ function MobilityGuide({ onClose }: { onClose: () => void }) {
   const circ = 2 * Math.PI * r;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/85 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-label="Recovery mobility guide">
-      <div className="max-h-[85dvh] w-full max-w-md -translate-y-[60px] overflow-y-auto rounded-t-2xl border border-primary/50 bg-card p-6 shadow-neon animate-fade-in sm:rounded-2xl">
-
-        <div className="flex items-start justify-between">
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-background/85 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label="Recovery mobility guide">
+      <div className="flex max-h-[92dvh] w-full max-w-md flex-col rounded-t-2xl border border-primary/50 bg-card shadow-neon animate-fade-in sm:max-h-[88dvh] sm:rounded-2xl">
+        <div className="flex shrink-0 items-start justify-between border-b border-border/60 px-6 pb-4 pt-5">
           <h3 className="text-lg font-semibold">5-Min Recovery Mobility</h3>
           <button type="button" onClick={onClose} aria-label="Close" className="text-muted-foreground hover:text-foreground"><X size={20} /></button>
         </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-1">
+
         <div className="mt-5 flex flex-col items-center">
           <svg width="128" height="128" viewBox="0 0 128 128" aria-hidden="true">
             <circle cx="64" cy="64" r={r} fill="none" stroke="var(--border)" strokeWidth="8" />
@@ -144,7 +145,9 @@ function MobilityGuide({ onClose }: { onClose: () => void }) {
             </li>
           ))}
         </ul>
+        </div>
       </div>
+
     </div>
   );
 }

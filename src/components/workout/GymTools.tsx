@@ -2,6 +2,22 @@ import { useMemo, useState } from "react";
 import { Check, ChevronDown, Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/** Turn a partially-typed field into a usable number; never NaN, never negative. */
+function toNumber(value: string): number {
+  const n = Number.parseFloat(value.replace(",", "."));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/** Keep only digits (plus one decimal point when decimals are allowed). */
+function sanitize(raw: string, inputMode: "decimal" | "numeric"): string {
+  const cleaned = raw.replace(",", ".").replace(inputMode === "numeric" ? /[^0-9]/g : /[^0-9.]/g, "");
+  if (inputMode === "numeric") return cleaned.replace(/^0+(?=\d)/, "").slice(0, 4);
+  const [whole = "", ...rest] = cleaned.split(".");
+  const head = whole.replace(/^0+(?=\d)/, "").slice(0, 4);
+  if (rest.length === 0) return head;
+  return `${head || "0"}.${rest.join("").slice(0, 2)}`;
+}
+
 export function Stepper({
   label,
   value,
@@ -21,9 +37,12 @@ export function Stepper({
   inputMode: "decimal" | "numeric";
   unit: string;
 }) {
+  const current = toNumber(value);
   const bump = (dir: 1 | -1) => {
-    const current = Number(value) || 0;
-    const next = Math.min(max, Math.max(min, Math.round((current + dir * step) * 100) / 100));
+    // Round to the step grid so repeated taps can't drift into 7.500000000000001.
+    const raw = current + dir * step;
+    const snapped = Math.round(raw / step) * step;
+    const next = Math.min(max, Math.max(min, Math.round(snapped * 100) / 100));
     onChange(String(next));
   };
   const btn =
@@ -32,7 +51,7 @@ export function Stepper({
     <div className="flex flex-col gap-3">
       <span className="text-sm font-medium uppercase tracking-widest text-muted-foreground">{label}</span>
       <div className="flex items-center gap-2">
-        <button type="button" className={btn} onClick={() => bump(-1)} aria-label={`Decrease ${label} by ${step} ${unit}`} disabled={(Number(value) || 0) <= min}>
+        <button type="button" className={btn} onClick={() => bump(-1)} aria-label={`Decrease ${label} by ${step} ${unit}`} disabled={current <= min}>
           <Minus className="size-5" aria-hidden="true" />
         </button>
         <input
@@ -41,13 +60,14 @@ export function Stepper({
           pattern={inputMode === "numeric" ? "[0-9]*" : "[0-9]*[.,]?[0-9]*"}
           aria-label={label}
           value={value}
-          onChange={(e) => onChange(e.target.value.replace(",", ".").replace(inputMode === "numeric" ? /[^0-9]/g : /[^0-9.]/g, ""))}
+          onChange={(e) => onChange(sanitize(e.target.value, inputMode))}
           placeholder="0"
           className="h-16 w-full min-w-0 rounded-2xl border-2 border-input bg-card px-2 text-center text-xl font-semibold tabular-nums text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-hidden focus:ring-3 focus:ring-primary/25"
         />
-        <button type="button" className={btn} onClick={() => bump(1)} aria-label={`Increase ${label} by ${step} ${unit}`}>
+        <button type="button" className={btn} onClick={() => bump(1)} aria-label={`Increase ${label} by ${step} ${unit}`} disabled={current >= max}>
           <Plus className="size-5" aria-hidden="true" />
         </button>
+
       </div>
     </div>
   );

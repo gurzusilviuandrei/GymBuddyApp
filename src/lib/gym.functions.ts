@@ -56,7 +56,7 @@ const profileSchema = z.object({
 
 export const createUserProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => profileSchema.parse(data))
+  .validator((data) => profileSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row, error } = await supabaseAdmin
@@ -88,7 +88,7 @@ const SPLIT_FOCUS: Record<SplitDay, string> = {
 // "auto" keeps the previous behaviour (custom when active, else pre-made).
 export const getDayOneWorkout = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) =>
+  .validator((data) =>
     z
       .object({
         user_id: z.string().optional(),
@@ -164,7 +164,7 @@ export const getExerciseLibrary = createServerFn({ method: "GET" })
 
 export const saveCustomRoutine = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) =>
+  .validator((data) =>
     z.object({ exercise_ids: z.array(z.string().min(1).max(64)).min(1) }).parse(data),
   )
   .handler(async ({ data, context }) => {
@@ -184,7 +184,7 @@ export const saveCustomRoutine = createServerFn({ method: "POST" })
 
 export const getAlternativeExercise = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ exercise_id: z.string().min(1).max(64) }).parse(data))
+  .validator((data) => z.object({ exercise_id: z.string().min(1).max(64) }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: current } = await supabaseAdmin
@@ -212,7 +212,7 @@ const logSchema = z.object({
 
 export const logWorkoutSet = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => logSchema.parse(data))
+  .validator((data) => logSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // All-time peak for this exercise, ignoring this same set on retries.
@@ -240,7 +240,7 @@ export const logWorkoutSet = createServerFn({ method: "POST" })
 
 export const updateWorkoutSet = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) =>
+  .validator((data) =>
     z
       .object({
         id: z.string().uuid(),
@@ -262,7 +262,7 @@ export const updateWorkoutSet = createServerFn({ method: "POST" })
 
 export const deleteWorkoutSet = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ id: z.string().uuid() }).parse(data))
+  .validator((data) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
@@ -276,7 +276,7 @@ export const deleteWorkoutSet = createServerFn({ method: "POST" })
 
 export const getLastLog = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) =>
+  .validator((data) =>
     z.object({ user_id: z.string().optional(), exercise_id: z.string().min(1).max(64) }).parse(data),
   )
   .handler(async ({ data, context }) => {
@@ -298,7 +298,7 @@ export const getLastLog = createServerFn({ method: "GET" })
 
 export const getMachineSetting = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ exercise_id: z.string().min(1).max(64) }).parse(data))
+  .validator((data) => z.object({ exercise_id: z.string().min(1).max(64) }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const [{ data: ex }, { data: row }] = await Promise.all([
@@ -320,7 +320,7 @@ export const getMachineSetting = createServerFn({ method: "GET" })
 
 export const saveMachineSetting = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) =>
+  .validator((data) =>
     z
       .object({
         exercise_id: z.string().min(1).max(64),
@@ -348,7 +348,7 @@ export const saveMachineSetting = createServerFn({ method: "POST" })
 
 export const getUserStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) =>
+  .validator((data) =>
     z
       .object({
         user_id: z.string().optional(),
@@ -397,7 +397,7 @@ export const getUserStats = createServerFn({ method: "GET" })
 // Records a finished workout from this session's logged set IDs, not unrelated logs.
 export const completeWorkout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) =>
+  .validator((data) =>
     z
       .object({
         program_type: z.enum(["premade", "custom"]),
@@ -411,22 +411,30 @@ export const completeWorkout = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const started = new Date(data.started_at);
-    const earliest = new Date(Date.now() - 12 * 60 * 60 * 1000);
-    const startedAt = started < earliest ? earliest : started;
 
     if (new Set(data.log_ids).size !== data.log_ids.length) throw new Error("Duplicate logged sets");
-    const logs = [] as { exercise_id: string; weight_kg: number; reps_completed: number }[];
+    // Match strictly on this session's own log IDs (already user-scoped). No timestamp
+    // window: device/server clock drift must never drop a set from the session totals.
+    const logs = [] as { exercise_id: string; weight_kg: number; reps_completed: number; timestamp: string }[];
     for (let offset = 0; offset < data.log_ids.length; offset += 200) {
+      const slice = data.log_ids.slice(offset, offset + 200);
       const { data: batch, error: logErr } = await supabaseAdmin
         .from("workout_logs")
-        .select("exercise_id, weight_kg, reps_completed")
+        .select("exercise_id, weight_kg, reps_completed, timestamp")
         .eq("user_id", context.userId)
-        .gte("timestamp", startedAt.toISOString())
-        .in("id", data.log_ids.slice(offset, offset + 200));
-      if (logErr || !batch || batch.length !== Math.min(200, data.log_ids.length - offset)) throw new Error("Could not read all logged sets");
+        .in("id", slice);
+      if (logErr || !batch || batch.length !== slice.length) throw new Error("Could not read all logged sets");
       logs.push(...batch);
     }
+
+    // Derive the session start from the sets themselves, clamped by the reported start,
+    // so a skewed client clock cannot stamp a session in the future or far past.
+    const now = Date.now();
+    const reported = Date.parse(data.started_at);
+    const earliestLog = logs.reduce((min, l) => Math.min(min, Date.parse(l.timestamp) || now), now);
+    const candidate = Number.isFinite(reported) ? Math.min(reported, earliestLog) : earliestLog;
+    const floor = now - 12 * 60 * 60 * 1000;
+    const startedAt = new Date(Math.min(now, Math.max(floor, candidate)));
 
     const ids = Array.from(new Set([...data.exercise_ids, ...logs.map((l) => l.exercise_id)]));
     const { data: rows } = await supabaseAdmin.from("exercises").select("id, name").in("id", ids);
@@ -434,6 +442,7 @@ export const completeWorkout = createServerFn({ method: "POST" })
     const doneIds = new Set(logs.map((l) => l.exercise_id));
     const names = data.exercise_ids.filter((id) => doneIds.has(id)).map((id) => nameById.get(id) ?? id);
     const volume = logs.reduce((s, l) => s + Number(l.weight_kg) * l.reps_completed, 0);
+
 
     if (data.auto_regulated) {
       for (let offset = 0; offset < data.log_ids.length; offset += 200) {
@@ -476,7 +485,7 @@ export const completeWorkout = createServerFn({ method: "POST" })
 
 export const getWorkoutHistory = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ limit: z.number().int().min(1).max(200).optional() }).parse(data))
+  .validator((data) => z.object({ limit: z.number().int().min(1).max(200).optional() }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows, error } = await supabaseAdmin
@@ -504,7 +513,7 @@ export const getWorkoutHistory = createServerFn({ method: "GET" })
 // counts rows in workout_sessions, so deleting here deducts it automatically.
 export const deleteWorkoutSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ session_id: z.string().uuid() }).parse(data))
+  .validator((data) => z.object({ session_id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -540,7 +549,7 @@ const EX_FIELDS = "id, name, instructions, setup_cue, position_cue, movement_cue
 // Up to 4 alternatives sharing the movement pattern; the curated alternative comes first.
 export const getAlternativeOptions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) =>
+  .validator((data) =>
     z.object({ exercise_id: z.string().min(1).max(64), exclude: z.array(z.string().max(64)).max(50).optional() }).parse(data),
   )
   .handler(async ({ data, context }) => {
@@ -565,7 +574,7 @@ export const getAlternativeOptions = createServerFn({ method: "GET" })
 // Local calendar dates (YYYY-MM-DD) with at least one logged set, last ~20 weeks.
 export const getActivityDays = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ tz_offset: z.number().int().min(-840).max(840) }).parse(data))
+  .validator((data) => z.object({ tz_offset: z.number().int().min(-840).max(840) }).parse(data))
   .handler(async ({ data, context }) => {
     const since = new Date(Date.now() - 20 * 7 * 86_400_000).toISOString();
     const { data: rows, error } = await context.supabase
@@ -586,7 +595,7 @@ export const getActivityDays = createServerFn({ method: "GET" })
 // Every set recorded during one finished session.
 export const getSessionDetail = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) => z.object({ session_id: z.string().uuid() }).parse(data))
+  .validator((data) => z.object({ session_id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const { data: session } = await context.supabase
       .from("workout_sessions")
@@ -620,7 +629,7 @@ export const getSessionDetail = createServerFn({ method: "GET" })
 // Best estimated 1RM (Epley) per training day over the last 8 weeks.
 export const getExerciseProgress = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data) =>
+  .validator((data) =>
     z.object({ exercise_id: z.string().min(1).max(64), tz_offset: z.number().int().min(-840).max(840) }).parse(data),
   )
   .handler(async ({ data, context }) => {

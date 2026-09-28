@@ -26,7 +26,7 @@ export const getAccountSettings = createServerFn({ method: "GET" })
 
 export const updateAccountEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => emailSchema.parse(input))
+  .validator((input) => emailSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.auth.updateUser({ email: data.email });
     if (error) throw new Error(error.message);
@@ -55,7 +55,7 @@ export const exportMyData = createServerFn({ method: "POST" })
 
 export const deleteAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) =>
+  .validator((input) =>
     z.object({ confirmation: z.literal("DELETE"), password: z.string().min(1).max(72) }).parse(input),
   )
   .handler(async ({ data, context }) => {
