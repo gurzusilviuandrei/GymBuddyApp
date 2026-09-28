@@ -14,6 +14,8 @@ import { PlateVisualizer, Stepper, WarmUpCalculator } from "@/components/workout
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useIdleNudge } from "@/hooks/use-idle-nudge";
 import { createBroCardBlob, downloadBroCard, type BroCardStats } from "@/lib/bro-card";
+import { ExerciseDemo } from "@/components/workout/ExerciseDemo";
+
 
 export const Route = createFileRoute("/_authenticated/workout")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -41,18 +43,15 @@ export const Route = createFileRoute("/_authenticated/workout")({
   component: Workout,
 });
 
-function PlayIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className="size-10 text-primary"
-      aria-hidden="true"
-    >
-      <path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14Z" />
-    </svg>
-  );
+function buildCues(exercise: Ex | undefined): ReadonlyArray<readonly [string, string]> {
+  if (!exercise) return [];
+  return [
+    ["Machine Setup", exercise.setup_cue || "Choose a manageable load and check your equipment."],
+    ["Starting Position", exercise.position_cue || "Get stable and brace your core before you move."],
+    ["Key Movement Cue", exercise.movement_cue || exercise.instructions || "Move slowly and with control."],
+  ] as const;
 }
+
 
 const REST_OPTIONS = [45, 60, 90, 120] as const;
 const SYNC_TIMEOUT_MS = 6000;
@@ -673,17 +672,9 @@ function Workout() {
         </div>
       )}
       <OfflineSyncBadge className="mb-4" />
-      {/* Exercise video placeholder */}
-      <div
-        className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-5 rounded-3xl border-2 border-border bg-card"
-        role="img"
-        aria-label={`${exercise?.name ?? "Exercise"} Video Guide placeholder`}
-      >
-        <PlayIcon />
-        <p className="text-base font-medium tracking-wide text-muted-foreground">
-          {exercise ? `${exercise.name} Video Guide` : "Loading your workout…"}
-        </p>
-      </div>
+      {/* Exercise demonstration */}
+      <ExerciseDemo exerciseId={exercise?.id} name={exercise?.name} cues={buildCues(exercise)} />
+
 
       {/* Exercise title & target */}
       <div key={exercise?.id} className="mt-10 home-enter">
@@ -713,11 +704,8 @@ function Workout() {
         {exercise ? (
           <section aria-label="Exercise setup and form" className="mt-6 rounded-lg border border-border bg-card p-5">
             <ul className="space-y-5">
-              {([
-                ["Machine Setup", exercise.setup_cue || "Choose a manageable load and check your equipment."],
-                ["Starting Position", exercise.position_cue || "Get stable and brace your core before you move."],
-                ["Key Movement Cue", exercise.movement_cue || exercise.instructions || "Move slowly and with control."],
-              ] as const).map(([label, cue]) => (
+              {buildCues(exercise).map(([label, cue]) => (
+
                 <li key={label} className="flex gap-3 text-sm leading-relaxed">
                   <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
                   <span><strong className="block font-semibold text-foreground">{label}</strong><span className="text-muted-foreground">{cue}</span></span>
