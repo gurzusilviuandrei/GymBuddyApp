@@ -159,6 +159,7 @@ export type Database = {
           id: string
           is_personal_record: boolean
           reps_completed: number
+          session_id: string | null
           set_number: number
           timestamp: string
           user_id: string
@@ -171,6 +172,7 @@ export type Database = {
           id?: string
           is_personal_record?: boolean
           reps_completed: number
+          session_id?: string | null
           set_number: number
           timestamp?: string
           user_id: string
@@ -183,6 +185,7 @@ export type Database = {
           id?: string
           is_personal_record?: boolean
           reps_completed?: number
+          session_id?: string | null
           set_number?: number
           timestamp?: string
           user_id?: string
@@ -194,6 +197,13 @@ export type Database = {
             columns: ["exercise_id"]
             isOneToOne: false
             referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "workout_sessions"
             referencedColumns: ["id"]
           },
           {
