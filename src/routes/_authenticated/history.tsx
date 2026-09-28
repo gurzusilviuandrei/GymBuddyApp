@@ -70,7 +70,14 @@ function HistoryPage() {
             </div>
           )}
 
-          {sessions?.map((session) => <SessionCard key={session.id} session={session} />)}
+          {sessions?.map((session) => (
+            <SessionCard
+              key={session.id}
+              session={session}
+              onDelete={(id) => deleteMutation.mutate(id)}
+              deleting={deleteMutation.isPending && deleteMutation.variables === session.id}
+            />
+          ))}
         </section>
       </main>
       <BottomNav />
