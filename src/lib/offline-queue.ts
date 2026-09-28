@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import type { CachedSet } from "./active-session";
 
 export const OFFLINE_QUEUE_KEY = "gymbuddy_offline_queue";
-const EVENT = "gymbuddy-offline-queue";
+export const QUEUE_EVENT = "gymbuddy-offline-queue";
+const EVENT = QUEUE_EVENT;
+
 
 export function readOfflineQueue(): CachedSet[] {
   if (typeof window === "undefined") return [];
