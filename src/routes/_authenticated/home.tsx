@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { BottomNav } from "@/components/BottomNav";
+import { usePro } from "@/components/pro/ProProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureUserRow, getDayOneWorkout, getUserStats, getWorkoutHistory } from "@/lib/gym.functions";
 
@@ -384,8 +385,8 @@ function Home() {
               >
                 Start Custom Workout <ArrowRight className="ml-2" aria-hidden="true" />
               </Button>
-              <Button asChild variant="outline" className="mt-3 h-11 w-full rounded-lg border-primary/60 text-sm font-semibold text-primary hover:bg-primary/10 hover:text-primary">
-                <Link to="/custom-routine">Edit Routine</Link>
+              <Button type="button" onClick={() => requirePro(() => navigate({ to: "/custom-routine" }))} variant="outline" className="mt-3 h-11 w-full rounded-lg border-primary/60 text-sm font-semibold text-primary hover:bg-primary/10 hover:text-primary">
+                Edit Routine
               </Button>
             </>
           ) : (
@@ -394,11 +395,12 @@ function Home() {
                 No custom routine assembled yet, Bro.
               </p>
               <Button
-                asChild
+                type="button"
+                onClick={() => requirePro(() => navigate({ to: "/custom-routine" }))}
                 variant="outline"
                 className="mt-6 h-14 w-full rounded-lg border-primary/60 text-base font-semibold text-primary hover:bg-primary/10 hover:text-primary"
               >
-                <Link to="/custom-routine">Assemble Custom Routine</Link>
+                Assemble Custom Routine{!isPro && " ⚡ Pro"}
               </Button>
             </>
           )}
