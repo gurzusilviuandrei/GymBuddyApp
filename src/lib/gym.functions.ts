@@ -369,7 +369,7 @@ export const getUserStats = createServerFn({ method: "GET" })
     const sunday = new Date(local.getTime() + offsetMs);
 
     // A workout counts once it has been finished (completion screen reached).
-    const [{ count }, { count: totalLoggedSets }] = await Promise.all([
+    const [weekRes, setsRes, userRes] = await Promise.all([
       supabaseAdmin
         .from("workout_sessions")
         .select("id", { count: "exact", head: true })
@@ -379,18 +379,19 @@ export const getUserStats = createServerFn({ method: "GET" })
         .from("workout_logs")
         .select("id", { count: "exact", head: true })
         .eq("user_id", context.userId),
+      supabaseAdmin.from("users").select("weekly_goal_days").eq("id", context.userId).maybeSingle(),
     ]);
-
-    const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("weekly_goal_days")
-      .eq("id", context.userId)
-      .maybeSingle();
+    // Surface failures so the screen keeps the last known numbers instead of showing zero.
+    const failed = weekRes.error ?? setsRes.error ?? userRes.error;
+    if (failed || weekRes.count == null || setsRes.count == null) {
+      console.error("getUserStats failed", failed?.code, failed?.message);
+      throw new Error("Could not load your weekly stats");
+    }
 
     return {
-      completedWorkouts: count ?? 0,
-      totalLoggedSets: totalLoggedSets ?? 0,
-      weeklyTarget: user?.weekly_goal_days ?? 3,
+      completedWorkouts: weekRes.count,
+      totalLoggedSets: setsRes.count,
+      weeklyTarget: userRes.data?.weekly_goal_days ?? 3,
     };
   });
 
@@ -470,6 +471,15 @@ export const completeWorkout = createServerFn({ method: "POST" })
       console.error("completeWorkout insert failed", error.code, error.message);
       throw new Error("Could not save workout");
     }
+    // Link every set of this workout directly to its session row.
+    for (let offset = 0; offset < data.log_ids.length; offset += 200) {
+      const { error: linkErr } = await supabaseAdmin
+        .from("workout_logs")
+        .update({ session_id: row.id })
+        .eq("user_id", context.userId)
+        .in("id", data.log_ids.slice(offset, offset + 200));
+      if (linkErr) console.error("completeWorkout link failed", linkErr.code, linkErr.message);
+    }
     // Rotate the pre-made split forward (A → B → C → A) as soon as it's finished.
     if (data.program_type === "premade") {
       const { data: u } = await supabaseAdmin.from("users").select("next_split_day").eq("id", context.userId).maybeSingle();
@@ -526,14 +536,25 @@ export const deleteWorkoutSession = createServerFn({ method: "POST" })
     if (readErr) throw new Error("Could not load that workout");
     if (!session) return { deleted: false as const };
 
-    // Clear the sets recorded during that session so test data does not skew stats.
-    const { error: logErr } = await supabaseAdmin
+    // Delete exactly the sets linked to this session.
+    const { data: linked, error: logErr } = await supabaseAdmin
       .from("workout_logs")
       .delete()
       .eq("user_id", context.userId)
-      .gte("timestamp", session.started_at)
-      .lte("timestamp", session.completed_at);
-    if (logErr) console.error("deleteWorkoutSession logs failed", logErr.code, logErr.message);
+      .eq("session_id", session.id)
+      .select("id");
+    if (logErr) throw new Error("Could not delete that workout");
+    if ((linked ?? []).length === 0) {
+      // Legacy session without linkage: only unlinked sets inside its window.
+      const { error: legacyErr } = await supabaseAdmin
+        .from("workout_logs")
+        .delete()
+        .eq("user_id", context.userId)
+        .is("session_id", null)
+        .gte("timestamp", session.started_at)
+        .lte("timestamp", session.completed_at);
+      if (legacyErr) throw new Error("Could not delete that workout");
+    }
 
     const { error } = await supabaseAdmin
       .from("workout_sessions")
@@ -604,13 +625,24 @@ export const getSessionDetail = createServerFn({ method: "GET" })
       .eq("user_id", context.userId)
       .maybeSingle();
     if (!session) return [];
-    const { data: logs, error } = await context.supabase
+    const cols = "id, exercise_id, set_number, weight_kg, reps_completed, timestamp, exercises(name)";
+    let { data: logs, error } = await context.supabase
       .from("workout_logs")
-      .select("id, exercise_id, set_number, weight_kg, reps_completed, timestamp, exercises(name)")
+      .select(cols)
       .eq("user_id", context.userId)
-      .gte("timestamp", session.started_at)
-      .lte("timestamp", session.completed_at)
+      .eq("session_id", data.session_id)
       .order("timestamp");
+    if (!error && (logs ?? []).length === 0) {
+      // Legacy sessions saved before direct linkage: fall back to unlinked sets in the window.
+      ({ data: logs, error } = await context.supabase
+        .from("workout_logs")
+        .select(cols)
+        .eq("user_id", context.userId)
+        .is("session_id", null)
+        .gte("timestamp", session.started_at)
+        .lte("timestamp", session.completed_at)
+        .order("timestamp"));
+    }
     if (error) throw new Error("Could not load workout details");
     const groups: { exercise_id: string; name: string; sets: { id: string; set_number: number; weight_kg: number; reps: number }[] }[] = [];
     for (const l of logs ?? []) {
