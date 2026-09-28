@@ -78,6 +78,7 @@ function Home() {
   const [active, setActive] = useState<ActiveSession | null>(() => readActiveSession());
   const [bagOpen, setBagOpen] = useState(true);
   const [checkInMode, setCheckInMode] = useState<"premade" | "custom" | null>(null);
+  const [autoRegulate, setAutoRegulate] = useState(false);
   const [bagChecked, setBagChecked] = useState<BagItemId[]>(() => readBagChecklist());
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -348,7 +349,18 @@ function Home() {
               <Dumbbell size={22} strokeWidth={1.7} aria-hidden="true" />
             </div>
           </div>
-          <Button type="button" onClick={() => setCheckInMode("premade")} className="mt-6 h-14 w-full rounded-lg text-base font-semibold shadow-neon transition-transform active:scale-[0.98]">
+          <label className="mt-6 flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-border bg-background px-4 py-3">
+            <span className="text-sm font-semibold text-foreground">🤕 Low energy / Super sore today?</span>
+            <Switch checked={autoRegulate} onCheckedChange={setAutoRegulate} aria-label="Low energy or super sore today" />
+          </label>
+          {autoRegulate && (
+            <p className="mt-2 text-xs text-primary animate-fade-in">No worries, Bro. We auto-regulated today's session. Showing up is a win.</p>
+          )}
+          <Button
+            type="button"
+            onClick={() => (autoRegulate ? navigate({ to: "/workout", search: { mode: "premade", sore: "super" } }) : setCheckInMode("premade"))}
+            className="mt-4 h-14 w-full rounded-lg text-base font-semibold shadow-neon transition-transform active:scale-[0.98]"
+          >
             Start Day {workout?.split_day ?? "A"} Workout <ArrowRight className="ml-2" aria-hidden="true" />
           </Button>
         </div>
