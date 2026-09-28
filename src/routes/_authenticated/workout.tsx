@@ -939,9 +939,24 @@ function Workout() {
                  </button>
                ))}
              </div>
-             <Button type="button" variant="link" onClick={() => setRestEndsAt(null)} className="mt-5 text-base text-muted-foreground hover:text-primary">
+             <button
+               type="button"
+               aria-pressed={!chimeMuted}
+               onClick={() => {
+                 const next = !chimeMuted;
+                 setChimeMuted(next);
+                 setChimeMutedState(next);
+                 if (!next) { unlockChime(); playRestOverChime(); }
+               }}
+               className="mt-7 inline-flex h-11 items-center justify-center gap-2 rounded-full border-2 border-border bg-card px-5 text-sm font-semibold text-muted-foreground transition hover:border-primary/60 hover:text-primary"
+             >
+               {chimeMuted ? <VolumeX className="size-4" aria-hidden="true" /> : <Volume2 className="size-4 text-primary" aria-hidden="true" />}
+               {chimeMuted ? "Chime off" : "Chime on"}
+             </button>
+             <Button type="button" variant="link" onClick={() => setRestEndsAt(null)} className="mt-3 block w-full text-base text-muted-foreground hover:text-primary">
                Skip Rest
              </Button>
+
            </div>
          </div>
        )}
