@@ -30,6 +30,7 @@ export function useOfflineStatus() {
   const [online, setOnline] = useState(true);
   const [count, setCount] = useState(0);
   useEffect(() => {
+    // Event-driven only: queue writes dispatch EVENT, so no background polling is needed.
     const update = () => {
       setOnline(navigator.onLine);
       setCount(readOfflineQueue().length);
@@ -39,14 +40,13 @@ export function useOfflineStatus() {
     window.addEventListener("offline", update);
     window.addEventListener(EVENT, update);
     window.addEventListener("storage", update);
-    const id = window.setInterval(update, 3000);
     return () => {
       window.removeEventListener("online", update);
       window.removeEventListener("offline", update);
       window.removeEventListener(EVENT, update);
       window.removeEventListener("storage", update);
-      window.clearInterval(id);
     };
   }, []);
   return { online, count };
 }
+

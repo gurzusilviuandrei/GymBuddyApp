@@ -145,7 +145,9 @@ function MobilityGuide({ onClose }: { onClose: () => void }) {
             </li>
           ))}
         </ul>
+        </div>
       </div>
+
     </div>
   );
 }
