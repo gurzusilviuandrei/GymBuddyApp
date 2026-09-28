@@ -274,6 +274,10 @@ function Workout() {
   };
 
   const kickSyncRef = useRef<() => void>(() => {});
+  const logLock = useRef(false);
+  // Always call the latest syncSet so background retries see the loaded workout.
+  const syncSetRef = useRef(syncSet);
+  syncSetRef.current = syncSet;
 
   // Mirror every unsynced set into the offline queue so the badge (and Home) can see it,
   // and wake the retry loop whenever a set is still waiting to reach the account.
@@ -306,7 +310,7 @@ function Workout() {
       try {
         for (const x of pending) {
           if (!navigator.onLine) break;
-          await syncSet(x.key);
+          await syncSetRef.current(x.key);
         }
       } finally {
         running = false;
@@ -535,7 +539,10 @@ function Workout() {
       toast.error("Your workout is still loading. Try again in a moment.");
       return;
     }
-    if (logging || restEndsAt !== null) return;
+    if (logging || logLock.current || restEndsAt !== null) return;
+    logLock.current = true;
+    setLogging(true);
+    window.setTimeout(() => { logLock.current = false; setLogging(false); }, 400);
     // Start at the tap, not after the network request completes.
     if (setNumber < targetSets) {
       setSecondsLeft(restSecs);
