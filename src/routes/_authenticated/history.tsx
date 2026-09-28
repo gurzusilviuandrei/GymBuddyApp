@@ -12,6 +12,7 @@ import { SessionDetailSheet } from "@/components/history/SessionDetailSheet";
 import type { SessionSummary } from "@/components/SessionCard";
 
 export const Route = createFileRoute("/_authenticated/history")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Workout History — GymBuddy" },

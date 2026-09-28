@@ -62,6 +62,7 @@ function readProfile(): Profile {
 }
 
 export const Route = createFileRoute("/_authenticated/home")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Home — GymBuddy" },

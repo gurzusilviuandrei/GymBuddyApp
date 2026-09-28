@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/reset-password")({
+  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Reset Password — GymBuddy" },
+      { name: "robots", content: "noindex" },
       { name: "description", content: "Choose a new secure password for your GymBuddy account." },
       { property: "og:title", content: "Reset Password — GymBuddy" },
       { property: "og:description", content: "Choose a new secure password for your GymBuddy account." },
