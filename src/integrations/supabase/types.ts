@@ -105,6 +105,7 @@ export type Database = {
       }
       workout_logs: {
         Row: {
+          client_key: string | null
           exercise_id: string
           id: string
           reps_completed: number
@@ -114,6 +115,7 @@ export type Database = {
           weight_kg: number
         }
         Insert: {
+          client_key?: string | null
           exercise_id: string
           id?: string
           reps_completed: number
@@ -123,6 +125,7 @@ export type Database = {
           weight_kg: number
         }
         Update: {
+          client_key?: string | null
           exercise_id?: string
           id?: string
           reps_completed?: number
