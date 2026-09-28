@@ -73,6 +73,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_custom: boolean
+          next_split_day: string
           primary_goal: string | null
           weekly_goal_days: number | null
         }
@@ -84,6 +85,7 @@ export type Database = {
           full_name?: string | null
           id: string
           is_custom?: boolean
+          next_split_day?: string
           primary_goal?: string | null
           weekly_goal_days?: number | null
         }
@@ -95,6 +97,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_custom?: boolean
+          next_split_day?: string
           primary_goal?: string | null
           weekly_goal_days?: number | null
         }
