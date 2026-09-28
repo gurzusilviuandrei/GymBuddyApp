@@ -12,6 +12,7 @@ export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
       { title: "Reset Password — GymBuddy" },
+      { name: "robots", content: "noindex" },
       { name: "description", content: "Choose a new secure password for your GymBuddy account." },
       { property: "og:title", content: "Reset Password — GymBuddy" },
       { property: "og:description", content: "Choose a new secure password for your GymBuddy account." },
