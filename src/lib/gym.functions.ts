@@ -319,19 +319,33 @@ export const getLastLog = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // Baseline ignores auto-regulated (recovery) sets so a light day never lowers next week's weights.
-    const lastLog = (baselineOnly: boolean) => {
+    const lastLogs = (baselineOnly: boolean) => {
       let q = supabaseAdmin
         .from("workout_logs")
-        .select("weight_kg, reps_completed")
+        .select("weight_kg, reps_completed, timestamp")
         .eq("user_id", context.userId)
         .eq("exercise_id", data.exercise_id);
       if (baselineOnly) q = q.eq("auto_regulated", false);
-      return q.order("timestamp", { ascending: false }).limit(1).maybeSingle();
+      return q.order("timestamp", { ascending: false }).limit(12);
     };
-    const { data: base } = await lastLog(true);
-    const row = base ?? (await lastLog(false)).data;
-    return row ? { weight_kg: Number(row.weight_kg), reps_completed: row.reps_completed } : null;
+    const { data: base } = await lastLogs(true);
+    const rows = base?.length ? base : (await lastLogs(false)).data ?? [];
+    const latest = rows[0];
+    if (!latest) return null;
+    // Keep only the sets from the most recent session for this exercise, so the
+    // step-up suggestion reflects one whole session rather than mixed weeks.
+    const dayOf = (ts: string) => new Date(ts).toDateString();
+    const session = rows.filter((r) => dayOf(r.timestamp) === dayOf(latest.timestamp));
+    const reps = session.map((r) => r.reps_completed);
+    return {
+      weight_kg: Number(latest.weight_kg),
+      reps_completed: latest.reps_completed,
+      sets_completed: session.length,
+      min_reps: reps.length ? Math.min(...reps) : latest.reps_completed,
+      top_weight_kg: Math.max(...session.map((r) => Number(r.weight_kg))),
+    };
   });
+
 
 export const getMachineSetting = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

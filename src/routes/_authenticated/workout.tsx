@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useBlocker } from "@tanstack/react-router";
-import { ArrowRightLeft, Camera, Check, Zap, CloudOff, Download, Pencil, Share2, Trash2, X } from "lucide-react";
+import { ArrowRightLeft, Camera, Check, Zap, CloudOff, Download, Pencil, Share2, Trash2, Volume2, VolumeX, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -17,6 +17,8 @@ import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } f
 import { useIdleNudge } from "@/hooks/use-idle-nudge";
 import { createBroCardBlob, downloadBroCard, type BroCardStats } from "@/lib/bro-card";
 import { ExerciseDemo } from "@/components/workout/ExerciseDemo";
+import { isChimeMuted, playRestOverChime, setChimeMuted, unlockChime } from "@/lib/rest-chime";
+
 
 
 export const Route = createFileRoute("/_authenticated/workout")({
@@ -80,7 +82,9 @@ function Workout() {
     const t = setTimeout(() => setPr(null), 3500);
     return () => clearTimeout(t);
   }, [pr]);
-  const [lastLog, setLastLog] = useState<{ weight_kg: number; reps_completed: number } | null>(null);
+  const [lastLog, setLastLog] = useState<{ weight_kg: number; reps_completed: number; sets_completed?: number; min_reps?: number; top_weight_kg?: number } | null>(null);
+  const [chimeMuted, setChimeMutedState] = useState(false);
+
   const logSet = useServerFn(logWorkoutSet);
   const fetchWorkout = useServerFn(getDayOneWorkout);
   const fetchOptions = useServerFn(getAlternativeOptions);
@@ -124,6 +128,18 @@ function Workout() {
     setSets(next);
   };
 
+  // Audio needs a real tap before it is allowed to play on phones.
+  useEffect(() => {
+    setChimeMutedState(isChimeMuted());
+    const arm = () => unlockChime();
+    window.addEventListener("pointerdown", arm, { once: true });
+    window.addEventListener("touchstart", arm, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", arm);
+      window.removeEventListener("touchstart", arm);
+    };
+  }, []);
+
   useEffect(() => {
     if (restEndsAt === null) return;
     // Only re-render when the displayed second actually changes, so the rest
@@ -135,12 +151,18 @@ function Workout() {
         shown = remaining;
         setSecondsLeft(remaining);
       }
-      if (remaining === 0) setRestEndsAt(null);
+      if (remaining === 0) {
+        setRestEndsAt(null);
+        // Chime for headphones, buzz for pockets — rest is over.
+        playRestOverChime();
+        try { navigator.vibrate?.([120, 80, 120]); } catch { /* unsupported */ }
+      }
     };
     tick();
     const interval = window.setInterval(tick, 250);
     return () => window.clearInterval(interval);
   }, [restEndsAt]);
+
 
   // Keep the screen awake while training; released on finish or leaving the page.
   useEffect(() => {
@@ -724,17 +746,48 @@ function Workout() {
         ) : (
           <p className="mt-4 text-muted-foreground">{isLoading ? "Loading exercise details…" : "No exercise is assigned to this workout."}</p>
         )}
-        {lastLog && (
-          <div className="mt-6 rounded-2xl border border-primary/40 bg-card p-5" aria-live="polite">
-            <p className="text-sm text-muted-foreground">
-              Last time: {lastLog.weight_kg} kg × {lastLog.reps_completed}
-            </p>
-            <p className="mt-1 text-base font-medium text-foreground">
-              Today: Try to hit <span className="text-primary">{lastLog.reps_completed + 1} reps</span> or add{" "}
-              <span className="text-primary">2.5kg</span>.
-            </p>
-          </div>
-        )}
+        {lastLog && (() => {
+          // Step-Up Progression: only suggest more weight when every target set
+          // and rep landed last time; otherwise repeat the weight and clean up form.
+          const base = lastLog.top_weight_kg ?? lastLog.weight_kg;
+          const setsLast = lastLog.sets_completed ?? 1;
+          const repsLast = lastLog.min_reps ?? lastLog.reps_completed;
+          const hitAll = setsLast >= targetSets && repsLast >= targetReps;
+          const stepUp = Math.round((base + 2.5) * 100) / 100;
+          const suggested = hitAll ? stepUp : base;
+          return (
+            <div className="mt-6 rounded-2xl border border-primary/40 bg-card p-5" aria-live="polite">
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+                {hitAll ? "Step-Up Progression ⚡" : "Today's Target"}
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {hitAll
+                  ? `Last time you crushed ${setsLast}×${repsLast} @ ${base} kg.`
+                  : `Last time: ${base} kg × ${lastLog.reps_completed} ${lastLog.reps_completed === 1 ? "rep" : "reps"}.`}
+              </p>
+              <p className="mt-1 text-base font-medium text-foreground">
+                {hitAll ? (
+                  <>Ready to step up to <span className="text-primary">{stepUp} kg</span> today, Bro?</>
+                ) : (
+                  <>Lock in form at <span className="text-primary">{base} kg</span> and aim for {targetReps} clean reps.</>
+                )}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setWeight(String(suggested));
+                  setReps(String(targetReps));
+                  toast.success(hitAll ? `Loaded ${stepUp} kg. Let's go, Bro!` : `Loaded ${base} kg. Smooth reps today.`);
+                }}
+                className="mt-4 h-12 w-full rounded-lg border-primary/60 text-sm font-semibold text-primary hover:bg-primary/10 hover:text-primary"
+              >
+                {hitAll ? "Accept Step-Up (+2.5 kg)" : `Use ${base} kg again`}
+              </Button>
+            </div>
+          );
+        })()}
+
       </div>
 
       {/* Set logging inputs */}
@@ -886,9 +939,24 @@ function Workout() {
                  </button>
                ))}
              </div>
-             <Button type="button" variant="link" onClick={() => setRestEndsAt(null)} className="mt-5 text-base text-muted-foreground hover:text-primary">
+             <button
+               type="button"
+               aria-pressed={!chimeMuted}
+               onClick={() => {
+                 const next = !chimeMuted;
+                 setChimeMuted(next);
+                 setChimeMutedState(next);
+                 if (!next) { unlockChime(); playRestOverChime(); }
+               }}
+               className="mt-7 inline-flex h-11 items-center justify-center gap-2 rounded-full border-2 border-border bg-card px-5 text-sm font-semibold text-muted-foreground transition hover:border-primary/60 hover:text-primary"
+             >
+               {chimeMuted ? <VolumeX className="size-4" aria-hidden="true" /> : <Volume2 className="size-4 text-primary" aria-hidden="true" />}
+               {chimeMuted ? "Chime off" : "Chime on"}
+             </button>
+             <Button type="button" variant="link" onClick={() => setRestEndsAt(null)} className="mt-3 block w-full text-base text-muted-foreground hover:text-primary">
                Skip Rest
              </Button>
+
            </div>
          </div>
        )}
