@@ -162,7 +162,9 @@ function AuthPage() {
           setNow(Date.now());
           toast.error(`Too many failed attempts. Locked for ${blocks * 60}s.`);
         } else {
-          toast.error(`Wrong email or password. ${MAX_ATTEMPTS - next} attempts left.`);
+          const left = MAX_ATTEMPTS - next;
+          toast.error(`Wrong email or password. ${left} ${left === 1 ? "attempt" : "attempts"} left.`);
+
         }
       } else {
         toast.error(msg);
