@@ -673,17 +673,9 @@ function Workout() {
         </div>
       )}
       <OfflineSyncBadge className="mb-4" />
-      {/* Exercise video placeholder */}
-      <div
-        className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-5 rounded-3xl border-2 border-border bg-card"
-        role="img"
-        aria-label={`${exercise?.name ?? "Exercise"} Video Guide placeholder`}
-      >
-        <PlayIcon />
-        <p className="text-base font-medium tracking-wide text-muted-foreground">
-          {exercise ? `${exercise.name} Video Guide` : "Loading your workout…"}
-        </p>
-      </div>
+      {/* Exercise demonstration */}
+      <ExerciseDemo exerciseId={exercise?.id} name={exercise?.name} cues={formCues} />
+
 
       {/* Exercise title & target */}
       <div key={exercise?.id} className="mt-10 home-enter">
