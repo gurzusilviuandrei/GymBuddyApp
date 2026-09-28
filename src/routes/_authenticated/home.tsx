@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { BottomNav } from "@/components/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
-import { ensureUserRow, getDayOneWorkout, getUserStats, getWorkoutHistory, logWorkoutSet } from "@/lib/gym.functions";
+import { ensureUserRow, getDayOneWorkout, getUserStats, getWorkoutHistory } from "@/lib/gym.functions";
+
 import { SessionCard } from "@/components/SessionCard";
 import { syncLocalProfile } from "@/lib/account-sync";
 import { readActiveSession, writeActiveSession, clearActiveSession, type ActiveSession } from "@/lib/active-session";
