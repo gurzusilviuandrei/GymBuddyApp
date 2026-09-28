@@ -267,6 +267,7 @@ function Home() {
             variant="link"
             onClick={() => {
               clearActiveSession();
+              writeOfflineQueue([]);
               setActive(null);
               toast.success("Workout abandoned.");
             }}
