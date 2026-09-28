@@ -87,6 +87,7 @@ function Home() {
   const [autoRegulate, setAutoRegulate] = useState(false);
   const [bagChecked, setBagChecked] = useState<BagItemId[]>(() => readBagChecklist());
   const navigate = useNavigate();
+  const { isPro, requirePro } = usePro();
   const queryClient = useQueryClient();
   const fetchWorkout = useServerFn(getDayOneWorkout);
   const fetchStats = useServerFn(getUserStats);

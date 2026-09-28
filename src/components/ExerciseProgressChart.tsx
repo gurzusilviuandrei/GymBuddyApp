@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { getExerciseProgress } from "@/lib/gym.functions";
+import { getPaddleEnvironment } from "@/lib/paddle";
 
 const shortDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short" });
 
@@ -10,7 +11,7 @@ export function ExerciseProgressChart({ exerciseId }: { exerciseId: string }) {
   const fetchProgress = useServerFn(getExerciseProgress);
   const { data, isLoading } = useQuery({
     queryKey: ["exercise-progress", exerciseId],
-    queryFn: () => fetchProgress({ data: { exercise_id: exerciseId, tz_offset: new Date().getTimezoneOffset() } }),
+    queryFn: () => fetchProgress({ data: { exercise_id: exerciseId, tz_offset: new Date().getTimezoneOffset(), env: getPaddleEnvironment() } }),
   });
 
   if (isLoading) return <p className="py-6 text-center text-xs text-muted-foreground">Loading your progress…</p>;
