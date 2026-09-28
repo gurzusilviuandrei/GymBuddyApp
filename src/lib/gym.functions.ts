@@ -485,7 +485,11 @@ export const getWorkoutHistory = createServerFn({ method: "GET" })
       .eq("user_id", context.userId)
       .order("completed_at", { ascending: false })
       .limit(data.limit ?? 100);
-    if (error) throw new Error("Could not load workout history");
+    if (error) {
+      // Log the real cause server-side; return an empty list so a hiccup never blanks the screen.
+      console.error("getWorkoutHistory failed", error.code, error.message);
+      return [];
+    }
     return (rows ?? []).map((r) => ({
       id: r.id,
       completedAt: r.completed_at,
