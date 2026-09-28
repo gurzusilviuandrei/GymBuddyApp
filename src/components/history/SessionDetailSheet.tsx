@@ -14,7 +14,7 @@ export function SessionDetailSheet({ session, onClose }: { session: SessionSumma
 
   return (
     <Sheet open={Boolean(session)} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="bottom" className="h-[100dvh] overflow-y-auto border-border bg-background px-6 pb-10 pt-10">
+      <SheetContent side="bottom" className="h-[100dvh] overflow-y-auto border-border bg-background px-6 pb-[calc(2.5rem+env(safe-area-inset-bottom))] pt-10">
         <div className="mx-auto w-full max-w-lg">
           <SheetHeader className="text-left">
             <p className="text-xs font-semibold uppercase text-primary">

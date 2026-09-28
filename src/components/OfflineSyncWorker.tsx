@@ -61,7 +61,9 @@ export function OfflineSyncWorker() {
           if (s) {
             writeActiveSession({
               ...s,
-              logged_set_ids: [...s.logged_set_ids, row.id],
+              // De-duplicate: a retried set returns the same row id, and a repeat
+              // entry would later fail completion with "Duplicate logged sets".
+              logged_set_ids: [...new Set([...s.logged_set_ids, row.id])],
               logged_sets: (s.logged_sets ?? []).map((x) =>
                 x.key === item.key ? { ...x, id: row.id, status: "saved" as const } : x,
               ),

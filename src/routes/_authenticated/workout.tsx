@@ -386,6 +386,11 @@ function Workout() {
   const handleNext = async () => {
     if (isLastExercise) {
       if (finishing) return;
+      // Nothing logged: there is no workout to save yet.
+      if (setsRef.current.length === 0 || loggedSetIds.current.length === 0) {
+        toast.error("Log at least one set before finishing, Bro.");
+        return;
+      }
       setFinishing(true);
       // Push any locally saved sets and pending deletions before totalling.
       await Promise.all(setsRef.current.filter((x) => !x.id).map((x) => syncSet(x.key)));
@@ -395,8 +400,6 @@ function Workout() {
         return;
       }
       await Promise.all(pendingDeletes.current.splice(0).map((id) => removeSet({ data: { id } }).catch(() => {})));
-      setComplete(true);
-      clearActiveSession();
       try {
         const doneIds = session.map((e, i) => usedExerciseIds.current[i] ?? e.id);
         const saved = await finish({
@@ -409,18 +412,27 @@ function Workout() {
             auto_regulated: superSore,
           },
         });
-        const freshStats = await fetchStats({ data: { tz_offset: new Date().getTimezoneOffset() } });
+        // Saved for good — only now is it safe to drop the local copy.
+        clearActiveSession();
+        writeOfflineQueue([]);
+        // A stats hiccup must never look like a failed save; fall back to a local count.
+        let weeklyWorkouts = 1;
+        try {
+          const freshStats = await fetchStats({ data: { tz_offset: new Date().getTimezoneOffset() } });
+          weeklyWorkouts = freshStats.completedWorkouts;
+        } catch {
+          /* totals refresh on Home */
+        }
         const startedMs = new Date(startedAt).getTime();
         const durationMinutes = Math.max(1, Math.round((Date.now() - startedMs) / 60_000));
-        setSummary({ sets: saved.sets, volume: saved.volume, durationMinutes, weeklyWorkouts: freshStats.completedWorkouts });
+        setSummary({ sets: saved.sets, volume: saved.volume, durationMinutes, weeklyWorkouts });
         queryClient.invalidateQueries({ queryKey: ["user-stats"] });
         queryClient.invalidateQueries({ queryKey: ["workout-history"] });
         // Next split day loads when Home mounts; don't swap this screen's plan now.
         queryClient.invalidateQueries({ queryKey: ["day-one-workout"], refetchType: "none" });
         setComplete(true);
       } catch {
-        setComplete(false);
-        toast.error("Couldn't save your workout. Try again.");
+        toast.error("Couldn't save your workout. Your sets are safe — try again.");
       } finally {
         setFinishing(false);
       }
@@ -790,7 +802,7 @@ function Workout() {
              <p id="exit-title" className="text-xl font-semibold text-foreground">Active Workout in Progress!</p>
              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Are you sure you want to abandon your workout? Progressive stats for this session will not be saved.</p>
              <Button type="button" onClick={() => blocker.reset?.()} className="mt-6 h-12 w-full font-semibold shadow-neon">Continue Training</Button>
-             <Button type="button" variant="outline" onClick={() => { clearActiveSession(); blocker.proceed?.(); }} className="mt-3 h-12 w-full border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive">Abandon Session</Button>
+             <Button type="button" variant="outline" onClick={() => { clearActiveSession(); writeOfflineQueue([]); blocker.proceed?.(); }} className="mt-3 h-12 w-full border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive">Abandon Session</Button>
            </div>
          </div>
        )}
