@@ -1,8 +1,17 @@
 import { useEffect, useState } from "react";
-import { Expand, X } from "lucide-react";
+import { Expand, Pause, Play, X } from "lucide-react";
 import { getExerciseFrames } from "@/lib/exercise-media";
 
 const FRAME_MS = 900;
+const PAUSED_KEY = "gymbuddy-demo-paused";
+
+function readPaused(): boolean {
+  try {
+    return window.localStorage.getItem(PAUSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 type Cue = readonly [string, string];
 
@@ -15,7 +24,7 @@ function PlaceholderIcon() {
 }
 
 /** Cross-fading two-frame loop: silent, never interrupts the user's music. */
-function Loop({ frames, name, ready, onReady }: { frames: readonly [string, string]; name: string; ready: boolean; onReady: () => void }) {
+function Loop({ frames, name, ready, paused, onReady }: { frames: readonly [string, string]; name: string; ready: boolean; paused: boolean; onReady: () => void }) {
   const [flip, setFlip] = useState(false);
   const [reduced, setReduced] = useState(false);
 
@@ -28,10 +37,10 @@ function Loop({ frames, name, ready, onReady }: { frames: readonly [string, stri
   }, []);
 
   useEffect(() => {
-    if (reduced || !ready) return;
+    if (reduced || !ready || paused) return;
     const id = window.setInterval(() => setFlip((f) => !f), FRAME_MS);
     return () => window.clearInterval(id);
-  }, [reduced, ready]);
+  }, [reduced, ready, paused]);
 
   return (
     <>
@@ -64,6 +73,17 @@ export function ExerciseDemo({
   const frames = getExerciseFrames(exerciseId);
   const [ready, setReady] = useState(false);
   const [open, setOpen] = useState(false);
+  const [paused, setPaused] = useState(readPaused);
+
+  const togglePaused = () => {
+    setPaused((p) => {
+      const next = !p;
+      try {
+        window.localStorage.setItem(PAUSED_KEY, next ? "1" : "0");
+      } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   useEffect(() => {
     setReady(false);
@@ -96,23 +116,34 @@ export function ExerciseDemo({
 
   return (
     <>
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setOpen(true)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(true); } }}
         aria-label={`Expand ${label} demonstration`}
-        className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl border-2 border-border bg-card"
+        className="relative aspect-[4/3] w-full cursor-pointer overflow-hidden rounded-3xl border-2 border-border bg-card"
       >
         {!ready && (
           <div className="absolute inset-0 animate-pulse bg-muted/40" aria-hidden="true" />
         )}
-        <Loop frames={frames} name={label} ready={ready} onReady={() => setReady(true)} />
+        <Loop frames={frames} name={label} ready={ready} paused={paused} onReady={() => setReady(true)} />
         <span className="absolute bottom-3 left-3 rounded-full border border-primary/50 bg-background/80 px-3 py-1 text-xs font-semibold text-primary backdrop-blur">
           Form Demo
         </span>
         <span className="absolute bottom-3 right-3 flex size-8 items-center justify-center rounded-full border border-border bg-background/80 text-muted-foreground backdrop-blur">
           <Expand className="size-4" aria-hidden="true" />
         </span>
-      </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); togglePaused(); }}
+          aria-label={paused ? `Play ${label} demonstration` : `Pause ${label} demonstration`}
+          aria-pressed={paused}
+          className="absolute right-3 top-3 flex size-8 items-center justify-center rounded-full border border-border bg-background/80 text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
+        >
+          {paused ? <Play className="size-4" aria-hidden="true" /> : <Pause className="size-4" aria-hidden="true" />}
+        </button>
+      </div>
 
       {open && (
         <div
@@ -135,7 +166,7 @@ export function ExerciseDemo({
               </button>
             </div>
             <div className="relative mt-4 aspect-[4/3] w-full overflow-hidden rounded-2xl border-2 border-primary/40 bg-card">
-              <Loop frames={frames} name={label} ready onReady={() => {}} />
+              <Loop frames={frames} name={label} ready paused={paused} onReady={() => {}} />
             </div>
             <ul className="mt-5 space-y-5 pb-8">
               {cues.map(([cueLabel, cue]) => (
