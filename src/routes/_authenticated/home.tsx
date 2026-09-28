@@ -12,7 +12,7 @@ import { ensureUserRow, getDayOneWorkout, getUserStats, getWorkoutHistory, logWo
 import { SessionCard } from "@/components/SessionCard";
 import { syncLocalProfile } from "@/lib/account-sync";
 import { readActiveSession, writeActiveSession, clearActiveSession, type ActiveSession } from "@/lib/active-session";
-import { readOfflineQueue, writeOfflineQueue } from "@/lib/offline-queue";
+import { QUEUE_EVENT, readOfflineQueue, writeOfflineQueue } from "@/lib/offline-queue";
 import { OfflineSyncBadge } from "@/components/OfflineSyncBadge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";

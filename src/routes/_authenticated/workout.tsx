@@ -270,26 +270,48 @@ function Workout() {
     writeOfflineQueue(sets.filter((x) => x.status !== "saved"));
   }, [sets]);
 
-  // Background sync loop: fire on the 'online' event and poll quietly; push sets one by one.
+  // Background sync: retry unsaved sets on reconnect, with backoff. No timer runs
+  // while every set is saved, so an idle tracker screen stays completely quiet.
   useEffect(() => {
     let running = false;
+    let timer = 0;
+    let delay = 5000;
+    let cancelled = false;
+
+    const schedule = () => {
+      if (cancelled || timer) return;
+      timer = window.setTimeout(() => { timer = 0; void retry(); }, delay);
+    };
+
     const retry = async () => {
-      if (running || !navigator.onLine) return;
+      if (cancelled || running) return;
+      const pending = setsRef.current.filter((s) => s.status === "local");
+      if (pending.length === 0) { delay = 5000; return; }
+      if (!navigator.onLine) { schedule(); return; }
       running = true;
       try {
-        for (const x of setsRef.current.filter((s) => s.status === "local")) {
+        for (const x of pending) {
           if (!navigator.onLine) break;
           await syncSet(x.key);
         }
       } finally {
         running = false;
+        const left = setsRef.current.filter((s) => s.status === "local").length;
+        delay = left >= pending.length ? Math.min(delay * 2, 60000) : 5000;
+        if (left > 0) schedule();
       }
     };
-    window.addEventListener("online", retry);
-    const id = window.setInterval(retry, 5000);
-    return () => { window.removeEventListener("online", retry); window.clearInterval(id); };
+
+    const kick = () => { delay = 5000; void retry(); };
+    window.addEventListener("online", kick);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("online", kick);
+      if (timer) window.clearTimeout(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   const handleDeleteSet = (key: string) => {
     const target = setsRef.current.find((x) => x.key === key);
