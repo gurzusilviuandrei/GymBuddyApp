@@ -25,7 +25,9 @@ async function applySubscription(sub: SubData, env: PaddleEnv, forceStatus?: str
     subscription_period_end: sub.currentBillingPeriod?.endsAt ?? null,
   };
   const userId = sub.customData?.userId;
-  const q = supabaseAdmin.from("users").update(patch);
+  let q = supabaseAdmin.from("users").update(patch);
+  // A downgrade from an older subscription must never override a newer one.
+  if (patch.subscription_tier === "basic") q = q.or(`paddle_subscription_id.is.null,paddle_subscription_id.eq.${sub.id}`);
   const { error } = userId && /^[0-9a-f-]{36}$/i.test(userId)
     ? await q.eq("id", userId)
     : await q.eq("paddle_subscription_id", sub.id);
