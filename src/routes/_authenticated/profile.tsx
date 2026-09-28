@@ -2,7 +2,7 @@ import { useState, type FormEvent, type MouseEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, BookOpen, FileDown, KeyRound, Mail, Search, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import { ArrowLeft, BookOpen, FileDown, KeyRound, Mail, Search, ShieldCheck, Trash2, UserRound, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
@@ -22,6 +22,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteAccount, exportMyData, getAccountSettings, updateAccountEmail } from "@/lib/account.functions";
+import { usePro } from "@/components/pro/ProProvider";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
@@ -60,6 +61,7 @@ const GYM_LINGO = [
 function ProfilePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isPro, loaded, openPaywall } = usePro();
   const loadSettings = useServerFn(getAccountSettings);
   const saveEmail = useServerFn(updateAccountEmail);
   const removeAccount = useServerFn(deleteAccount);
@@ -196,6 +198,27 @@ function ProfilePage() {
           <Badge className="mt-3 border border-primary/40 bg-primary/10 text-primary hover:bg-primary/10">Bro Status: {account?.tier === "pro" ? "Pro" : "Free"}</Badge>
         </div>
       </section>
+
+      {loaded && !isPro && (
+        <section className="mt-8">
+          <button
+            type="button"
+            onClick={openPaywall}
+            className="group w-full rounded-lg border-2 border-primary/40 bg-card p-5 text-left shadow-neon transition-transform active:scale-[0.98]"
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                <Zap className="size-6" aria-hidden="true" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-base font-semibold text-foreground">Upgrade to Pro</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Custom routines, multi-swap & advanced analytics — €9.99/mo.</p>
+              </div>
+              <span className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground">See Pro</span>
+            </div>
+          </button>
+        </section>
+      )}
 
       <section className="mt-14">
         <div className="flex items-center gap-3">
