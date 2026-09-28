@@ -7,10 +7,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/BottomNav";
 import { supabase } from "@/integrations/supabase/client";
-import { ensureUserRow, getDayOneWorkout, getUserStats, getWorkoutHistory } from "@/lib/gym.functions";
+import { ensureUserRow, getDayOneWorkout, getUserStats, getWorkoutHistory, logWorkoutSet } from "@/lib/gym.functions";
 import { SessionCard } from "@/components/SessionCard";
 import { syncLocalProfile } from "@/lib/account-sync";
-import { readActiveSession, clearActiveSession, type ActiveSession } from "@/lib/active-session";
+import { readActiveSession, writeActiveSession, clearActiveSession, type ActiveSession } from "@/lib/active-session";
+import { readOfflineQueue, writeOfflineQueue } from "@/lib/offline-queue";
+import { OfflineSyncBadge } from "@/components/OfflineSyncBadge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -87,6 +89,41 @@ function Home() {
     queryFn: () => fetchHistory({ data: { limit: 3 } }),
   });
   const ensure = useServerFn(ensureUserRow);
+  const logSet = useServerFn(logWorkoutSet);
+
+  // Background sync loop for sets left in the offline queue after leaving a workout.
+  useEffect(() => {
+    let running = false;
+    const flush = async () => {
+      if (running || !navigator.onLine) return;
+      running = true;
+      try {
+        for (const item of readOfflineQueue()) {
+          if (!navigator.onLine) break;
+          const row = await logSet({ data: { exercise_id: item.exercise_id, weight_kg: item.weight_kg, reps_completed: item.reps, set_number: item.set_number } });
+          writeOfflineQueue(readOfflineQueue().filter((x) => x.key !== item.key));
+          const s = readActiveSession();
+          if (s) {
+            writeActiveSession({
+              ...s,
+              logged_set_ids: [...s.logged_set_ids, row.id],
+              logged_sets: (s.logged_sets ?? []).map((x) => (x.key === item.key ? { ...x, id: row.id, status: "saved" as const } : x)),
+            });
+          }
+        }
+      } catch {
+        /* still spotty — try again on the next tick */
+      } finally {
+        running = false;
+      }
+    };
+    void flush();
+    window.addEventListener("online", flush);
+    const id = window.setInterval(flush, 5000);
+    return () => { window.removeEventListener("online", flush); window.clearInterval(id); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
 
   // Keep Home as the signed-in entry point; explicit actions such as Start Workout and Sign Out remain available.
@@ -178,6 +215,8 @@ function Home() {
           <LogOut aria-hidden="true" />
         </Button>
       </header>
+      <OfflineSyncBadge className="mt-4" />
+
 
       {stats?.totalLoggedSets === 0 && (
         <Collapsible open={bagOpen} onOpenChange={setBagOpen} className="mt-10 rounded-lg border-2 border-primary/50 bg-card shadow-neon">
