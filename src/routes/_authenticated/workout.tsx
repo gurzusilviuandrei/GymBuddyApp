@@ -14,6 +14,8 @@ import { PlateVisualizer, Stepper, WarmUpCalculator } from "@/components/workout
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useIdleNudge } from "@/hooks/use-idle-nudge";
 import { createBroCardBlob, downloadBroCard, type BroCardStats } from "@/lib/bro-card";
+import { ExerciseDemo } from "@/components/workout/ExerciseDemo";
+
 
 export const Route = createFileRoute("/_authenticated/workout")({
   validateSearch: (search: Record<string, unknown>) => ({
