@@ -251,13 +251,36 @@ export const updateWorkoutSet = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Which exercise this set belongs to — needed to re-judge the all-time peak.
+    const { data: current, error: readErr } = await supabaseAdmin
+      .from("workout_logs")
+      .select("exercise_id")
+      .eq("id", data.id)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (readErr) throw new Error("Could not update set");
+    if (!current) throw new Error("That set no longer exists");
+
+    // A correction can turn a normal set into an all-time record (or undo one),
+    // so recompute the flag against every other set of this exercise.
+    const { data: others } = await supabaseAdmin
+      .from("workout_logs")
+      .select("weight_kg")
+      .eq("user_id", context.userId)
+      .eq("exercise_id", current.exercise_id)
+      .neq("id", data.id)
+      .order("weight_kg", { ascending: false })
+      .limit(1);
+    const best = others?.[0] ? Number(others[0].weight_kg) : null;
+    const is_personal_record = best !== null && data.weight_kg > best;
+
     const { error } = await supabaseAdmin
       .from("workout_logs")
-      .update({ weight_kg: data.weight_kg, reps_completed: data.reps_completed })
+      .update({ weight_kg: data.weight_kg, reps_completed: data.reps_completed, is_personal_record })
       .eq("id", data.id)
       .eq("user_id", context.userId);
     if (error) throw new Error("Could not update set");
-    return { ok: true };
+    return { ok: true, is_personal_record, exercise_id: current.exercise_id };
   });
 
 export const deleteWorkoutSet = createServerFn({ method: "POST" })
@@ -414,6 +437,30 @@ export const completeWorkout = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     if (new Set(data.log_ids).size !== data.log_ids.length) throw new Error("Duplicate logged sets");
+
+    // Idempotent finish: these sets are linked to a session the moment one is saved.
+    // A resubmitted finish (stale tab, double tap, retry) returns that same workout
+    // instead of inserting a second one and rotating the split past a day.
+    const { data: already } = await supabaseAdmin
+      .from("workout_logs")
+      .select("session_id")
+      .eq("user_id", context.userId)
+      .in("id", data.log_ids.slice(0, 200))
+      .not("session_id", "is", null)
+      .limit(1);
+    const existingId = already?.[0]?.session_id ?? null;
+    if (existingId) {
+      const { data: existing } = await supabaseAdmin
+        .from("workout_sessions")
+        .select("id, total_sets, total_volume_kg")
+        .eq("id", existingId)
+        .eq("user_id", context.userId)
+        .maybeSingle();
+      if (existing) {
+        return { id: existing.id, sets: existing.total_sets, volume: Number(existing.total_volume_kg) };
+      }
+    }
+
     // Match strictly on this session's own log IDs (already user-scoped). No timestamp
     // window: device/server clock drift must never drop a set from the session totals.
     const logs = [] as { exercise_id: string; weight_kg: number; reps_completed: number; timestamp: string }[];
@@ -481,14 +528,20 @@ export const completeWorkout = createServerFn({ method: "POST" })
       if (linkErr) console.error("completeWorkout link failed", linkErr.code, linkErr.message);
     }
     // Rotate the pre-made split forward (A → B → C → A) as soon as it's finished.
+    // Only rotate when the finished day is still the day due, so a finish sent from
+    // an old screen cannot advance the plan a second time and skip a day.
     if (data.program_type === "premade") {
       const { data: u } = await supabaseAdmin.from("users").select("next_split_day").eq("id", context.userId).maybeSingle();
-      const done = (data.split_day ?? u?.next_split_day ?? "A") as SplitDay;
-      const { error: rotErr } = await supabaseAdmin
-        .from("users")
-        .update({ next_split_day: NEXT_SPLIT[done] ?? "A" })
-        .eq("id", context.userId);
-      if (rotErr) console.error("split rotation failed", rotErr.code, rotErr.message);
+      const due = (u?.next_split_day ?? "A") as SplitDay;
+      const done = (data.split_day ?? due) as SplitDay;
+      if (done === due) {
+        const { error: rotErr } = await supabaseAdmin
+          .from("users")
+          .update({ next_split_day: NEXT_SPLIT[done] ?? "A" })
+          .eq("id", context.userId)
+          .eq("next_split_day", due);
+        if (rotErr) console.error("split rotation failed", rotErr.code, rotErr.message);
+      }
     }
     return { id: row.id, sets: row.total_sets, volume: Number(row.total_volume_kg) };
   });

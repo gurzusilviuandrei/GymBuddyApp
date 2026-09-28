@@ -3,9 +3,9 @@ import { useEffect, useState } from "react";
 import type { CachedSet } from "./active-session";
 
 export const OFFLINE_QUEUE_KEY = "gymbuddy_offline_queue";
+export const PENDING_DELETES_KEY = "gymbuddy_pending_deletes";
 export const QUEUE_EVENT = "gymbuddy-offline-queue";
 const EVENT = QUEUE_EVENT;
-
 
 export function readOfflineQueue(): CachedSet[] {
   if (typeof window === "undefined") return [];
@@ -25,6 +25,83 @@ export function writeOfflineQueue(q: CachedSet[]) {
     /* storage blocked */
   }
   window.dispatchEvent(new Event(EVENT));
+}
+
+/**
+ * Deletions that still have to reach the account. Kept in localStorage (not a
+ * React ref) so closing the tab offline can never resurrect a removed set.
+ */
+export function readPendingDeletes(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = JSON.parse(localStorage.getItem(PENDING_DELETES_KEY) ?? "[]");
+    return Array.isArray(raw) ? (raw as unknown[]).filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function writePendingDeletes(ids: string[]) {
+  try {
+    if (ids.length === 0) localStorage.removeItem(PENDING_DELETES_KEY);
+    else localStorage.setItem(PENDING_DELETES_KEY, JSON.stringify([...new Set(ids)]));
+  } catch {
+    /* storage blocked */
+  }
+  window.dispatchEvent(new Event(EVENT));
+}
+
+export function addPendingDelete(id: string) {
+  writePendingDeletes([...readPendingDeletes(), id]);
+}
+
+export function removePendingDelete(id: string) {
+  writePendingDeletes(readPendingDeletes().filter((x) => x !== id));
+}
+
+export function clearPendingDeletes() {
+  writePendingDeletes([]);
+}
+
+/**
+ * Cross-tab mutual exclusion for the sync loop. Two tabs flushing the same
+ * queue could otherwise write an older copy of a set over a newer edit.
+ * Web Locks where available, with a short time-boxed localStorage fallback.
+ */
+const LOCK_KEY = "gymbuddy_sync_lock";
+const LOCK_TTL_MS = 30_000;
+
+type Locks = { request: (name: string, options: { ifAvailable: boolean }, fn: (lock: unknown) => Promise<void>) => Promise<void> };
+
+export async function withSyncLock(run: () => Promise<void>): Promise<boolean> {
+  const locks = (navigator as Navigator & { locks?: Locks }).locks;
+  if (locks?.request) {
+    let ran = false;
+    await locks.request("gymbuddy-offline-sync", { ifAvailable: true }, async (lock) => {
+      if (!lock) return;
+      ran = true;
+      await run();
+    });
+    return ran;
+  }
+  // Fallback: a stale lock older than the TTL is treated as abandoned.
+  try {
+    const held = Number(localStorage.getItem(LOCK_KEY) ?? "0");
+    if (Number.isFinite(held) && Date.now() - held < LOCK_TTL_MS) return false;
+    localStorage.setItem(LOCK_KEY, String(Date.now()));
+  } catch {
+    /* storage blocked — run unguarded rather than never syncing */
+  }
+  try {
+    await run();
+  } finally {
+    try {
+      localStorage.removeItem(LOCK_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+  return true;
 }
 
 /** Live connectivity + queued-set count. */
@@ -51,4 +128,3 @@ export function useOfflineStatus() {
   }, []);
   return { online, count };
 }
-
