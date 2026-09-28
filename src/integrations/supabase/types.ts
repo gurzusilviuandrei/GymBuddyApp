@@ -64,6 +64,54 @@ export type Database = {
           },
         ]
       }
+      user_machine_settings: {
+        Row: {
+          created_at: string
+          custom_setting_notes: string | null
+          exercise_id: string
+          id: string
+          pad_notch: string | null
+          seat_notch: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_setting_notes?: string | null
+          exercise_id: string
+          id?: string
+          pad_notch?: string | null
+          seat_notch?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_setting_notes?: string | null
+          exercise_id?: string
+          id?: string
+          pad_notch?: string | null
+          seat_notch?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_machine_settings_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_machine_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           age: number | null
