@@ -14,7 +14,10 @@ type ProState = {
   requirePro: (action: () => void) => void;
 };
 
-const ProContext = createContext<ProState | null>(null);
+// Keep a single context instance across hot reloads so an already-mounted
+// provider and freshly reloaded consumers always share it.
+const globalStore = globalThis as unknown as { __gymbuddyProContext?: React.Context<ProState | null> };
+const ProContext = (globalStore.__gymbuddyProContext ??= createContext<ProState | null>(null));
 
 export function usePro() {
   const ctx = useContext(ProContext);
