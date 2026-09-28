@@ -75,7 +75,7 @@ function Home() {
   const [signingOut, setSigningOut] = useState(false);
   const [active, setActive] = useState<ActiveSession | null>(() => readActiveSession());
   const [bagOpen, setBagOpen] = useState(true);
-  const [checkInOpen, setCheckInOpen] = useState(false);
+  const [checkInMode, setCheckInMode] = useState<"premade" | "custom" | null>(null);
   const [bagChecked, setBagChecked] = useState<BagItemId[]>(() => readBagChecklist());
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -308,7 +308,7 @@ function Home() {
               <Dumbbell size={22} strokeWidth={1.7} aria-hidden="true" />
             </div>
           </div>
-          <Button type="button" onClick={() => setCheckInOpen(true)} className="mt-6 h-14 w-full rounded-lg text-base font-semibold shadow-neon transition-transform active:scale-[0.98]">
+          <Button type="button" onClick={() => setCheckInMode("premade")} className="mt-6 h-14 w-full rounded-lg text-base font-semibold shadow-neon transition-transform active:scale-[0.98]">
             Start Day {workout?.split_day ?? "A"} Workout <ArrowRight className="ml-2" aria-hidden="true" />
           </Button>
         </div>
@@ -327,10 +327,8 @@ function Home() {
                   </li>
                 ))}
               </ul>
-              <Button asChild className="mt-6 h-14 w-full rounded-lg text-base font-semibold shadow-neon transition-transform active:scale-[0.98]">
-                <Link to="/workout" search={{ mode: "custom" }}>
-                  Start Custom Workout <ArrowRight className="ml-2" aria-hidden="true" />
-                </Link>
+              <Button type="button" onClick={() => setCheckInMode("custom")} className="mt-6 h-14 w-full rounded-lg text-base font-semibold shadow-neon transition-transform active:scale-[0.98]">
+                Start Custom Workout <ArrowRight className="ml-2" aria-hidden="true" />
               </Button>
               <Button asChild variant="outline" className="mt-3 h-11 w-full rounded-lg border-primary/60 text-sm font-semibold text-primary hover:bg-primary/10 hover:text-primary">
                 <Link to="/custom-routine">Edit Routine</Link>
@@ -370,8 +368,8 @@ function Home() {
       </section>
     </main>
     <BottomNav />
-    {checkInOpen && (
-      <div className="fixed inset-0 z-[60] flex items-end justify-center bg-background/90 px-5 pb-8 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="checkin-title" onClick={() => setCheckInOpen(false)}>
+    {checkInMode && (
+      <div className="fixed inset-0 z-[60] flex items-end justify-center bg-background/90 px-5 pb-8 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="checkin-title" onClick={() => setCheckInMode(null)}>
         <div className="w-full max-w-md rounded-lg border border-primary/40 bg-card p-6 animate-scale-in" onClick={(e) => e.stopPropagation()}>
           <p id="checkin-title" className="text-xl font-semibold text-foreground">Muscle Status Check-in</p>
           <p className="mt-2 text-sm text-muted-foreground">How do your muscles feel today? One tap and we'll tune your session.</p>
@@ -385,8 +383,9 @@ function Home() {
                 key={key}
                 type="button"
                 onClick={() => {
-                  setCheckInOpen(false);
-                  navigate({ to: "/workout", search: { mode: "premade", sore: key } });
+                  const mode = checkInMode;
+                  setCheckInMode(null);
+                  navigate({ to: "/workout", search: { mode, sore: key } });
                 }}
                 className="flex items-center gap-4 rounded-lg border-2 border-primary/40 bg-background px-4 py-4 text-left transition hover:border-primary hover:shadow-neon"
               >
@@ -398,7 +397,7 @@ function Home() {
               </button>
             ))}
           </div>
-          <Button type="button" variant="ghost" onClick={() => setCheckInOpen(false)} className="mt-3 w-full text-muted-foreground">Cancel</Button>
+          <Button type="button" variant="ghost" onClick={() => setCheckInMode(null)} className="mt-3 w-full text-muted-foreground">Cancel</Button>
         </div>
       </div>
     )}
