@@ -265,10 +265,16 @@ function Workout() {
     }
   };
 
-  // Mirror every unsynced set into the offline queue so the badge (and Home) can see it.
+  const kickSyncRef = useRef<() => void>(() => {});
+
+  // Mirror every unsynced set into the offline queue so the badge (and Home) can see it,
+  // and wake the retry loop whenever a set is still waiting to reach the account.
   useEffect(() => {
-    writeOfflineQueue(sets.filter((x) => x.status !== "saved"));
+    const unsynced = sets.filter((x) => x.status !== "saved");
+    writeOfflineQueue(unsynced);
+    if (unsynced.some((x) => x.status === "local")) kickSyncRef.current();
   }, [sets]);
+
 
   // Background sync: retry unsaved sets on reconnect, with backoff. No timer runs
   // while every set is saved, so an idle tracker screen stays completely quiet.
