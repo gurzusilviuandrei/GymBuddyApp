@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { readActiveSession, writeActiveSession, clearActiveSession, type CachedSet } from "@/lib/active-session";
 import { getDayOneWorkout, getAlternativeOptions, getLastLog, getUserStats, logWorkoutSet, completeWorkout, updateWorkoutSet, deleteWorkoutSet } from "@/lib/gym.functions";
 import { MachineAlignment } from "@/components/workout/MachineAlignment";
-import { writeOfflineQueue } from "@/lib/offline-queue";
+import { writeOfflineQueue, addPendingDelete, readPendingDeletes, removePendingDelete, clearPendingDeletes } from "@/lib/offline-queue";
 import { OfflineSyncBadge } from "@/components/OfflineSyncBadge";
 import { PlateVisualizer, Stepper, WarmUpCalculator } from "@/components/workout/GymTools";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -102,7 +102,7 @@ function Workout() {
   const [restored, setRestored] = useState(false);
   const [sets, setSets] = useState<CachedSet[]>([]);
   const setsRef = useRef<CachedSet[]>([]);
-  const pendingDeletes = useRef<string[]>([]);
+  const finishLock = useRef(false);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editWeight, setEditWeight] = useState("");
   const [editReps, setEditReps] = useState("");
@@ -255,7 +255,7 @@ function Workout() {
       const current = setsRef.current.find((x) => x.key === key);
       if (!current) {
         // Deleted while syncing — remove the server copy too.
-        removeSet({ data: { id: row.id } }).catch(() => pendingDeletes.current.push(row.id));
+        removeSet({ data: { id: row.id } }).catch(() => addPendingDelete(row.id));
         return;
       }
       commitSets((prev) => prev.map((x) => (x.key === key ? { ...x, id: row.id, status: "saved" } : x)));
@@ -278,6 +278,9 @@ function Workout() {
   // Always call the latest syncSet so background retries see the loaded workout.
   const syncSetRef = useRef(syncSet);
   syncSetRef.current = syncSet;
+  // Same for deletions queued on the device.
+  const removeSetRef = useRef(removeSet);
+  removeSetRef.current = removeSet;
 
   // Mirror every unsynced set into the offline queue so the badge (and Home) can see it,
   // and wake the retry loop whenever a set is still waiting to reach the account.
@@ -304,19 +307,29 @@ function Workout() {
     const retry = async () => {
       if (cancelled || running) return;
       const pending = setsRef.current.filter((s) => s.status === "local");
-      if (pending.length === 0) { delay = 5000; return; }
+      const deletes = readPendingDeletes();
+      if (pending.length === 0 && deletes.length === 0) { delay = 5000; return; }
       if (!navigator.onLine) { schedule(); return; }
       running = true;
       try {
+        // Removals stored on the device go out too, so a set deleted without
+        // signal never reappears later.
+        for (const id of deletes) {
+          if (!navigator.onLine) break;
+          await removeSetRef.current({ data: { id } }).then(() => removePendingDelete(id));
+        }
         for (const x of pending) {
           if (!navigator.onLine) break;
           await syncSetRef.current(x.key);
         }
+      } catch {
+        /* retried on the next tick */
       } finally {
         running = false;
         const left = setsRef.current.filter((s) => s.status === "local").length;
-        delay = left >= pending.length ? Math.min(delay * 2, 60000) : 5000;
-        if (left > 0) schedule();
+        const deletesLeft = readPendingDeletes().length;
+        delay = left >= pending.length && deletesLeft >= deletes.length ? Math.min(delay * 2, 60000) : 5000;
+        if (left > 0 || deletesLeft > 0) schedule();
       }
     };
 
@@ -346,7 +359,12 @@ function Workout() {
     if (editingKey === key) setEditingKey(null);
     if (target.id) {
       const id = target.id;
-      removeSet({ data: { id } }).catch(() => pendingDeletes.current.push(id));
+      // Record the deletion in storage first: if the tab closes before signal
+      // returns, the removal is still pending and the set can't come back.
+      addPendingDelete(id);
+      removeSet({ data: { id } })
+        .then(() => removePendingDelete(id))
+        .catch(() => {});
     }
     toast.success("Set removed");
   };
@@ -370,10 +388,25 @@ function Workout() {
     commitSets((prev) => prev.map((x) => (x.key === target.key ? { ...x, weight_kg: w, reps: r } : x)));
     setEditingKey(null);
     if (target.id) {
-      updateSet({ data: { id: target.id, weight_kg: w, reps_completed: r } }).catch(() => {
-        commitSets((prev) => prev.map((x) => (x.key === target.key ? { ...x, ...before } : x)));
-        toast.error("Couldn't save that correction. Try again.");
-      });
+      updateSet({ data: { id: target.id, weight_kg: w, reps_completed: r } })
+        .then((res) => {
+          // A correction can push the set past your all-time best — celebrate it,
+          // and never leave an old best marked as a record after it's lowered.
+          if (res?.is_personal_record) {
+            prShown.current.add(target.key);
+            const name =
+              session.find((e) => e.id === target.exercise_id)?.name ??
+              (exercise?.id === target.exercise_id ? exercise.name : "lift");
+            try { navigator.vibrate?.(50); } catch { /* unsupported */ }
+            setPr({ weight: w, name });
+          } else {
+            prShown.current.delete(target.key);
+          }
+        })
+        .catch(() => {
+          commitSets((prev) => prev.map((x) => (x.key === target.key ? { ...x, ...before } : x)));
+          toast.error("Couldn't save that correction. Try again.");
+        });
     }
   };
 
@@ -397,21 +430,31 @@ function Workout() {
 
   const handleNext = async () => {
     if (isLastExercise) {
-      if (finishing) return;
+      // Synchronous lock: two taps in the same frame both see finishing === false,
+      // so the ref is what actually stops a second finish going out.
+      if (finishing || finishLock.current) return;
       // Nothing logged: there is no workout to save yet.
       if (setsRef.current.length === 0 || loggedSetIds.current.length === 0) {
         toast.error("Log at least one set before finishing, Bro.");
         return;
       }
+      finishLock.current = true;
       setFinishing(true);
       // Push any locally saved sets and pending deletions before totalling.
       await Promise.all(setsRef.current.filter((x) => !x.id).map((x) => syncSet(x.key)));
       if (setsRef.current.some((x) => !x.id)) {
+        finishLock.current = false;
         setFinishing(false);
         toast.error("Some sets are only saved locally. Check your connection and try again.");
         return;
       }
-      await Promise.all(pendingDeletes.current.splice(0).map((id) => removeSet({ data: { id } }).catch(() => {})));
+      await Promise.all(
+        readPendingDeletes().map((id) =>
+          removeSet({ data: { id } })
+            .then(() => removePendingDelete(id))
+            .catch(() => {}),
+        ),
+      );
       try {
         const doneIds = session.map((e, i) => usedExerciseIds.current[i] ?? e.id);
         const saved = await finish({
@@ -427,6 +470,7 @@ function Workout() {
         // Saved for good — only now is it safe to drop the local copy.
         clearActiveSession();
         writeOfflineQueue([]);
+        clearPendingDeletes();
         // A stats hiccup must never look like a failed save; fall back to a local count.
         let weeklyWorkouts = 1;
         try {
@@ -444,6 +488,8 @@ function Workout() {
         queryClient.invalidateQueries({ queryKey: ["day-one-workout"], refetchType: "none" });
         setComplete(true);
       } catch {
+        // Release the lock so a retry is possible after a failed save.
+        finishLock.current = false;
         toast.error("Couldn't save your workout. Your sets are safe — try again.");
       } finally {
         setFinishing(false);
@@ -817,7 +863,7 @@ function Workout() {
              <p id="exit-title" className="text-xl font-semibold text-foreground">Active Workout in Progress!</p>
              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Are you sure you want to abandon your workout? Progressive stats for this session will not be saved.</p>
              <Button type="button" onClick={() => blocker.reset?.()} className="mt-6 h-12 w-full font-semibold shadow-neon">Continue Training</Button>
-             <Button type="button" variant="outline" onClick={() => { clearActiveSession(); writeOfflineQueue([]); blocker.proceed?.(); }} className="mt-3 h-12 w-full border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive">Abandon Session</Button>
+             <Button type="button" variant="outline" onClick={() => { clearActiveSession(); writeOfflineQueue([]); clearPendingDeletes(); blocker.proceed?.(); }} className="mt-3 h-12 w-full border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive">Abandon Session</Button>
            </div>
          </div>
        )}
