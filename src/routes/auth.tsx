@@ -208,8 +208,24 @@ function AuthPage() {
             <Input type="password" autoComplete={isSignup ? "new-password" : "current-password"} placeholder={isSignup ? "Create a password" : "Your password"} aria-label="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-14 rounded-lg border-border bg-card px-4 text-base" />
           </div>
 
-          <Button type="submit" size="lg" disabled={busy} className="mt-10 h-16 w-full rounded-lg text-lg font-semibold shadow-neon transition-transform active:scale-[0.98]">
-            {busy ? "One sec…" : isSignup ? "Sign Up & Start" : "Welcome Back: Login"}
+          {!isSignup && (
+            <button
+              type="button"
+              onClick={() => { setForgotEmail(email); setResetSentTo(null); setForgotOpen(true); }}
+              className="mt-4 self-end text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Forgot password?
+            </button>
+          )}
+
+          {locked && (
+            <p role="alert" className="mt-5 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-foreground">
+              Too many failed attempts, Bro. Try again in {lockRemaining}s — or reset your password.
+            </p>
+          )}
+
+          <Button type="submit" size="lg" disabled={busy || locked} className="mt-10 h-16 w-full rounded-lg text-lg font-semibold shadow-neon transition-transform active:scale-[0.98]">
+            {busy ? "One sec…" : locked ? `Locked — ${lockRemaining}s` : isSignup ? "Sign Up & Start" : "Welcome Back: Login"}
           </Button>
 
           <button type="button" onClick={() => setMode(isSignup ? "login" : "signup")} className="mt-6 text-center text-sm text-muted-foreground hover:text-foreground">
@@ -217,6 +233,42 @@ function AuthPage() {
           </button>
         </form>
       )}
+
+      {forgotOpen && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-background/90 px-5 pb-8 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="forgot-title" onClick={() => setForgotOpen(false)}>
+          <div className="w-full max-w-md rounded-lg border border-primary/40 bg-card p-6 animate-scale-in" onClick={(e) => e.stopPropagation()}>
+            {resetSentTo ? (
+              <>
+                <MailCheck className="size-12 text-primary" strokeWidth={1.4} aria-hidden="true" />
+                <p id="forgot-title" className="mt-5 text-xl font-semibold text-foreground">Reset link sent</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Check <span className="text-foreground">{resetSentTo}</span> for a secure link to choose a new password.
+                </p>
+                <Button type="button" onClick={() => setForgotOpen(false)} className="mt-6 h-12 w-full rounded-lg font-semibold">Got it</Button>
+              </>
+            ) : (
+              <form onSubmit={sendResetLink}>
+                <p id="forgot-title" className="text-xl font-semibold text-foreground">Reset your password</p>
+                <p className="mt-2 text-sm text-muted-foreground">Enter your email and we'll send you a secure reset link.</p>
+                <Input
+                  type="email"
+                  autoComplete="email"
+                  aria-label="Email for password reset"
+                  placeholder="you@email.com"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  className="mt-5 h-14 rounded-lg border-border bg-background px-4 text-base"
+                />
+                <Button type="submit" disabled={sendingReset} className="mt-5 h-14 w-full rounded-lg text-base font-semibold shadow-neon">
+                  {sendingReset ? "Sending…" : "Send Reset Link"}
+                </Button>
+                <Button type="button" variant="ghost" onClick={() => setForgotOpen(false)} className="mt-2 w-full text-muted-foreground">Cancel</Button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
     </main>
   );
 }
