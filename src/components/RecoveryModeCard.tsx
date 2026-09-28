@@ -110,7 +110,7 @@ function MobilityGuide({ onClose }: { onClose: () => void }) {
           <h3 className="text-lg font-semibold">5-Min Recovery Mobility</h3>
           <button type="button" onClick={onClose} aria-label="Close" className="text-muted-foreground hover:text-foreground"><X size={20} /></button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-1">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-1">
 
         <div className="mt-5 flex flex-col items-center">
           <svg width="128" height="128" viewBox="0 0 128 128" aria-hidden="true">
