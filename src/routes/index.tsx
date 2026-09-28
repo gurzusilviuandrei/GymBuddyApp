@@ -53,12 +53,19 @@ function Welcome() {
           and the top of the barbell circle. */}
       <div className="flex flex-1 flex-col items-center justify-center gap-3 py-8">
         <header className="text-center">
-          <img
-            src={gymBuddyLogo}
-            alt="GymBuddy"
-            className="welcome-logo mx-auto h-auto w-48 object-contain"
-          />
+          <h1 className="flex justify-center">
+            <img
+              src={gymBuddyLogo}
+              alt="GymBuddy"
+              className="welcome-logo mx-auto h-auto w-48 object-contain"
+            />
+          </h1>
           <p className="mt-4 text-sm font-medium text-muted-foreground">The beginner&rsquo;s gym guide.</p>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground/80">
+            Walk into the gym knowing exactly what to do. GymBuddy gives first-timers a
+            guided plan, machine-by-machine setup cues, and simple set-by-set tracking —
+            so you can build strength and confidence from your very first session.
+          </p>
         </header>
 
         <div className="relative flex aspect-square w-full max-w-72 items-center justify-center" aria-hidden="true">
