@@ -11,7 +11,7 @@
 
 GymBuddy uses separate typed routes for Welcome, Onboarding, Home, and Workout. Why: each step remains directly revisit-able.
 
-- Home and Workout share the authenticated Day 1 query for equipment, ordered exercises, and targets. Why: both screens stay consistent.
+- Pre-made plan rotates via `users.next_split_day` (A→B→C→A, advanced in completeWorkout); Home and Workout share the authenticated split-day query for equipment, ordered exercises, and targets. Why: both screens stay consistent.
 - Workout `mode` selects premade or custom independently. Why: a custom routine must not hide the guided plan.
 - Email/password accounts map `users.id` to the auth user; protected functions scope by `context.userId`. Why: account data never trusts browser identity.
 - Home blocks only browser Back; Sign Out clears protected caches and replaces history. Why: avoid stale protected screens without blocking deliberate links.
