@@ -177,8 +177,11 @@ function Workout() {
 
 
   const session = workout?.exercises ?? [];
-  // Super sore: auto-regulate down to 2 working sets (and 120s rest above).
-  const targetSets = superSore ? Math.min(2, workout?.target_sets ?? 3) : (workout?.target_sets ?? 3);
+  // Auto-regulate: 3+ sets → 2 sets; otherwise keep sets and drop target reps by 2.
+  const baseSets = workout?.target_sets ?? 3;
+  const baseReps = workout?.target_reps ?? 10;
+  const targetSets = superSore && baseSets >= 3 ? 2 : baseSets;
+  const targetReps = superSore && baseSets < 3 ? Math.max(1, baseReps - 2) : baseReps;
   const primary = session[index];
   const exercise = swapped ?? primary;
   const setsDone = setNumber > targetSets;
@@ -373,6 +376,7 @@ function Workout() {
             log_ids: loggedSetIds.current,
             started_at: startedAt,
             split_day: workout?.is_custom ? undefined : workout?.split_day,
+            auto_regulated: superSore,
           },
         });
         const freshStats = await fetchStats({ data: { tz_offset: new Date().getTimezoneOffset() } });
@@ -589,11 +593,18 @@ function Workout() {
           {exercise?.name ?? "Your Workout"}
         </h1>
         <p className="mt-3 text-lg text-muted-foreground">
-          {workout ? `Target: ${targetSets} Sets × ${workout.target_reps} Reps` : "Loading target…"}
+          {workout ? (
+            <>
+              Target:{" "}
+              <span className={superSore && targetSets !== baseSets ? "font-semibold text-primary" : undefined}>{targetSets} Sets</span>
+              {" × "}
+              <span className={superSore && targetReps !== baseReps ? "font-semibold text-primary" : undefined}>{targetReps} Reps</span>
+            </>
+          ) : "Loading target…"}
         </p>
         {superSore && (
           <p className="mt-3 inline-flex rounded-full border border-primary/50 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-            Recovery mode · 2 sets · 120s rest
+            Scaled for Recovery 🛡️ · {targetSets !== baseSets ? `${baseSets}→${targetSets} sets` : `${baseReps}→${targetReps} reps`} · 120s rest
           </p>
         )}
         {exercise ? (
