@@ -72,13 +72,23 @@ function MobilityGuide({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
-    const prevHtmlOverflow = html.style.overflow;
-    const prevBodyOverflow = body.style.overflow;
+    const prev = {
+      htmlOverflow: html.style.overflow,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyWidth: body.style.width,
+      scrollY: window.scrollY,
+    };
     html.style.overflow = "hidden";
-    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${prev.scrollY}px`;
+    body.style.width = "100%";
     return () => {
-      html.style.overflow = prevHtmlOverflow;
-      body.style.overflow = prevBodyOverflow;
+      html.style.overflow = prev.htmlOverflow;
+      body.style.position = prev.bodyPosition;
+      body.style.top = prev.bodyTop;
+      body.style.width = prev.bodyWidth;
+      window.scrollTo(0, prev.scrollY);
     };
   }, []);
 
