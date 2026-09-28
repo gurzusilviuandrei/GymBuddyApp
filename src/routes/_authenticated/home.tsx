@@ -16,6 +16,7 @@ import { readOfflineQueue, writeOfflineQueue } from "@/lib/offline-queue";
 import { OfflineSyncBadge } from "@/components/OfflineSyncBadge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { RecoveryModeCard } from "@/components/RecoveryModeCard";
 
 
 const FREQUENCY_TARGETS: Record<string, number> = {
@@ -79,6 +80,7 @@ function Home() {
   const [active, setActive] = useState<ActiveSession | null>(() => readActiveSession());
   const [bagOpen, setBagOpen] = useState(true);
   const [checkInMode, setCheckInMode] = useState<"premade" | "custom" | null>(null);
+  const [trainAnyway, setTrainAnyway] = useState(false);
   const [customAutoRegulate, setCustomAutoRegulate] = useState(false);
   const [autoRegulate, setAutoRegulate] = useState(false);
   const [bagChecked, setBagChecked] = useState<BagItemId[]>(() => readBagChecklist());
@@ -198,6 +200,10 @@ function Home() {
   const percentage = Math.min(1, completed / weeklyTarget);
   const dashArray = 2 * Math.PI * 44;
   const dashOffset = dashArray * (1 - percentage);
+
+  const todayKey = new Date().toDateString();
+  const trainedToday = Boolean(recent?.some((s) => s.completedAt && new Date(s.completedAt).toDateString() === todayKey));
+  const isRestDay = !trainAnyway && Boolean(stats) && (completed >= weeklyTarget || trainedToday);
 
   const hasCustom = Boolean(workout?.is_custom && (workout?.exercises.length ?? 0) > 0);
   const customNames = hasCustom ? workout?.exercises.map((e) => e.name) ?? [] : [];
@@ -330,6 +336,11 @@ function Home() {
         <p className="mt-2 text-center text-xs text-muted-foreground">Resets every Monday</p>
       </section>
 
+      {isRestDay ? (
+      <section className="mt-14" aria-label="Rest and recovery">
+        <RecoveryModeCard onTrainAnyway={() => setTrainAnyway(true)} />
+      </section>
+      ) : (
       <section className="mt-14 space-y-6" aria-label="Your programs">
         {/* Card A — Pre-Made Plan */}
         <div className="rounded-lg border border-border bg-card p-6">
@@ -415,6 +426,7 @@ function Home() {
           )}
         </div>
       </section>
+      )}
 
       <section className="mt-14" aria-label="Recent workouts">
         <div className="flex items-center justify-between">
