@@ -23,3 +23,4 @@ GymBuddy uses separate typed routes for Welcome, Onboarding, Home, and Workout. 
 - Bro Cards render in-browser as 1080×1920 PNGs. Why: personal workout metrics remain on-device.
 - Pro access lives on `users.subscription_tier` + `subscription_environment`, written only by the signed payments webhook; Pro server functions call `assertPro` with the client's payment env. Why: the paywall UI is cosmetic and test purchases must not unlock live.
 - Capacitor shell (`capacitor.config.ts`) loads the published site via `server.url`; native projects are generated locally with `npx cap add ios|android`. Why: the app is server-rendered, so there is no static bundle to ship.
+- Offline mode: vite-plugin-pwa generateSW to dist/client/sw.js, registered only via src/lib/register-sw.ts (prod, non-preview, ?sw=off kill switch); pages/GET data NetworkFirst. Why: never serve stale previews.
