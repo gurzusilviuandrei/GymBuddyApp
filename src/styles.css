@@ -160,3 +160,15 @@
 }
 
 @keyframes paywall-up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Phones draw the app edge-to-edge: keep a solid strip behind the status bar so
+   scrolled content never runs under the clock. Zero height in a desktop browser. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  background: var(--background);
+  z-index: 100;
+  pointer-events: none;
+}
