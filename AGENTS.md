@@ -15,4 +15,5 @@ GymBuddy uses separate typed routes for Welcome, Onboarding, Home, and Workout. 
 - Sets update optimistically, retry locally (`client_key` makes retries idempotent), and remain editable before Finish. Why: poor gym connectivity must not corrupt stats.
 - Bro Cards render on-device as 1080×1920 PNGs; saving/sharing goes through `src/lib/native-files.ts`. Why: personal workout metrics remain on-device, and WebViews can't download blobs.
 - Pro access is `users.subscription_tier = 'pro'`, checked by `is_pro_user()` inside Pro database functions. Members cannot write that column; only future store-billing code (service role) may. Why: the paywall UI is cosmetic.
-- Database changes go in a new file under `supabase/migrations/`; never edit an applied migration.
+- Database changes go in a new file under `supabase/migrations/`; never edit an applied migration. Cover new or changed database functions and access rules in `supabase/tests/` (PGlite runs every migration as the real `anon`/`authenticated` roles). Why: the database is the only server, so its rules are the app's security.
+- Run `npm run check` (types, tests, build) before pushing; CI runs the same plus an Android build. Why: keep `main` shippable.

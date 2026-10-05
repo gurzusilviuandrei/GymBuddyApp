@@ -11,7 +11,10 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "app:sync": "vite build && cap sync",
-    "app:android": "cap open android"
+    "app:android": "cap open android",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run test && npm run build"
   },
   "overrides": {
     "rolldown": "1.2.1"
@@ -83,6 +86,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.2",
+    "@electric-sql/pglite": "^0.5.8",
     "@eslint/js": "^9.32.0",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
@@ -97,6 +101,7 @@
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "8.1.5"
+    "vite": "8.1.5",
+    "vitest": "^3.2.7"
   }
 }
