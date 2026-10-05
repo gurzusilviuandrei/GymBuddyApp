@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureUserRow } from "@/lib/gym-api";
-import { syncLocalProfile } from "@/lib/account-sync";
+import { readLocalProfile, syncLocalProfile } from "@/lib/account-sync";
 import { ArrowRight, Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import gymBuddyLogo from "@/assets/gymbuddy-logo.png";
@@ -38,7 +38,8 @@ function Welcome() {
         const dest = syncLocalProfile(result);
         if (!cancelled) navigate({ to: dest, replace: true });
       } catch {
-        /* stay on welcome */
+        // No signal: a member already onboarded on this phone still goes Home.
+        if (!cancelled && readLocalProfile(data.session.user.id)?.["equipment"]) navigate({ to: "/home", replace: true });
       }
     });
     return () => {

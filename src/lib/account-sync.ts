@@ -24,3 +24,13 @@ export function syncLocalProfile(r: EnsureResult): "/home" | "/onboarding" {
   localStorage.setItem("gymbuddy-profile", JSON.stringify({ ...existing, ...profile }));
   return r.onboarded ? "/home" : "/onboarding";
 }
+
+/** The profile cached on this device for `userId`, if any (used when offline). */
+export function readLocalProfile(userId: string): Record<string, unknown> | null {
+  try {
+    const profile = JSON.parse(localStorage.getItem("gymbuddy-profile") ?? "null") as Record<string, unknown> | null;
+    return profile && profile["userId"] === userId ? profile : null;
+  } catch {
+    return null;
+  }
+}
