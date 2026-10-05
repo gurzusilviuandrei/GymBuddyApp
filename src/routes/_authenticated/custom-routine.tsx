@@ -1,13 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowLeft, ArrowUp, Check, LineChart, Plus, X } from "lucide-react";
-import { ExerciseProgressChart } from "@/components/ExerciseProgressChart";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { getExerciseLibrary, saveCustomRoutine } from "@/lib/gym-api";
 import { cn } from "@/lib/utils";
+
+// The chart library is large: load it only when a member opens a progress chart.
+const ExerciseProgressChart = lazy(() =>
+  import("@/components/ExerciseProgressChart").then((m) => ({ default: m.ExerciseProgressChart })),
+);
 import { usePro } from "@/components/pro/ProProvider";
 
 export const Route = createFileRoute("/_authenticated/custom-routine")({
@@ -161,7 +165,7 @@ function CustomRoutineEditor() {
                   <Button type="button" size="icon" variant="ghost" onClick={() => removeExercise(id)} aria-label={`Remove ${exercise.name}`} title="Remove exercise" className="size-8 text-muted-foreground hover:text-destructive"><X aria-hidden="true" /></Button>
                 </div>
                 </div>
-                {chartId === id && <div className="animate-fade-in"><ExerciseProgressChart exerciseId={id} /></div>}
+                {chartId === id && <div className="animate-fade-in"><Suspense fallback={<p className="py-6 text-center text-sm text-muted-foreground">Loading chart…</p>}><ExerciseProgressChart exerciseId={id} /></Suspense></div>}
               </li>
             );
           })}

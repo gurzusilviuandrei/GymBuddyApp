@@ -21,6 +21,7 @@ import { SwapDrawer } from "@/components/workout/SwapDrawer";
 import { IdleNudge, LeaveWorkoutDialog, PersonalRecordDialog } from "@/components/workout/WorkoutDialogs";
 import { WorkoutComplete, type WorkoutSummary } from "@/components/workout/WorkoutComplete";
 import { haptic, keepScreenOn } from "@/lib/native-workout";
+import { allSaved, flushPending, nextRetryDelay, RETRY_MIN_MS, SYNC_TIMEOUT_MS, syncSet as uploadSet, type SyncApi, type SyncEnv } from "@/lib/set-sync";
 import {
   buildCues,
   canResume,
@@ -43,13 +44,20 @@ export const Route = createFileRoute("/_authenticated/workout")({
   component: Workout,
 });
 
-const SYNC_TIMEOUT_MS = 6000;
-function withTimeout<T>(p: Promise<T>, ms = SYNC_TIMEOUT_MS): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const t = window.setTimeout(() => reject(new Error("timeout")), ms);
-    p.then((v) => { window.clearTimeout(t); resolve(v); }, (e) => { window.clearTimeout(t); reject(e); });
-  });
-}
+// How sets reach the account: see src/lib/set-sync.ts.
+const syncApi: SyncApi = {
+  log: (s) =>
+    logWorkoutSet({ data: { exercise_id: s.exercise_id, weight_kg: s.weight_kg, reps_completed: s.reps, set_number: s.set_number, client_key: s.key } }),
+  update: (id, weightKg, reps) => updateWorkoutSet({ data: { id, weight_kg: weightKg, reps_completed: reps } }),
+  remove: (id) => deleteWorkoutSet({ data: { id } }),
+};
+const syncEnv: SyncEnv = {
+  online: () => navigator.onLine,
+  timeoutMs: SYNC_TIMEOUT_MS,
+  addPendingDelete,
+  readPendingDeletes,
+  removePendingDelete,
+};
 
 function Workout() {
   const { mode, sore } = Route.useSearch();
@@ -170,38 +178,14 @@ function Workout() {
     withResolver: true,
   });
 
-  const syncSet = async (key: string) => {
-    const item = setsRef.current.find((x) => x.key === key);
-    if (!item || item.id) return;
-    // No signal: keep it local instantly instead of waiting for a timeout.
-    if (!navigator.onLine) {
-      commitSets((prev) => prev.map((x) => (x.key === key ? { ...x, status: "local" } : x)));
-      return;
-    }
-    commitSets((prev) => prev.map((x) => (x.key === key ? { ...x, status: "syncing" } : x)));
-    try {
-      const row = await withTimeout(
-        logWorkoutSet({ data: { exercise_id: item.exercise_id, weight_kg: item.weight_kg, reps_completed: item.reps, set_number: item.set_number, client_key: item.key } }),
-      );
-      const current = setsRef.current.find((x) => x.key === key);
-      if (!current) {
-        // Deleted while syncing — remove the server copy too.
-        deleteWorkoutSet({ data: { id: row.id } }).catch(() => addPendingDelete(row.id));
-        return;
-      }
-      commitSets((prev) => prev.map((x) => (x.key === key ? { ...x, id: row.id, status: "saved" } : x)));
-      if (row.is_personal_record && !prShown.current.has(key)) {
-        prShown.current.add(key);
-        haptic("success");
-        setPr({ weight: item.weight_kg, name: nameOf(item.exercise_id) });
-      }
-      if (current.weight_kg !== item.weight_kg || current.reps !== item.reps) {
-        updateWorkoutSet({ data: { id: row.id, weight_kg: current.weight_kg, reps_completed: current.reps } }).catch(() => {});
-      }
-    } catch {
-      commitSets((prev) => prev.map((x) => (x.key === key ? { ...x, status: "local" } : x)));
-    }
-  };
+  const store = { get: () => setsRef.current, commit: commitSets };
+  const syncSet = (key: string) =>
+    uploadSet(key, store, syncApi, syncEnv, (item) => {
+      if (prShown.current.has(item.key)) return;
+      prShown.current.add(item.key);
+      haptic("success");
+      setPr({ weight: item.weight_kg, name: nameOf(item.exercise_id) });
+    });
 
   const kickSyncRef = useRef<() => void>(() => {});
   // Always call the latest syncSet so background retries see the loaded workout.
@@ -221,7 +205,7 @@ function Workout() {
   useEffect(() => {
     let running = false;
     let timer = 0;
-    let delay = 5000;
+    let delay = RETRY_MIN_MS;
     let cancelled = false;
 
     const schedule = () => {
@@ -231,34 +215,19 @@ function Workout() {
 
     const retry = async () => {
       if (cancelled || running) return;
-      const pending = setsRef.current.filter((s) => s.status === "local");
-      const deletes = readPendingDeletes();
-      if (pending.length === 0 && deletes.length === 0) { delay = 5000; return; }
+      if (!setsRef.current.some((s) => s.status === "local") && readPendingDeletes().length === 0) {
+        delay = RETRY_MIN_MS;
+        return;
+      }
       if (!navigator.onLine) { schedule(); return; }
       running = true;
-      try {
-        // Removals stored on the device go out too, so a set deleted without
-        // signal never reappears later.
-        for (const id of deletes) {
-          if (!navigator.onLine) break;
-          await deleteWorkoutSet({ data: { id } }).then(() => removePendingDelete(id));
-        }
-        for (const x of pending) {
-          if (!navigator.onLine) break;
-          await syncSetRef.current(x.key);
-        }
-      } catch {
-        /* retried on the next tick */
-      } finally {
-        running = false;
-        const left = setsRef.current.filter((s) => s.status === "local").length;
-        const deletesLeft = readPendingDeletes().length;
-        delay = left >= pending.length && deletesLeft >= deletes.length ? Math.min(delay * 2, 60000) : 5000;
-        if (left > 0 || deletesLeft > 0) schedule();
-      }
+      const result = await flushPending({ get: () => setsRef.current, commit: commitSets }, syncApi, syncEnv, (key) => syncSetRef.current(key));
+      running = false;
+      delay = nextRetryDelay(delay, result);
+      if (result.pendingAfter > 0 || result.deletesAfter > 0) schedule();
     };
 
-    const kick = () => { delay = 5000; void retry(); };
+    const kick = () => { delay = RETRY_MIN_MS; void retry(); };
     kickSyncRef.current = kick;
     window.addEventListener("online", kick);
 
@@ -345,7 +314,7 @@ function Workout() {
       setFinishing(true);
       // Push any locally saved sets and pending deletions before totalling.
       await Promise.all(setsRef.current.filter((x) => !x.id).map((x) => syncSet(x.key)));
-      if (setsRef.current.some((x) => !x.id)) {
+      if (!allSaved(setsRef.current)) {
         finishLock.current = false;
         setFinishing(false);
         toast.error("Some sets are only saved locally. Check your connection and try again.");
