@@ -51,8 +51,10 @@ jobs:
       - name: Build and copy the app into Android
         run: npm run app:sync
         env:
-          VITE_SUPABASE_URL: https://example.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+          # The real project, so the APK attached to each run can log in. Both values
+          # are public by design (they ship inside every copy of the app).
+          VITE_SUPABASE_URL: https://uoljwupvesnnsjipnzyn.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_wRHNLX3Jo49IcuWO-JYmKQ_Z05uBuB3
       - name: Assemble debug APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
