@@ -92,11 +92,12 @@ function MobilityGuide({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
+  const finished = left <= 0;
   useEffect(() => {
-    if (!running || left <= 0) return;
+    if (!running || finished) return;
     const id = window.setInterval(() => setLeft((s) => Math.max(0, s - 1)), 1000);
     return () => window.clearInterval(id);
-  }, [running, left <= 0]);
+  }, [running, finished]);
 
   const mm = Math.floor(left / 60);
   const ss = String(left % 60).padStart(2, "0");

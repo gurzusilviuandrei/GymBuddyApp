@@ -84,7 +84,7 @@ const PLATES = [
   { kg: 1.25, cls: "bg-plate-small text-plate-white", h: "h-7" },
 ];
 
-export function platesPerSide(total: number) {
+function platesPerSide(total: number) {
   let side = (total - BAR_KG) / 2;
   const out: (typeof PLATES)[number][] = [];
   for (const p of PLATES) {

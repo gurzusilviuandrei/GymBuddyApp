@@ -19,6 +19,8 @@ type ProState = {
 const globalStore = globalThis as unknown as { __gymbuddyProContext?: React.Context<ProState | null> };
 const ProContext = (globalStore.__gymbuddyProContext ??= createContext<ProState | null>(null));
 
+// The hook lives beside its provider on purpose; only hot reload in development is affected.
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePro() {
   const ctx = useContext(ProContext);
   if (!ctx) throw new Error("usePro must be used inside ProProvider");

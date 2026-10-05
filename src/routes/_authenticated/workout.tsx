@@ -279,17 +279,19 @@ function Workout() {
     if (exercise?.name) document.title = `${exercise.name} — GymBuddy`;
   }, [exercise?.name]);
 
+  // Last time this exercise was done; reloads when the exercise changes (including a swap).
+  const exerciseId = exercise?.id;
   useEffect(() => {
     setLastLog(null);
-    if (!exercise) return;
+    if (!exerciseId) return;
     let cancelled = false;
-    getLastLog({ data: { exercise_id: exercise.id } })
+    getLastLog({ data: { exercise_id: exerciseId } })
       .then((row) => !cancelled && setLastLog(row))
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [exercise?.id]);
+  }, [exerciseId]);
 
   const handleNext = async () => {
     if (isLastExercise) {

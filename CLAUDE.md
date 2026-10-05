@@ -129,9 +129,8 @@ Bottom tabs: Home, History, Profile. Android Back minimizes the app on `/`, `/au
 1. Home's "Abandon Workout" has no confirmation, and it now deletes the sets that were already saved.
 2. Sets logged before an exercise swap count toward the totals, but that exercise's name is missing from the session's `exercise_names`.
 3. Resuming after a swap can pre-fill the weight from the replaced exercise.
-4. Lint warnings: the workout screen's last-log effect misses the `exercise` dependency, and custom-routine's `exercises` memo recalculates on every update.
-5. Unverified: deleting a PR set may leave the other sets' `is_personal_record` flags stale.
-6. Before launch:
+4. Unverified: deleting a PR set may leave the other sets' `is_personal_record` flags stale.
+5. Before launch:
    - SMTP email provider (Supabase's built-in email is rate-limited)
    - Release signing and code shrinking
    - Store billing via RevenueCat, including `subscription_period_end` expiry

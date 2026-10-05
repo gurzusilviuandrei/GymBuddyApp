@@ -66,7 +66,7 @@ function CustomRoutineEditor() {
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["exercise-library"], queryFn: () => getExerciseLibrary() });
 
   useEffect(() => { if (data?.selected) setSelected([...new Set(data.selected)]); }, [data]);
-  const exercises = data?.exercises ?? [];
+  const exercises = useMemo(() => data?.exercises ?? [], [data]);
   // Derived lists are memoized so taps on filters or reorder arrows don't
   // rebuild the whole exercise index every render.
   const exerciseById = useMemo(() => new Map(exercises.map((exercise) => [exercise.id, exercise])), [exercises]);
