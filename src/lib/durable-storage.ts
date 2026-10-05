@@ -11,7 +11,10 @@ export const DURABLE_KEYS = [
   "gymbuddy_offline_queue",
   "gymbuddy_pending_deletes",
   "gymbuddy-profile",
+  "gymbuddy-pro",
   "gymbuddy-query-cache",
+  // Which account the data above belongs to (see device-owner.ts).
+  "gymbuddy-device-owner",
 ] as const;
 
 const memory = new Map<string, string>();

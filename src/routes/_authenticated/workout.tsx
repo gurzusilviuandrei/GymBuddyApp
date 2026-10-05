@@ -4,11 +4,11 @@ import { ArrowRightLeft } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { readActiveSession, writeActiveSession, clearActiveSession, type CachedSet } from "@/lib/active-session";
+import { abandonActiveSession, readActiveSession, writeActiveSession, clearActiveSession, type CachedSet } from "@/lib/active-session";
 import { usePro } from "@/components/pro/ProProvider";
-import { getDayOneWorkout, getAlternativeOptions, getLastLog, getUserStats, logWorkoutSet, completeWorkout, updateWorkoutSet, deleteWorkoutSet } from "@/lib/gym-api";
+import { getDayOneWorkout, getAlternativeOptions, getLastLog, getUserStats, completeWorkout, updateWorkoutSet, deleteWorkoutSet } from "@/lib/gym-api";
 import { MachineAlignment } from "@/components/workout/MachineAlignment";
-import { writeOfflineQueue, addPendingDelete, readPendingDeletes, removePendingDelete, clearPendingDeletes } from "@/lib/offline-queue";
+import { writeOfflineQueue, addPendingDelete, readPendingDeletes, removePendingDelete } from "@/lib/offline-queue";
 import { OfflineSyncBadge } from "@/components/OfflineSyncBadge";
 import { PlateVisualizer, Stepper, WarmUpCalculator } from "@/components/workout/GymTools";
 import { useIdleNudge } from "@/hooks/use-idle-nudge";
@@ -21,7 +21,8 @@ import { SwapDrawer } from "@/components/workout/SwapDrawer";
 import { IdleNudge, LeaveWorkoutDialog, PersonalRecordDialog } from "@/components/workout/WorkoutDialogs";
 import { WorkoutComplete, type WorkoutSummary } from "@/components/workout/WorkoutComplete";
 import { haptic, keepScreenOn } from "@/lib/native-workout";
-import { allSaved, flushPending, nextRetryDelay, RETRY_MIN_MS, SYNC_TIMEOUT_MS, syncSet as uploadSet, type SyncApi, type SyncEnv } from "@/lib/set-sync";
+import { allSaved, flushPending, nextRetryDelay, RETRY_MIN_MS, syncSet as uploadSet } from "@/lib/set-sync";
+import { syncApi, syncEnv } from "@/lib/set-sync-client";
 import {
   buildCues,
   canResume,
@@ -44,20 +45,7 @@ export const Route = createFileRoute("/_authenticated/workout")({
   component: Workout,
 });
 
-// How sets reach the account: see src/lib/set-sync.ts.
-const syncApi: SyncApi = {
-  log: (s) =>
-    logWorkoutSet({ data: { exercise_id: s.exercise_id, weight_kg: s.weight_kg, reps_completed: s.reps, set_number: s.set_number, client_key: s.key } }),
-  update: (id, weightKg, reps) => updateWorkoutSet({ data: { id, weight_kg: weightKg, reps_completed: reps } }),
-  remove: (id) => deleteWorkoutSet({ data: { id } }),
-};
-const syncEnv: SyncEnv = {
-  online: () => navigator.onLine,
-  timeoutMs: SYNC_TIMEOUT_MS,
-  addPendingDelete,
-  readPendingDeletes,
-  removePendingDelete,
-};
+// How sets reach the account: see src/lib/set-sync.ts and set-sync-client.ts.
 
 function Workout() {
   const { mode, sore } = Route.useSearch();
@@ -89,6 +77,8 @@ function Workout() {
   const setsRef = useRef<CachedSet[]>([]);
   const finishLock = useRef(false);
   const logLock = useRef(false);
+  // Set once the member abandons, so nothing re-saves the workout on the way out.
+  const abandoned = useRef(false);
 
   useEffect(() => {
     if (!pr) return;
@@ -154,7 +144,7 @@ function Workout() {
 
   // Mirror progress to device storage after every change (once something happened).
   useEffect(() => {
-    if (!restored || !workout || complete) return;
+    if (!restored || !workout || complete || abandoned.current) return;
     const started = setsRef.current.length > 0 || loggedSetIds.current.length > 0 || index > 0 || Object.keys(swappedMap.current).length > 0;
     if (!started) return;
     writeActiveSession({
@@ -340,9 +330,9 @@ function Workout() {
           },
         });
         // Saved for good — only now is it safe to drop the local copy.
+        // Deletions that didn't get through stay queued for the background sync.
         clearActiveSession();
         writeOfflineQueue([]);
-        clearPendingDeletes();
         // A stats hiccup must never look like a failed save; fall back to a local count.
         let weeklyWorkouts = 1;
         try {
@@ -519,9 +509,11 @@ function Workout() {
         <LeaveWorkoutDialog
           onStay={() => blocker.reset?.()}
           onAbandon={() => {
-            clearActiveSession();
-            writeOfflineQueue([]);
-            clearPendingDeletes();
+            abandoned.current = true;
+            const savedIds = setsRef.current.flatMap((x) => (x.id ? [x.id] : []));
+            // An upload still in flight finds its set gone and removes the server copy.
+            commitSets(() => []);
+            abandonActiveSession(savedIds);
             blocker.proceed?.();
           }}
         />

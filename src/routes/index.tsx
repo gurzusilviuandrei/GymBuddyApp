@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureUserRow } from "@/lib/gym-api";
 import { readLocalProfile, syncLocalProfile } from "@/lib/account-sync";
+import { clearAccountData } from "@/lib/device-owner";
 import { ArrowRight, Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import gymBuddyLogo from "@/assets/gymbuddy-logo.png";
@@ -32,6 +33,8 @@ function Welcome() {
       try {
         const result = await ensure();
         if (result.accountMissing) {
+          // The account was deleted elsewhere: nothing on this phone belongs to anyone.
+          clearAccountData();
           await supabase.auth.signOut();
           return;
         }

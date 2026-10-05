@@ -60,10 +60,6 @@ export function removePendingDelete(id: string) {
   writePendingDeletes(readPendingDeletes().filter((x) => x !== id));
 }
 
-export function clearPendingDeletes() {
-  writePendingDeletes([]);
-}
-
 /**
  * Cross-tab mutual exclusion for the sync loop. Two tabs flushing the same
  * queue could otherwise write an older copy of a set over a newer edit.

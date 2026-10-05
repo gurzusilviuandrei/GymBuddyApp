@@ -129,6 +129,11 @@ describe("finishing a workout", () => {
     expect(await splitDay()).toBe("B");
   });
 
+  it("keeps a finished workout's sets when a stale phone copy tries to delete them", async () => {
+    await t.rpc(`SELECT public.delete_workout_set($1)`, [logIds[0]]);
+    expect(await t.rows(`SELECT id FROM workout_logs WHERE id = $1 AND session_id = $2`, [logIds[0], workoutId])).toHaveLength(1);
+  });
+
   it("does not rotate the plan for a custom workout", async () => {
     const s = await log(10, "k5", "db-bench");
     await t.rpc(`SELECT public.complete_workout('custom', $1, $2, now())`, [["db-bench"], [s.id]]);

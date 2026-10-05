@@ -11,6 +11,7 @@ import "@fontsource/space-grotesk/700.css";
 import "./styles.css";
 import { routeTree } from "./routeTree.gen";
 import { durableStorage, initDurableStorage } from "./lib/durable-storage";
+import { claimDeviceData } from "./lib/device-owner";
 import { initMonitoring, setMonitoringUser } from "./lib/monitoring";
 import { supabase } from "./integrations/supabase/client";
 
@@ -32,10 +33,14 @@ const queryClient = new QueryClient({
   },
 });
 
-supabase.auth.onAuthStateChange((_event, session) => setMonitoringUser(session?.user.id ?? null));
-
 // Native storage must be in memory before anything reads it (cache, offline sets).
 await initDurableStorage();
+
+supabase.auth.onAuthStateChange((_event, session) => {
+  setMonitoringUser(session?.user.id ?? null);
+  // A different account signed in on this phone: drop the previous one's data.
+  if (session && claimDeviceData(session.user.id)) queryClient.clear();
+});
 
 // Remember the last loaded plan, stats and history on the device, so opening the
 // app with no signal (basement gyms) still shows them. Sign Out clears the cache.

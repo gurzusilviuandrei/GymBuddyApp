@@ -24,7 +24,7 @@ import { authRedirectUrl } from "@/lib/platform";
 import { saveFile } from "@/lib/native-files";
 import { deleteAccount, exportMyData, getAccountSettings, updateAccountEmail } from "@/lib/account-api";
 import { usePro } from "@/components/pro/ProProvider";
-import { durableStorage } from "@/lib/durable-storage";
+import { clearAccountData } from "@/lib/device-owner";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
@@ -160,7 +160,8 @@ function ProfilePage() {
       }
       await queryClient.cancelQueries();
       queryClient.clear();
-      durableStorage.removeItem("gymbuddy-profile");
+      // The account is gone: erase its sets, workout and caches from this phone too.
+      clearAccountData();
       await supabase.auth.signOut({ scope: "local" });
       navigate({ to: "/", replace: true });
     } catch {

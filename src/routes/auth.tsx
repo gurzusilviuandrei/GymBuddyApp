@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { authRedirectUrl } from "@/lib/platform";
 import { ensureUserRow } from "@/lib/gym-api";
 import { syncLocalProfile } from "@/lib/account-sync";
+import { clearAccountData } from "@/lib/device-owner";
 import { SECURITY_NOTICE, SECURITY_NOTICE_KEY } from "@/components/SessionGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,6 +71,7 @@ function AuthPage() {
   const enterApp = async () => {
     const result = await ensure();
     if (result.accountMissing) {
+      clearAccountData();
       await supabase.auth.signOut();
       return;
     }

@@ -156,6 +156,15 @@ describe("flushPending", () => {
     expect(r.pendingAfter).toBe(1);
   });
 
+  it("gives up on a hanging deletion instead of stalling every later pass", async () => {
+    const h = harness([set("a", { status: "local" })]);
+    h.env.addPendingDelete("row-x");
+    h.api.remove.mockReturnValueOnce(new Promise(() => {}));
+    const r = await flushPending(h.store, h.api, h.env, (k) => h.sync(k));
+    expect(r.deletesAfter).toBe(1);
+    expect(r.pendingAfter).toBe(1);
+  });
+
   it("keeps a deletion queued when the server rejects it", async () => {
     const h = harness([]);
     h.env.addPendingDelete("row-x");

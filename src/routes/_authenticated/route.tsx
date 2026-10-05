@@ -1,18 +1,18 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { OfflineSyncWorker } from "@/components/OfflineSyncWorker";
-
+import { claimDeviceData } from "@/lib/device-owner";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async () => {
-    // Fast path: the locally stored session avoids a network round-trip on
-    // every in-app navigation. Server functions still validate the bearer token.
+  beforeLoad: async ({ context }) => {
+    // Fast path: the locally stored session avoids a network round-trip on every
+    // in-app navigation. The database still checks the token on every request.
     const { data: sessionData } = await supabase.auth.getSession();
-    if (sessionData.session?.user) return { user: sessionData.session.user };
-
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
-    return { user: data.user };
+    const user = sessionData.session?.user ?? (await supabase.auth.getUser()).data.user;
+    if (!user) throw redirect({ to: "/auth" });
+    // Another account's data on this phone is erased before any screen can show it.
+    if (claimDeviceData(user.id)) context.queryClient.clear();
+    return { user };
   },
   component: () => (
     <>
@@ -21,4 +21,3 @@ export const Route = createFileRoute("/_authenticated")({
     </>
   ),
 });
-

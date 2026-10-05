@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import type React from "react";
 import { Check, Lock, Trophy, X, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { durableStorage } from "@/lib/durable-storage";
 import { Button } from "@/components/ui/button";
 
 type ProState = {
@@ -24,7 +25,23 @@ export function usePro() {
   return ctx;
 }
 
-const FEATURES: { label: string; pro: boolean }[] = [
+// Last Pro status the server confirmed for this account (offline starts read it).
+const PRO_CACHE_KEY = "gymbuddy-pro";
+
+function readCachedPro(userId: string): boolean | null {
+  try {
+    const cached = JSON.parse(durableStorage.getItem(PRO_CACHE_KEY) ?? "null") as { userId?: string; isPro?: boolean } | null;
+    return cached?.userId === userId && typeof cached.isPro === "boolean" ? cached.isPro : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedPro(userId: string, isPro: boolean) {
+  durableStorage.setItem(PRO_CACHE_KEY, JSON.stringify({ userId, isPro }));
+}
+
+const FEATURES:{ label: string; pro: boolean }[] = [
   { label: "Guided 3-day beginner split", pro: false },
   { label: "Set logging, rest timer & form demos", pro: false },
   { label: "Workout history & Bro Cards", pro: false },
@@ -41,6 +58,7 @@ export function ProProvider({ children }: { children: ReactNode }) {
   const [paywall, setPaywall] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
   const wasPro = useRef<boolean | null>(null);
+  const proUser = useRef<string | null>(null);
 
   useEffect(() => {
     const sync = (u: { id: string } | null) => setUserId(u?.id ?? null);
@@ -52,15 +70,34 @@ export function ProProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refresh = useCallback(async () => {
-    if (!userId) { setIsPro(false); setLoaded(false); wasPro.current = null; return; }
-    const { data } = await supabase
+    if (!userId) { setIsPro(false); setLoaded(false); wasPro.current = null; proUser.current = null; return; }
+    if (proUser.current !== userId) {
+      // A different account: its status starts unknown, never inherited.
+      proUser.current = userId;
+      wasPro.current = null;
+      setIsPro(false);
+      setLoaded(false);
+    }
+    // Start from the last confirmed status so Pro stays unlocked with no signal.
+    if (wasPro.current === null) {
+      const cached = readCachedPro(userId);
+      if (cached !== null) {
+        wasPro.current = cached;
+        setIsPro(cached);
+        setLoaded(true);
+      }
+    }
+    const { data, error } = await supabase
       .from("users")
       .select("subscription_tier, subscription_status")
       .eq("id", userId)
       .maybeSingle();
+    // No answer (offline, timeout) or the account changed meanwhile: keep what we know.
+    if (error || proUser.current !== userId) return;
     const pro = data?.subscription_tier === "pro";
     if (wasPro.current === false && pro) { setPaywall(false); setCelebrate(true); }
     wasPro.current = pro;
+    writeCachedPro(userId, pro);
     setIsPro(pro);
     setStatus(data?.subscription_status ?? null);
     setLoaded(true);

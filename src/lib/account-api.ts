@@ -1,5 +1,6 @@
 // Account settings, data export and deletion for the signed-in member.
 import { supabase } from "@/integrations/supabase/client";
+import { authRedirectUrl } from "@/lib/platform";
 
 async function currentUser() {
   const { data } = await supabase.auth.getSession();
@@ -24,7 +25,8 @@ export async function getAccountSettings() {
 }
 
 export async function updateAccountEmail({ data }: { data: { email: string } }) {
-  const { error } = await supabase.auth.updateUser({ email: data.email });
+  // The confirmation links reopen the app on a phone (see NativeBridge).
+  const { error } = await supabase.auth.updateUser({ email: data.email }, { emailRedirectTo: authRedirectUrl("/") });
   if (error) throw new Error(error.message);
   return { email: data.email };
 }

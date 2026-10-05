@@ -103,7 +103,7 @@ export async function flushPending(
   try {
     for (const id of deletes) {
       if (!env.online()) break;
-      await api.remove(id);
+      await withTimeout(api.remove(id), env.timeoutMs);
       env.removePendingDelete(id);
     }
     for (const x of pending) {

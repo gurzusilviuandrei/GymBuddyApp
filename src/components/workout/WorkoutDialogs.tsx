@@ -31,7 +31,7 @@ export function LeaveWorkoutDialog({ onStay, onAbandon }: { onStay: () => void; 
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background/90 px-6 backdrop-blur-sm" role="alertdialog" aria-modal="true" aria-labelledby="exit-title">
       <div className="w-full max-w-sm rounded-lg border border-primary/40 bg-card p-6 text-center">
         <p id="exit-title" className="text-xl font-semibold text-foreground">Active Workout in Progress!</p>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Are you sure you want to abandon your workout? Progressive stats for this session will not be saved.</p>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Are you sure you want to abandon your workout? The sets you logged in this session will be removed.</p>
         <Button type="button" onClick={onStay} className="mt-6 h-12 w-full font-semibold shadow-neon">Continue Training</Button>
         <Button type="button" variant="outline" onClick={onAbandon} className="mt-3 h-12 w-full border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive">Abandon Session</Button>
       </div>

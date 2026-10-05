@@ -1,5 +1,6 @@
 // Mid-workout recovery cache. Browser-only: call from effects or handlers.
 import { durableStorage } from "@/lib/durable-storage";
+import { addPendingDelete, writeOfflineQueue } from "@/lib/offline-queue";
 
 export const ACTIVE_SESSION_KEY = "gymbuddy-active-session";
 
@@ -70,4 +71,23 @@ export function clearActiveSession() {
   } catch {
     /* ignore */
   }
+}
+
+/**
+ * Abandon the workout in progress. Its sets must not count anywhere (stats,
+ * history, next week's weights), so the ones that already reached the account are
+ * queued for deletion (this works offline, and the database never deletes sets of
+ * a finished workout), and the ones that never left the phone are dropped.
+ * Deletions already waiting are kept, so a set removed earlier can't come back.
+ */
+export function abandonActiveSession(savedSetIds: string[] = []) {
+  const s = readActiveSession();
+  const ids = new Set([
+    ...savedSetIds,
+    ...(s?.logged_set_ids ?? []),
+    ...(s?.logged_sets ?? []).flatMap((x) => (x.id ? [x.id] : [])),
+  ]);
+  for (const id of ids) addPendingDelete(id);
+  clearActiveSession();
+  writeOfflineQueue([]);
 }

@@ -12,13 +12,14 @@ import { ensureUserRow, getDayOneWorkout, getUserStats, getWorkoutHistory } from
 
 import { SessionCard } from "@/components/SessionCard";
 import { syncLocalProfile } from "@/lib/account-sync";
-import { readActiveSession, writeActiveSession, clearActiveSession, type ActiveSession } from "@/lib/active-session";
-import { QUEUE_EVENT, readOfflineQueue, writeOfflineQueue } from "@/lib/offline-queue";
+import { abandonActiveSession, readActiveSession, type ActiveSession } from "@/lib/active-session";
+import { readOfflineQueue } from "@/lib/offline-queue";
 import { OfflineSyncBadge } from "@/components/OfflineSyncBadge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { RecoveryModeCard } from "@/components/RecoveryModeCard";
 import { durableStorage } from "@/lib/durable-storage";
+import { clearAccountData } from "@/lib/device-owner";
 
 
 const FREQUENCY_TARGETS: Record<string, number> = {
@@ -101,10 +102,6 @@ function Home() {
   // Offline sets are flushed app-wide by <OfflineSyncWorker /> in the authenticated layout,
   // so they keep syncing even if the member stays on History or Profile after reconnecting.
 
-
-
-
-
   // Keep Home as the signed-in entry point; explicit actions such as Start Workout and Sign Out remain available.
   useBlocker({
     shouldBlockFn: ({ action, current }) => action === "BACK" && current.pathname === "/home",
@@ -114,11 +111,20 @@ function Home() {
   const handleSignOut = async () => {
     if (signingOut) return;
     setSigningOut(true);
+    // Sets still waiting for signal stay on this phone for this account only (see
+    // device-owner.ts): they upload when this member signs back in here.
+    const waiting = readOfflineQueue().length;
     try {
       await queryClient.cancelQueries(); // stop in-flight queries before 401s land
       queryClient.clear(); // drop cached protected data
       await supabase.auth.signOut(); // session cleared, account data stays in the database
       navigate({ to: "/", replace: true }); // history REPLACE — Back must not restore /home
+      if (waiting > 0) {
+        toast.warning(
+          `${waiting} ${waiting === 1 ? "set hasn't" : "sets haven't"} reached your account yet. Sign back in on this phone to upload ${waiting === 1 ? "it" : "them"}.`,
+          { duration: 8000 },
+        );
+      }
     } catch {
       setSigningOut(false);
       toast.error("Couldn't sign you out. Try again.");
@@ -139,6 +145,7 @@ function Home() {
       .then(async (result) => {
         if (cancelled) return;
         if (result.accountMissing) {
+          clearAccountData();
           await supabase.auth.signOut();
           navigate({ to: "/", replace: true });
           return;
@@ -255,10 +262,9 @@ function Home() {
             type="button"
             variant="link"
             onClick={() => {
-              clearActiveSession();
-              writeOfflineQueue([]);
+              abandonActiveSession();
               setActive(null);
-              toast.success("Workout abandoned.");
+              toast.success("Workout abandoned. Its sets were removed.");
             }}
             className="mt-2 w-full text-sm text-muted-foreground hover:text-destructive"
           >
