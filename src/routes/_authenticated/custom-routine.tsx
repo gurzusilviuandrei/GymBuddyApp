@@ -160,9 +160,9 @@ function CustomRoutineEditor() {
                   <p className="flex items-center gap-1 truncate text-xs text-muted-foreground"><LineChart className={cn("size-3", chartId === id ? "text-primary" : "")} aria-hidden="true" /> {exercise.movement_type} · {exercise.equipment_type}</p>
                 </button>
                 <div className="flex shrink-0 items-center gap-0.5">
-                  <Button type="button" size="icon" variant="ghost" disabled={index === 0} onClick={() => moveExercise(index, -1)} aria-label={`Move ${exercise.name} up`} title="Move up" className="size-8 text-muted-foreground hover:text-primary"><ArrowUp aria-hidden="true" /></Button>
-                  <Button type="button" size="icon" variant="ghost" disabled={index === selected.length - 1} onClick={() => moveExercise(index, 1)} aria-label={`Move ${exercise.name} down`} title="Move down" className="size-8 text-muted-foreground hover:text-primary"><ArrowDown aria-hidden="true" /></Button>
-                  <Button type="button" size="icon" variant="ghost" onClick={() => removeExercise(id)} aria-label={`Remove ${exercise.name}`} title="Remove exercise" className="size-8 text-muted-foreground hover:text-destructive"><X aria-hidden="true" /></Button>
+                  <Button type="button" size="icon" variant="ghost" disabled={index === 0} onClick={() => moveExercise(index, -1)} aria-label={`Move ${exercise.name} up`} title="Move up" className="size-11 text-muted-foreground hover:text-primary"><ArrowUp aria-hidden="true" /></Button>
+                  <Button type="button" size="icon" variant="ghost" disabled={index === selected.length - 1} onClick={() => moveExercise(index, 1)} aria-label={`Move ${exercise.name} down`} title="Move down" className="size-11 text-muted-foreground hover:text-primary"><ArrowDown aria-hidden="true" /></Button>
+                  <Button type="button" size="icon" variant="ghost" onClick={() => removeExercise(id)} aria-label={`Remove ${exercise.name}`} title="Remove exercise" className="size-11 text-muted-foreground hover:text-destructive"><X aria-hidden="true" /></Button>
                 </div>
                 </div>
                 {chartId === id && <div className="animate-fade-in"><Suspense fallback={<p className="py-6 text-center text-sm text-muted-foreground">Loading chart…</p>}><ExerciseProgressChart exerciseId={id} /></Suspense></div>}
@@ -178,7 +178,7 @@ function CustomRoutineEditor() {
           <DrawerHeader className="mx-auto w-full max-w-lg px-5 pb-3 text-left">
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
               <div className="min-w-0"><DrawerTitle className="text-xl">Add Exercise</DrawerTitle><DrawerDescription className="mt-2">{selected.length} in your routine</DrawerDescription></div>
-              <Button size="icon" variant="ghost" onClick={() => setDrawerOpen(false)} aria-label="Close exercise library" className="size-9 shrink-0 text-muted-foreground"><X aria-hidden="true" /></Button>
+              <Button size="icon" variant="ghost" onClick={() => setDrawerOpen(false)} aria-label="Close exercise library" className="size-11 shrink-0 text-muted-foreground"><X aria-hidden="true" /></Button>
             </div>
             <div className="mt-5">{filterRow(true)}</div>
           </DrawerHeader>

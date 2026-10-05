@@ -43,12 +43,12 @@ export function LoggedSets({ sets, onDelete, onSaveEdit }: Props) {
               <span className="text-sm font-semibold text-foreground">Set {x.set_number}</span>
               <span className="text-sm tabular-nums text-muted-foreground">{x.weight_kg} kg × {x.reps}</span>
               {x.status !== "saved" && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
                   <CloudOff className="size-3" aria-hidden="true" /> Saved locally
                 </span>
               )}
               <div className="ml-auto flex items-center gap-1">
-                <button type="button" onClick={() => startEdit(x)} aria-label={`Edit set ${x.set_number}`} className="flex size-9 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-primary">
+                <button type="button" onClick={() => startEdit(x)} aria-label={`Edit set ${x.set_number}`} className="flex size-11 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-primary">
                   <Pencil className="size-4" aria-hidden="true" />
                 </button>
                 <button
@@ -58,7 +58,7 @@ export function LoggedSets({ sets, onDelete, onSaveEdit }: Props) {
                     onDelete(x.key);
                   }}
                   aria-label={`Delete set ${x.set_number}`}
-                  className="flex size-9 items-center justify-center rounded-md text-destructive/70 transition hover:bg-destructive/10 hover:text-destructive"
+                  className="flex size-11 items-center justify-center rounded-md text-destructive/70 transition hover:bg-destructive/10 hover:text-destructive"
                 >
                   <Trash2 className="size-4" aria-hidden="true" />
                 </button>

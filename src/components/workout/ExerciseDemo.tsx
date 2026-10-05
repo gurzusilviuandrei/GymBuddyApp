@@ -164,7 +164,7 @@ export function ExerciseDemo({
           onKeyDown={(e) => e.stopPropagation()}
           aria-label={paused ? `Play ${label} demonstration` : `Pause ${label} demonstration`}
           aria-pressed={paused}
-          className="absolute right-3 top-3 flex size-8 items-center justify-center rounded-full border border-border bg-background/80 text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
+          className="absolute right-3 top-3 flex size-11 items-center justify-center rounded-full border border-border bg-background/80 text-muted-foreground backdrop-blur transition-colors hover:text-foreground"
         >
           {paused ? <Play className="size-4" aria-hidden="true" /> : <Pause className="size-4" aria-hidden="true" />}
         </button>
