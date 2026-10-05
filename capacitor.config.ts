@@ -7,6 +7,8 @@ const config: CapacitorConfig = {
   appName: "GymBuddy",
   webDir: "dist",
   backgroundColor: "#121212",
+  // Never echo plugin calls to the device log: they include the login session.
+  loggingBehavior: "none",
   plugins: {
     // Light status-bar icons to match the always-dark UI.
     SystemBars: { style: "DARK" },

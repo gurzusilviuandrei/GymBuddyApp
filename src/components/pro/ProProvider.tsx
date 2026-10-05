@@ -73,7 +73,16 @@ export function ProProvider({ children }: { children: ReactNode }) {
       .channel(`pro-${userId}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "users", filter: `id=eq.${userId}` }, () => void refresh())
       .subscribe();
-    return () => { void supabase.removeChannel(channel); };
+    // Live updates can be missed (socket asleep in the background), so also
+    // re-check whenever the app comes back to the foreground.
+    const onVisible = () => { if (document.visibilityState === "visible") void refresh(); };
+    document.addEventListener("visibilitychange", onVisible);
+    document.addEventListener("resume", onVisible);
+    return () => {
+      void supabase.removeChannel(channel);
+      document.removeEventListener("visibilitychange", onVisible);
+      document.removeEventListener("resume", onVisible);
+    };
   }, [userId, refresh]);
 
   const openPaywall = useCallback(() => setPaywall(true), []);
