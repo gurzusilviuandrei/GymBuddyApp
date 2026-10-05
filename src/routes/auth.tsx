@@ -1,18 +1,17 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, MailCheck } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { ensureUserRow } from "@/lib/gym.functions";
+import { authRedirectUrl } from "@/lib/platform";
+import { ensureUserRow } from "@/lib/gym-api";
 import { syncLocalProfile } from "@/lib/account-sync";
 import { SECURITY_NOTICE, SECURITY_NOTICE_KEY } from "@/components/SessionGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/auth")({
-  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Create Your Bro Profile — GymBuddy" },
@@ -42,7 +41,7 @@ function readLockoutUntil(): number {
 
 function AuthPage() {
   const navigate = useNavigate();
-  const ensure = useServerFn(ensureUserRow);
+  const ensure = ensureUserRow;
   const [mode, setMode] = useState<"signup" | "login">("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -105,7 +104,7 @@ function AuthPage() {
     setSendingReset(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: authRedirectUrl("/reset-password"),
       });
       if (error) throw error;
       setResetSentTo(parsed.data);
@@ -133,7 +132,7 @@ function AuthPage() {
         const { data, error } = await supabase.auth.signUp({
           email: parsed.data.email,
           password: parsed.data.password,
-          options: { emailRedirectTo: `${window.location.origin}/auth` },
+          options: { emailRedirectTo: authRedirectUrl("/auth") },
         });
         if (error) throw error;
         if (data.session) await enterApp();

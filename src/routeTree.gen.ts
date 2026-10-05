@@ -13,14 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthenticatedCustomRoutineRouteImport } from './routes/_authenticated/custom-routine'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedWorkoutRouteImport } from './routes/_authenticated/workout'
-import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -39,11 +37,6 @@ const AuthRoute = AuthRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedCustomRoutineRoute =
@@ -77,38 +70,28 @@ const AuthenticatedWorkoutRoute = AuthenticatedWorkoutRouteImport.update({
   path: '/workout',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const ApiPublicPaymentsWebhookRoute =
-  ApiPublicPaymentsWebhookRouteImport.update({
-    id: '/api/public/payments/webhook',
-    path: '/api/public/payments/webhook',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/custom-routine': typeof AuthenticatedCustomRoutineRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/home': typeof AuthenticatedHomeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/workout': typeof AuthenticatedWorkoutRoute
-  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/custom-routine': typeof AuthenticatedCustomRoutineRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/home': typeof AuthenticatedHomeRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/workout': typeof AuthenticatedWorkoutRoute
-  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,14 +99,12 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/custom-routine': typeof AuthenticatedCustomRoutineRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/workout': typeof AuthenticatedWorkoutRoute
-  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,41 +112,35 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
-    | '/sitemap.xml'
     | '/custom-routine'
     | '/history'
     | '/home'
     | '/onboarding'
     | '/profile'
     | '/workout'
-    | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/reset-password'
-    | '/sitemap.xml'
     | '/custom-routine'
     | '/history'
     | '/home'
     | '/onboarding'
     | '/profile'
     | '/workout'
-    | '/api/public/payments/webhook'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/reset-password'
-    | '/sitemap.xml'
     | '/_authenticated/custom-routine'
     | '/_authenticated/history'
     | '/_authenticated/home'
     | '/_authenticated/onboarding'
     | '/_authenticated/profile'
     | '/_authenticated/workout'
-    | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -173,8 +148,6 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
-  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
-  ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -205,13 +178,6 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/custom-routine': {
@@ -256,13 +222,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorkoutRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/api/public/payments/webhook': {
-      id: '/api/public/payments/webhook'
-      path: '/api/public/payments/webhook'
-      fullPath: '/api/public/payments/webhook'
-      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -292,19 +251,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
-  SitemapDotxmlRoute: SitemapDotxmlRoute,
-  ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, ChevronDown, Dumbbell, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { BottomNav } from "@/components/BottomNav";
 import { usePro } from "@/components/pro/ProProvider";
 import { supabase } from "@/integrations/supabase/client";
-import { ensureUserRow, getDayOneWorkout, getUserStats, getWorkoutHistory } from "@/lib/gym.functions";
+import { ensureUserRow, getDayOneWorkout, getUserStats, getWorkoutHistory } from "@/lib/gym-api";
 
 import { SessionCard } from "@/components/SessionCard";
 import { syncLocalProfile } from "@/lib/account-sync";
@@ -62,7 +61,6 @@ function readProfile(): Profile {
 }
 
 export const Route = createFileRoute("/_authenticated/home")({
-  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Home — GymBuddy" },
@@ -90,14 +88,14 @@ function Home() {
   const navigate = useNavigate();
   const { isPro, requirePro } = usePro();
   const queryClient = useQueryClient();
-  const fetchWorkout = useServerFn(getDayOneWorkout);
-  const fetchStats = useServerFn(getUserStats);
-  const fetchHistory = useServerFn(getWorkoutHistory);
+  const fetchWorkout = getDayOneWorkout;
+  const fetchStats = getUserStats;
+  const fetchHistory = getWorkoutHistory;
   const { data: recent } = useQuery({
     queryKey: ["workout-history", "recent"],
     queryFn: () => fetchHistory({ data: { limit: 3 } }),
   });
-  const ensure = useServerFn(ensureUserRow);
+  const ensure = ensureUserRow;
 
   // Offline sets are flushed app-wide by <OfflineSyncWorker /> in the authenticated layout,
   // so they keep syncing even if the member stays on History or Profile after reconnecting.

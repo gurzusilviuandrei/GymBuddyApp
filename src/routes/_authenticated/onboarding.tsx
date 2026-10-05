@@ -1,14 +1,12 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { createUserProfile } from "@/lib/gym.functions";
+import { createUserProfile } from "@/lib/gym-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
-  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Get Started — GymBuddy" },
@@ -75,7 +73,7 @@ function Onboarding() {
   const [selected, setSelected] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
-  const createUser = useServerFn(createUserProfile);
+  const createUser = createUserProfile;
 
   const ageNumber = Number(age);
   const detailsValid = name.trim().length > 0 && age.trim().length > 0 && Number.isFinite(ageNumber) && ageNumber >= 10 && ageNumber <= 100;

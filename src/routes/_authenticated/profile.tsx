@@ -1,7 +1,6 @@
 import { useState, type FormEvent, type MouseEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, BookOpen, FileDown, KeyRound, Mail, Search, ShieldCheck, Trash2, UserRound, Zap, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -21,13 +20,12 @@ import { Button } from "@/components/ui/button";
 import { BottomNav } from "@/components/BottomNav";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { deleteAccount, exportMyData, getAccountSettings, updateAccountEmail } from "@/lib/account.functions";
+import { authRedirectUrl } from "@/lib/platform";
+import { saveFile } from "@/lib/native-files";
+import { deleteAccount, exportMyData, getAccountSettings, updateAccountEmail } from "@/lib/account-api";
 import { usePro } from "@/components/pro/ProProvider";
-import { createCustomerPortalSession } from "@/lib/payments.functions";
-import { getPaddleEnvironment } from "@/lib/paddle";
 
 export const Route = createFileRoute("/_authenticated/profile")({
-  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Profile & Settings — GymBuddy" },
@@ -65,30 +63,12 @@ function ProfilePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isPro, loaded, openPaywall } = usePro();
-  const loadSettings = useServerFn(getAccountSettings);
-  const saveEmail = useServerFn(updateAccountEmail);
-  const removeAccount = useServerFn(deleteAccount);
-  const exportData = useServerFn(exportMyData);
+  const loadSettings = getAccountSettings;
+  const saveEmail = updateAccountEmail;
+  const removeAccount = deleteAccount;
+  const exportData = exportMyData;
   const [editingEmail, setEditingEmail] = useState(false);
   const [newEmail, setNewEmail] = useState("");
-  const createPortal = useServerFn(createCustomerPortalSession);
-  const [portalLoading, setPortalLoading] = useState(false);
-  const openPortal = async (kind: "manage" | "cancel") => {
-    // Open the tab synchronously so mobile browsers don't block it as a popup.
-    const tab = window.open("about:blank", "_blank");
-    setPortalLoading(true);
-    try {
-      const urls = await createPortal({ data: { environment: getPaddleEnvironment() } });
-      const url = kind === "cancel" && urls.cancelUrl ? urls.cancelUrl : urls.overviewUrl;
-      if (tab) tab.location.href = url;
-      else window.location.href = url;
-    } catch (err) {
-      tab?.close();
-      toast.error(err instanceof Error ? err.message : "Could not open subscription settings");
-    } finally {
-      setPortalLoading(false);
-    }
-  };
   const [savingEmail, setSavingEmail] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
   const [deleteText, setDeleteText] = useState("");
@@ -134,7 +114,7 @@ function ProfilePage() {
     setSendingReset(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(account.email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: authRedirectUrl("/reset-password"),
       });
       if (error) throw error;
       toast.success("A secure reset link has been dispatched to your email.");
@@ -151,14 +131,7 @@ function ProfilePage() {
     try {
       const payload = await exportData();
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `gymbuddy-training-history-${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      await saveFile(blob, `gymbuddy-training-history-${new Date().toISOString().slice(0, 10)}.json`, "My GymBuddy training history");
       toast.success("Your training history has been downloaded.");
     } catch {
       toast.error("Couldn't export your data. Try again.");
@@ -249,12 +222,8 @@ function ProfilePage() {
             </div>
             <div className="min-w-0 flex-1">
               <h2 className="text-base font-semibold text-foreground">Your Pro subscription</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Update your card, view invoices or cancel anytime.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Custom routines, multi-swap and advanced analytics are unlocked.</p>
             </div>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <Button disabled={portalLoading} onClick={() => openPortal("manage")}>Manage</Button>
-            <Button variant="outline" disabled={portalLoading} onClick={() => openPortal("cancel")}>Cancel plan</Button>
           </div>
         </section>
       )}

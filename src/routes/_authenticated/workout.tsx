@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useBlocker } from "@tanstack/react-router";
 import { ArrowRightLeft, Camera, Check, Zap, CloudOff, Download, Pencil, Share2, Trash2, Volume2, VolumeX, X } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { readActiveSession, writeActiveSession, clearActiveSession, type CachedSet } from "@/lib/active-session";
 import { usePro } from "@/components/pro/ProProvider";
-import { getPaddleEnvironment } from "@/lib/paddle";
-import { getDayOneWorkout, getAlternativeOptions, getLastLog, getUserStats, logWorkoutSet, completeWorkout, updateWorkoutSet, deleteWorkoutSet } from "@/lib/gym.functions";
+import { getDayOneWorkout, getAlternativeOptions, getLastLog, getUserStats, logWorkoutSet, completeWorkout, updateWorkoutSet, deleteWorkoutSet } from "@/lib/gym-api";
 import { MachineAlignment } from "@/components/workout/MachineAlignment";
 import { writeOfflineQueue, addPendingDelete, readPendingDeletes, removePendingDelete, clearPendingDeletes } from "@/lib/offline-queue";
 import { OfflineSyncBadge } from "@/components/OfflineSyncBadge";
@@ -16,13 +14,13 @@ import { PlateVisualizer, Stepper, WarmUpCalculator } from "@/components/workout
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useIdleNudge } from "@/hooks/use-idle-nudge";
 import { createBroCardBlob, downloadBroCard, type BroCardStats } from "@/lib/bro-card";
+import { shareFile } from "@/lib/native-files";
 import { ExerciseDemo } from "@/components/workout/ExerciseDemo";
 import { isChimeMuted, playRestOverChime, setChimeMuted, unlockChime } from "@/lib/rest-chime";
 
 
 
 export const Route = createFileRoute("/_authenticated/workout")({
-  staticData: { sitemap: false },
   validateSearch: (search: Record<string, unknown>) => ({
     mode: search["mode"] === "premade" || search["mode"] === "custom" ? search["mode"] : undefined,
     sore: search["sore"] === "fresh" || search["sore"] === "little" || search["sore"] === "super" ? search["sore"] : undefined,
@@ -85,15 +83,15 @@ function Workout() {
   const [lastLog, setLastLog] = useState<{ weight_kg: number; reps_completed: number; sets_completed?: number; min_reps?: number; top_weight_kg?: number } | null>(null);
   const [chimeMuted, setChimeMutedState] = useState(false);
 
-  const logSet = useServerFn(logWorkoutSet);
-  const fetchWorkout = useServerFn(getDayOneWorkout);
-  const fetchOptions = useServerFn(getAlternativeOptions);
+  const logSet = logWorkoutSet;
+  const fetchWorkout = getDayOneWorkout;
+  const fetchOptions = getAlternativeOptions;
   const [swapOpen, setSwapOpen] = useState(false);
   const { isPro, requirePro } = usePro();
-  const fetchLastLog = useServerFn(getLastLog);
+  const fetchLastLog = getLastLog;
   const [swapped, setSwapped] = useState<Ex | null>(null);
   const [swapping, setSwapping] = useState(false);
-  const finish = useServerFn(completeWorkout);
+  const finish = completeWorkout;
   const queryClient = useQueryClient();
   const [startedAt, setStartedAt] = useState(() => new Date().toISOString());
   const [finishing, setFinishing] = useState(false);
@@ -113,9 +111,9 @@ function Workout() {
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editWeight, setEditWeight] = useState("");
   const [editReps, setEditReps] = useState("");
-  const updateSet = useServerFn(updateWorkoutSet);
-  const removeSet = useServerFn(deleteWorkoutSet);
-  const fetchStats = useServerFn(getUserStats);
+  const updateSet = updateWorkoutSet;
+  const removeSet = deleteWorkoutSet;
+  const fetchStats = getUserStats;
   const [broCardUrl, setBroCardUrl] = useState<string | null>(null);
   const [broCardBlob, setBroCardBlob] = useState<Blob | null>(null);
   const [creatingCard, setCreatingCard] = useState(false);
@@ -560,24 +558,17 @@ function Workout() {
   const handleShareCard = async () => {
     const blob = broCardBlob ?? await makeCard();
     if (!blob) return;
-    const file = new File([blob], "gymbuddy-bro-card.png", { type: "image/png" });
-    if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
-      try {
-        await navigator.share({ files: [file], title: "My GymBuddy Bro Card" });
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-      }
-    }
+    await shareFile(blob, "gymbuddy-bro-card.png", "My GymBuddy Bro Card").catch(() => {});
   };
 
   const handleDownloadCard = async () => {
     const blob = broCardBlob ?? await makeCard();
-    if (blob) downloadBroCard(blob);
+    if (blob) await downloadBroCard(blob).catch(() => {});
   };
 
   const { data: swapOptions, isFetching: loadingOptions } = useQuery({
     queryKey: ["swap-options", exercise?.id],
-    queryFn: () => fetchOptions({ data: { exercise_id: exercise!.id, exclude: session.map((e) => e.id), env: getPaddleEnvironment() } }),
+    queryFn: () => fetchOptions({ data: { exercise_id: exercise!.id, exclude: session.map((e) => e.id) } }),
     enabled: swapOpen && isPro && Boolean(exercise),
   });
 

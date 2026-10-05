@@ -1,15 +1,13 @@
 import { useEffect } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { ensureUserRow } from "@/lib/gym.functions";
+import { ensureUserRow } from "@/lib/gym-api";
 import { syncLocalProfile } from "@/lib/account-sync";
 import { ArrowRight, Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import gymBuddyLogo from "@/assets/gymbuddy-logo.png";
 
 export const Route = createFileRoute("/")({
-  staticData: { sitemap: true },
   head: () => ({
     meta: [
       { title: "Welcome to GymBuddy" },
@@ -25,7 +23,7 @@ export const Route = createFileRoute("/")({
 
 function Welcome() {
   const navigate = useNavigate();
-  const ensure = useServerFn(ensureUserRow);
+  const ensure = ensureUserRow;
   // Signed-in users skip Welcome / Login / Onboarding entirely.
   useEffect(() => {
     let cancelled = false;

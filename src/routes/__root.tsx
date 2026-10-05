@@ -1,20 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  Outlet,
-  Link,
-  createRootRouteWithContext,
-  useRouter,
-  HeadContent,
-  Scripts,
-} from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { Outlet, Link, createRootRouteWithContext, useRouter } from "@tanstack/react-router";
 
-import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionGuard } from "@/components/SessionGuard";
-import { ProProvider, PaymentTestModeBanner } from "@/components/pro/ProProvider";
-import { reportLovableError } from "../lib/lovable-error-reporting";
-import { registerAppServiceWorker } from "@/lib/register-sw";
+import { ProProvider } from "@/components/pro/ProProvider";
+import { NativeBridge } from "@/components/NativeBridge";
 
 function NotFoundComponent() {
   return (
@@ -41,9 +31,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -77,82 +64,22 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  staticData: { sitemap: false },
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "GymBuddy" },
-      {
-        name: "description",
-        content:
-          "The beginner's gym guide.",
-      },
-      { property: "og:site_name", content: "GymBuddy" },
-      { property: "og:type", content: "website" },
-      { name: "theme-color", content: "#121212" },
-      { name: "apple-mobile-web-app-capable", content: "yes" },
-      { name: "mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-title", content: "GymBuddy" },
-      { name: "apple-mobile-web-app-status-bar-style", content: "black" },
-    ],
-    links: [
-      {
-        rel: "preconnect",
-        href: "https://fonts.googleapis.com",
-      },
-      {
-        rel: "preconnect",
-        href: "https://fonts.gstatic.com",
-        crossOrigin: "anonymous",
-      },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap",
-      },
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      { rel: "icon", href: "/favicon.png", type: "image/png" },
-      { rel: "manifest", href: "/manifest.webmanifest" },
-      { rel: "apple-touch-icon", href: "/icon-180.png", sizes: "180x180" },
-    ],
-  }),
-  shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });
 
-function RootShell({ children }: { children: ReactNode }) {
-  return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  );
-}
-
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  useEffect(() => {
-    registerAppServiceWorker();
-  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <ProProvider>
-        <PaymentTestModeBanner />
         <Outlet />
       </ProProvider>
       <SessionGuard />
+      <NativeBridge />
       <Toaster position="top-center" />
     </QueryClientProvider>
   );

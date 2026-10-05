@@ -1,9 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type React from "react";
-import { Check, Lock, Loader2, Trophy, X, Zap } from "lucide-react";
-import { toast } from "sonner";
+import { Check, Lock, Trophy, X, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { getPaddleEnvironment, getPaddlePriceId, initializePaddle, PRO_PRICE_ID } from "@/lib/paddle";
 import { Button } from "@/components/ui/button";
 
 type ProState = {
@@ -37,21 +35,15 @@ const FEATURES: { label: string; pro: boolean }[] = [
 
 export function ProProvider({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
-  const [email, setEmail] = useState<string | undefined>();
   const [isPro, setIsPro] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [paywall, setPaywall] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
-  const [opening, setOpening] = useState(false);
   const wasPro = useRef<boolean | null>(null);
-  const env = getPaddleEnvironment();
 
   useEffect(() => {
-    const sync = (u: { id: string; email?: string } | null) => {
-      setUserId(u?.id ?? null);
-      setEmail(u?.email);
-    };
+    const sync = (u: { id: string } | null) => setUserId(u?.id ?? null);
     supabase.auth.getSession().then(({ data }) => sync(data.session?.user ?? null));
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED" || event === "INITIAL_SESSION") sync(session?.user ?? null);
@@ -63,16 +55,16 @@ export function ProProvider({ children }: { children: ReactNode }) {
     if (!userId) { setIsPro(false); setLoaded(false); wasPro.current = null; return; }
     const { data } = await supabase
       .from("users")
-      .select("subscription_tier, subscription_status, subscription_environment")
+      .select("subscription_tier, subscription_status")
       .eq("id", userId)
       .maybeSingle();
-    const pro = data?.subscription_tier === "pro" && data?.subscription_environment === env;
+    const pro = data?.subscription_tier === "pro";
     if (wasPro.current === false && pro) { setPaywall(false); setCelebrate(true); }
     wasPro.current = pro;
     setIsPro(pro);
     setStatus(data?.subscription_status ?? null);
     setLoaded(true);
-  }, [userId, env]);
+  }, [userId]);
 
   useEffect(() => {
     void refresh();
@@ -84,46 +76,11 @@ export function ProProvider({ children }: { children: ReactNode }) {
     return () => { void supabase.removeChannel(channel); };
   }, [userId, refresh]);
 
-  // Fallback polling right after checkout in case realtime is slow.
-  const pollAfterCheckout = useCallback(() => {
-    let n = 0;
-    const id = window.setInterval(() => {
-      n += 1;
-      void refresh();
-      if (n >= 15 || wasPro.current) window.clearInterval(id);
-    }, 2000);
-  }, [refresh]);
-
   const openPaywall = useCallback(() => setPaywall(true), []);
   const requirePro = useCallback((action: () => void) => {
     if (isPro) action();
     else setPaywall(true);
   }, [isPro]);
-
-  const checkout = async () => {
-    if (!userId || opening) return;
-    setOpening(true);
-    try {
-      await initializePaddle((e) => { if (e.name === "checkout.completed") pollAfterCheckout(); });
-      const priceId = await getPaddlePriceId(PRO_PRICE_ID);
-      window.Paddle.Checkout.open({
-        items: [{ priceId, quantity: 1 }],
-        customer: email ? { email } : undefined,
-        customData: { userId },
-        settings: {
-          displayMode: "overlay",
-          theme: "dark",
-          successUrl: `${window.location.origin}/home?checkout=success`,
-          allowLogout: false,
-          variant: "one-page",
-        },
-      });
-    } catch {
-      toast.error("Checkout couldn't open. Check your connection and try again, Bro.");
-    } finally {
-      setOpening(false);
-    }
-  };
 
   return (
     <ProContext.Provider value={{ isPro, loaded, status, openPaywall, requirePro }}>
@@ -159,15 +116,11 @@ export function ProProvider({ children }: { children: ReactNode }) {
               ))}
             </div>
 
-            <Button
-              type="button"
-              onClick={checkout}
-              disabled={opening || !userId}
-              className="mt-7 h-16 w-full rounded-xl text-lg font-bold shadow-neon transition-transform active:scale-[0.98]"
-            >
-              {opening ? <Loader2 className="animate-spin" /> : "Unlock Pro Access - €9.99/mo"}
+            {/* Store billing (Google Play / App Store) plugs in here before launch. */}
+            <Button type="button" disabled className="mt-7 h-16 w-full rounded-xl text-lg font-bold">
+              Pro is coming soon
             </Button>
-            <p className="mt-3 text-center text-xs text-muted-foreground">Cancel anytime. Your data stays yours.</p>
+            <p className="mt-3 text-center text-xs text-muted-foreground">Your data stays yours.</p>
           </div>
         </div>
       )}
@@ -198,11 +151,3 @@ function FeatureRow({ label, pro }: { label: string; pro: boolean }) {
   );
 }
 
-export function PaymentTestModeBanner() {
-  if (getPaddleEnvironment() !== "sandbox") return null;
-  return (
-    <div className="w-full border-b border-accent bg-accent/40 px-4 py-1.5 text-center text-xs text-accent-foreground">
-      Payments in the preview are in test mode — no real money is charged.
-    </div>
-  );
-}

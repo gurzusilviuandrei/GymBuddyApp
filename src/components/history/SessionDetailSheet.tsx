@@ -1,11 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { getSessionDetail } from "@/lib/gym.functions";
+import { getSessionDetail } from "@/lib/gym-api";
 import type { SessionSummary } from "@/components/SessionCard";
 
 export function SessionDetailSheet({ session, onClose }: { session: SessionSummary | null; onClose: () => void }) {
-  const fetchDetail = useServerFn(getSessionDetail);
+  const fetchDetail = getSessionDetail;
   const { data, isLoading } = useQuery({
     queryKey: ["session-detail", session?.id],
     queryFn: () => fetchDetail({ data: { session_id: session!.id } }),

@@ -1,4 +1,5 @@
 import logoUrl from "@/assets/gymbuddy-logo.png";
+import { saveFile } from "./native-files";
 
 export type BroCardStats = {
   date: string;
@@ -94,12 +95,5 @@ export async function createBroCardBlob(stats: BroCardStats): Promise<Blob> {
 }
 
 export function downloadBroCard(blob: Blob) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `gymbuddy-bro-card-${new Date().toISOString().slice(0, 10)}.png`;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return saveFile(blob, `gymbuddy-bro-card-${new Date().toISOString().slice(0, 10)}.png`, "My GymBuddy Bro Card");
 }

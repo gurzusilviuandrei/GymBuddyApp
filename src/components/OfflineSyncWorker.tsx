@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useRouterState } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { logWorkoutSet, deleteWorkoutSet } from "@/lib/gym.functions";
+import { logWorkoutSet, deleteWorkoutSet } from "@/lib/gym-api";
 import { readActiveSession, writeActiveSession } from "@/lib/active-session";
 import {
   QUEUE_EVENT,
@@ -19,8 +18,8 @@ import {
  * retry loop while a session is open, so this worker stands down on that route.
  */
 export function OfflineSyncWorker() {
-  const logSet = useServerFn(logWorkoutSet);
-  const removeSet = useServerFn(deleteWorkoutSet);
+  const logSet = logWorkoutSet;
+  const removeSet = deleteWorkoutSet;
   const onWorkout = useRouterState({
     select: (s) => s.location.pathname.startsWith("/workout"),
   });

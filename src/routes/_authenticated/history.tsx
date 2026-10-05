@@ -1,18 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { SessionCard } from "@/components/SessionCard";
 import { BottomNav } from "@/components/BottomNav";
 import { useState } from "react";
-import { deleteWorkoutSession, getActivityDays, getWorkoutHistory } from "@/lib/gym.functions";
+import { deleteWorkoutSession, getActivityDays, getWorkoutHistory } from "@/lib/gym-api";
 import { ActivityHeatmap } from "@/components/history/ActivityHeatmap";
 import { SessionDetailSheet } from "@/components/history/SessionDetailSheet";
 import type { SessionSummary } from "@/components/SessionCard";
 
 export const Route = createFileRoute("/_authenticated/history")({
-  staticData: { sitemap: false },
   head: () => ({
     meta: [
       { title: "Workout History — GymBuddy" },
@@ -28,10 +26,10 @@ export const Route = createFileRoute("/_authenticated/history")({
 
 
 function HistoryPage() {
-  const fetchHistory = useServerFn(getWorkoutHistory);
-  const removeSession = useServerFn(deleteWorkoutSession);
+  const fetchHistory = getWorkoutHistory;
+  const removeSession = deleteWorkoutSession;
   const queryClient = useQueryClient();
-  const fetchActivity = useServerFn(getActivityDays);
+  const fetchActivity = getActivityDays;
   const [openSession, setOpenSession] = useState<SessionSummary | null>(null);
   const { data: activeDays } = useQuery({
     queryKey: ["workout-history", "activity"],

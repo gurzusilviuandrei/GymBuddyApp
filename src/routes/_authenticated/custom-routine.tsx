@@ -1,19 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { ArrowDown, ArrowLeft, ArrowUp, Check, LineChart, Plus, X } from "lucide-react";
 import { ExerciseProgressChart } from "@/components/ExerciseProgressChart";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { getExerciseLibrary, saveCustomRoutine } from "@/lib/gym.functions";
+import { getExerciseLibrary, saveCustomRoutine } from "@/lib/gym-api";
 import { cn } from "@/lib/utils";
 import { usePro } from "@/components/pro/ProProvider";
-import { getPaddleEnvironment } from "@/lib/paddle";
 
 export const Route = createFileRoute("/_authenticated/custom-routine")({
-  staticData: { sitemap: false },
   head: () => ({ meta: [
     { title: "Custom Workout Editor — GymBuddy" },
     { name: "description", content: "Arrange and edit your own GymBuddy workout routine." },
@@ -63,8 +60,8 @@ function CustomRoutine() {
 }
 
 function CustomRoutineEditor() {
-  const fetchLib = useServerFn(getExerciseLibrary);
-  const save = useServerFn(saveCustomRoutine);
+  const fetchLib = getExerciseLibrary;
+  const save = saveCustomRoutine;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<string[]>([]);
@@ -109,7 +106,7 @@ function CustomRoutineEditor() {
     if (selected.length === 0 || saving || !data) return;
     setSaving(true);
     try {
-      await save({ data: { exercise_ids: selected, env: getPaddleEnvironment() } });
+      await save({ data: { exercise_ids: selected } });
       await queryClient.invalidateQueries({ queryKey: ["day-one-workout"] });
       await queryClient.invalidateQueries({ queryKey: ["exercise-library"] });
       toast.success("Custom Routine Updated, Bro! 🔧");

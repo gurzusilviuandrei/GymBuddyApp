@@ -310,6 +310,38 @@ export type Database = {
     }
     Functions: {
       is_pro: { Args: { _env?: string; _user_id: string }; Returns: boolean }
+      is_pro_user: { Args: never; Returns: boolean }
+      ensure_user_row: { Args: never; Returns: Json }
+      create_user_profile: {
+        Args: { p_full_name: string; p_age: number; p_frequency: string; p_primary_goal: string; p_equipment_type: string }
+        Returns: string
+      }
+      save_custom_routine: { Args: { p_exercise_ids: string[] }; Returns: undefined }
+      log_workout_set: {
+        Args: { p_exercise_id: string; p_weight_kg: number; p_reps_completed: number; p_set_number: number; p_client_key?: string | null }
+        Returns: Json
+      }
+      update_workout_set: { Args: { p_id: string; p_weight_kg: number; p_reps_completed: number }; Returns: Json }
+      delete_workout_set: { Args: { p_id: string }; Returns: undefined }
+      save_machine_setting: {
+        Args: { p_exercise_id: string; p_seat_notch: string; p_pad_notch: string; p_custom_setting_notes: string }
+        Returns: undefined
+      }
+      complete_workout: {
+        Args: {
+          p_program_type: string
+          p_exercise_ids: string[]
+          p_log_ids: string[]
+          p_started_at: string
+          p_split_day?: string | null
+          p_auto_regulated?: boolean
+        }
+        Returns: Json
+      }
+      delete_workout_session: { Args: { p_session_id: string }; Returns: Json }
+      get_alternative_options: { Args: { p_exercise_id: string; p_exclude?: string[] }; Returns: Json }
+      get_exercise_progress: { Args: { p_exercise_id: string; p_tz_offset: number }; Returns: Json }
+      delete_account: { Args: { p_password: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

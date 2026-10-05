@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="gymbuddy_background">#121212</color>
+    <color name="colorPrimary">#121212</color>
+    <color name="colorPrimaryDark">#121212</color>
+    <color name="colorAccent">#39FF14</color>
+</resources>

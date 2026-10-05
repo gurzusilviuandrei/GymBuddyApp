@@ -1,17 +1,16 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { ChevronDown } from "lucide-react";
 import { toast } from "sonner";
-import { getMachineSetting, saveMachineSetting } from "@/lib/gym.functions";
+import { getMachineSetting, saveMachineSetting } from "@/lib/gym-api";
 import { cn } from "@/lib/utils";
 
 const OPTIONS = ["", "1", "2", "3", "4", "5", "6", "7", "8", "A", "B", "C", "D", "E", "F"];
 
 export function MachineAlignment({ exerciseId }: { exerciseId: string }) {
   const qc = useQueryClient();
-  const fetchSetting = useServerFn(getMachineSetting);
-  const save = useServerFn(saveMachineSetting);
+  const fetchSetting = getMachineSetting;
+  const save = saveMachineSetting;
   const key = ["machine-setting", exerciseId];
   const { data } = useQuery({ queryKey: key, queryFn: () => fetchSetting({ data: { exercise_id: exerciseId } }) });
   const [open, setOpen] = useState(false);

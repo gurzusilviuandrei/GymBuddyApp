@@ -1,15 +1,15 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
-// GymBuddy renders on the server, so the native shell loads the live site
-// instead of bundling static files. Publishing updates the app instantly.
+// The app ships its own bundled copy of the UI (dist/, built with `npm run build`)
+// and talks to Supabase directly, so it starts without a connection and needs no server.
 const config: CapacitorConfig = {
   appId: "app.gymbuddyapp.gymbuddy",
   appName: "GymBuddy",
-  webDir: "public",
+  webDir: "dist",
   backgroundColor: "#121212",
-  server: {
-    url: "https://gymbuddyapp.app",
-    cleartext: false,
+  plugins: {
+    // Light status-bar icons to match the always-dark UI.
+    SystemBars: { style: "DARK" },
   },
   ios: { contentInset: "always", backgroundColor: "#121212" },
   android: { backgroundColor: "#121212" },
