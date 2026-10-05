@@ -9,6 +9,14 @@ const getEnv = (key: string): string => {
 export { EventName };
 export type PaddleEnv = "sandbox" | "live";
 
+// The payment environment this deployment runs in, decided by the server's own
+// build config (preview = test token, published = live token), never by the
+// request. Fails closed to "live" so a test subscription can't unlock Pro here.
+export function getServerPaddleEnv(): PaddleEnv {
+  const token = import.meta.env["VITE_PAYMENTS_CLIENT_TOKEN"] ?? process.env["VITE_PAYMENTS_CLIENT_TOKEN"];
+  return typeof token === "string" && token.startsWith("test_") ? "sandbox" : "live";
+}
+
 const GATEWAY_BASE_URL = "https://connector-gateway.lovable.dev/paddle";
 
 export function getConnectionApiKey(env: PaddleEnv): string {
