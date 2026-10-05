@@ -11,6 +11,11 @@ import "@fontsource/space-grotesk/700.css";
 import "./styles.css";
 import { routeTree } from "./routeTree.gen";
 import { durableStorage, initDurableStorage } from "./lib/durable-storage";
+import { initMonitoring, setMonitoringUser } from "./lib/monitoring";
+import { supabase } from "./integrations/supabase/client";
+
+// First, so errors during start-up are reported too.
+initMonitoring();
 
 const OFFLINE_CACHE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -26,6 +31,8 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+supabase.auth.onAuthStateChange((_event, session) => setMonitoringUser(session?.user.id ?? null));
 
 // Native storage must be in memory before anything reads it (cache, offline sets).
 await initDurableStorage();

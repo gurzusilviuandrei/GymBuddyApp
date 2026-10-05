@@ -1,10 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Outlet, Link, createRootRouteWithContext, useRouter } from "@tanstack/react-router";
 
 import { Toaster } from "@/components/ui/sonner";
 import { SessionGuard } from "@/components/SessionGuard";
 import { ProProvider } from "@/components/pro/ProProvider";
 import { NativeBridge } from "@/components/NativeBridge";
+import { reportError } from "@/lib/monitoring";
 
 function NotFoundComponent() {
   return (
@@ -31,6 +33,9 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
+  useEffect(() => {
+    reportError(error, { boundary: "root_error_screen" });
+  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">

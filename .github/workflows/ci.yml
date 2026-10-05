@@ -55,6 +55,7 @@ jobs:
           # are public by design (they ship inside every copy of the app).
           VITE_SUPABASE_URL: https://uoljwupvesnnsjipnzyn.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_wRHNLX3Jo49IcuWO-JYmKQ_Z05uBuB3
+          VITE_SENTRY_DSN: https://339fd206883f6489807d93e7ae2feeef@o4512205215694849.ingest.de.sentry.io/4512205230112848
       - name: Assemble debug APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon

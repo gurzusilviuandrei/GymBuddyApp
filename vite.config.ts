@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import pkg from "./package.json" with { type: "json" };
 
 // Plain single-page app: everything is bundled into dist/, which Capacitor ships
 // inside the Android/iOS app. There is no server; data comes from Supabase.
@@ -15,6 +16,8 @@ export default defineConfig(({ command, mode }) => {
   }
 
   return {
+    // Tags crash reports with the app version.
+    define: { __APP_VERSION__: JSON.stringify(pkg.version) },
     plugins: [
       // Must run before the React plugin so it can generate src/routeTree.gen.ts.
       tanstackRouter({ target: "react", autoCodeSplitting: true }),
