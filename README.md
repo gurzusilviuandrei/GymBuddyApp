@@ -32,7 +32,7 @@ A session companion for people who have a gym membership and still freeze in the
 | `npm run dev` | Run the app in your browser at http://localhost:5173 |
 | `npm run typecheck` | Check the code for type errors |
 | `npm test` | Run the database, security and exercise-library tests (no internet or Supabase needed) |
-| `npm run check` | Everything GitHub checks on every push: types, tests and a full build |
+| `npm run check` | Everything GitHub checks on every push: types, lint, tests and a full build |
 | `npm run app:sync` | Build the app and copy it into the Android project |
 | `npm run app:android` | Open the Android project in Android Studio (run it on a phone or emulator from there) |
 
@@ -42,7 +42,7 @@ On Windows PowerShell, use `npm.cmd` instead of `npm` (e.g. `npm.cmd test`).
 
 ## Automatic checks
 
-Every push to GitHub runs `.github/workflows/ci.yml`: type check, tests, app build and an Android debug build (the APK is downloadable from the run for 14 days). Only merge to `main` when the check is green.
+Every push to GitHub runs `.github/workflows/ci.yml`: type check, lint, tests, app build and an Android debug build (the APK is downloadable from the run for 14 days). Only merge to `main` when the check is green.
 
 ## Pro access
 
