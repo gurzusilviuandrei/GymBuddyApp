@@ -15,14 +15,6 @@ const ExerciseProgressChart = lazy(() =>
 import { usePro } from "@/components/pro/ProProvider";
 
 export const Route = createFileRoute("/_authenticated/custom-routine")({
-  head: () => ({ meta: [
-    { title: "Custom Workout Editor — GymBuddy" },
-    { name: "description", content: "Arrange and edit your own GymBuddy workout routine." },
-    { property: "og:title", content: "Custom Workout Editor — GymBuddy" },
-    { property: "og:description", content: "Arrange and edit your own GymBuddy workout routine." },
-    { property: "og:type", content: "website" },
-    { name: "twitter:card", content: "summary_large_image" },
-  ] }),
   component: CustomRoutine,
 });
 
@@ -64,8 +56,6 @@ function CustomRoutine() {
 }
 
 function CustomRoutineEditor() {
-  const fetchLib = getExerciseLibrary;
-  const save = saveCustomRoutine;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<string[]>([]);
@@ -73,7 +63,7 @@ function CustomRoutineEditor() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [chartId, setChartId] = useState<string | null>(null);
-  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["exercise-library"], queryFn: () => fetchLib() });
+  const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["exercise-library"], queryFn: () => getExerciseLibrary() });
 
   useEffect(() => { if (data?.selected) setSelected([...new Set(data.selected)]); }, [data]);
   const exercises = data?.exercises ?? [];
@@ -110,7 +100,7 @@ function CustomRoutineEditor() {
     if (selected.length === 0 || saving || !data) return;
     setSaving(true);
     try {
-      await save({ data: { exercise_ids: selected } });
+      await saveCustomRoutine({ data: { exercise_ids: selected } });
       await queryClient.invalidateQueries({ queryKey: ["day-one-workout"] });
       await queryClient.invalidateQueries({ queryKey: ["exercise-library"] });
       toast.success("Custom Routine Updated, Bro! 🔧");

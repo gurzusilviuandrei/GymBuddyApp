@@ -9,29 +9,18 @@ import { Button } from "@/components/ui/button";
 import gymBuddyLogo from "@/assets/gymbuddy-logo.png";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Welcome to GymBuddy" },
-      { name: "description", content: "GymBuddy is the beginner's gym guide. Start your training journey with confidence." },
-      { property: "og:title", content: "Welcome to GymBuddy" },
-      { property: "og:description", content: "The beginner's gym guide. Start your training journey with confidence." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
   component: Welcome,
 });
 
 function Welcome() {
   const navigate = useNavigate();
-  const ensure = ensureUserRow;
   // Signed-in users skip Welcome / Login / Onboarding entirely.
   useEffect(() => {
     let cancelled = false;
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session || cancelled) return;
       try {
-        const result = await ensure();
+        const result = await ensureUserRow();
         if (result.accountMissing) {
           // The account was deleted elsewhere: nothing on this phone belongs to anyone.
           clearAccountData();
@@ -48,7 +37,7 @@ function Welcome() {
     return () => {
       cancelled = true;
     };
-  }, [ensure, navigate]);
+  }, [navigate]);
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col overflow-hidden bg-background px-7 pb-[max(2.5rem,env(safe-area-inset-bottom))] text-foreground">
       {/* Unified group: logo + subtitle + graphic, centered as one block with

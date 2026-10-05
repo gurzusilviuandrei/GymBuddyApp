@@ -7,9 +7,10 @@ export const SECURITY_NOTICE_KEY = "gymbuddy-security-notice";
 export const SECURITY_NOTICE = "Security update detected. Please re-authenticate.";
 
 /**
- * Re-validates the session with the auth server on focus and every 30s.
- * When a password change on another device revoked this session, the
- * check fails and this tab is signed out and sent to the login screen.
+ * Re-validates the session with the auth server at start-up and whenever the app
+ * returns to the foreground (no polling, to spare battery and data). When a
+ * password change on another device revoked this session, the check fails and
+ * this phone is signed out and sent to the login screen.
  */
 export function SessionGuard() {
   const router = useRouter();
@@ -36,12 +37,10 @@ export function SessionGuard() {
         checking = false;
       }
     };
-    const id = window.setInterval(check, 30_000);
     document.addEventListener("visibilitychange", check);
     window.addEventListener("focus", check);
     check();
     return () => {
-      window.clearInterval(id);
       document.removeEventListener("visibilitychange", check);
       window.removeEventListener("focus", check);
     };

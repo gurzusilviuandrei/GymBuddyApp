@@ -3,8 +3,10 @@
 // supabase/migrations/*_standalone_api.sql, which act as the signed-in member.
 // Each call takes `{ data }` so screens call it like the old server functions.
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 type Input<T> = { data: T };
+type DbFunction = keyof Database["public"]["Functions"];
 
 async function currentUserId(): Promise<string> {
   const { data } = await supabase.auth.getSession();
@@ -13,8 +15,10 @@ async function currentUserId(): Promise<string> {
   return id;
 }
 
-async function call<T>(fn: string, args: Record<string, unknown>, fallback: string): Promise<T> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+// Function names are checked against the database types; the result shape is
+// declared per call (the functions return jsonb).
+async function call<T>(fn: DbFunction, args: Record<string, unknown>, fallback: string): Promise<T> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- rpc's overloads don't accept a generic name
   const { data, error } = await (supabase.rpc as any)(fn, args);
   if (error) {
     console.error(fn, error.code, error.message);

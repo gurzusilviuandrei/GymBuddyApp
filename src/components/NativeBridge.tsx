@@ -51,7 +51,10 @@ export function NativeBridge() {
     const backListener = App.addListener("backButton", () => {
       const path = router.state.location.pathname;
       if (EXIT_ROUTES.has(path)) void App.minimizeApp();
-      else window.history.back();
+      else if (router.history.canGoBack()) window.history.back();
+      // Opened straight from a link (e.g. password reset): nothing to go back to,
+      // so go to the start screen, which sends signed-in members Home.
+      else void router.navigate({ to: "/", replace: true });
     });
 
     return () => {

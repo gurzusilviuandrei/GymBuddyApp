@@ -8,17 +8,6 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/reset-password")({
-  head: () => ({
-    meta: [
-      { title: "Reset Password — GymBuddy" },
-      { name: "robots", content: "noindex" },
-      { name: "description", content: "Choose a new secure password for your GymBuddy account." },
-      { property: "og:title", content: "Reset Password — GymBuddy" },
-      { property: "og:description", content: "Choose a new secure password for your GymBuddy account." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
   component: ResetPasswordPage,
 });
 
@@ -29,14 +18,26 @@ function ResetPasswordPage() {
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [complete, setComplete] = useState(false);
+  const [invalid, setInvalid] = useState(false);
 
   useEffect(() => {
     const recoveryLink = new URLSearchParams(window.location.hash.slice(1)).get("type") === "recovery";
     setReady(recoveryLink);
+    let confirmed = recoveryLink;
     const { data } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setReady(true);
+      if (event === "PASSWORD_RECOVERY") {
+        confirmed = true;
+        setReady(true);
+      }
     });
-    return () => data.subscription.unsubscribe();
+    // Opened without a valid reset link: say so instead of "Checking…" forever.
+    const giveUp = window.setTimeout(() => {
+      if (!confirmed) setInvalid(true);
+    }, 6000);
+    return () => {
+      window.clearTimeout(giveUp);
+      data.subscription.unsubscribe();
+    };
   }, []);
 
   const submit = async (event: FormEvent) => {
@@ -68,6 +69,13 @@ function ResetPasswordPage() {
           <h1 className="mt-7 text-3xl font-semibold">Password updated</h1>
           <p className="mt-3 text-muted-foreground">Your GymBuddy account is secure and ready.</p>
           <Button asChild size="lg" className="mt-10 h-14 w-full rounded-lg shadow-neon"><Link to="/home">Return to GymBuddy</Link></Button>
+        </section>
+      ) : invalid && !ready ? (
+        <section className="text-center">
+          <KeyRound className="mx-auto size-12 text-primary" strokeWidth={1.5} aria-hidden="true" />
+          <h1 className="mt-7 text-3xl font-semibold">Link expired</h1>
+          <p className="mt-3 text-muted-foreground">This reset link is invalid or has expired. Request a new one from the login screen.</p>
+          <Button asChild size="lg" className="mt-10 h-14 w-full rounded-lg shadow-neon"><Link to="/auth">Back to login</Link></Button>
         </section>
       ) : (
         <form onSubmit={submit} className="w-full">

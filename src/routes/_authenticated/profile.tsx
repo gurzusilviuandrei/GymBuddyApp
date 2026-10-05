@@ -27,16 +27,6 @@ import { usePro } from "@/components/pro/ProProvider";
 import { clearAccountData } from "@/lib/device-owner";
 
 export const Route = createFileRoute("/_authenticated/profile")({
-  head: () => ({
-    meta: [
-      { title: "Profile & Settings — GymBuddy" },
-      { name: "description", content: "Manage your GymBuddy profile, email, password, and account security." },
-      { property: "og:title", content: "Profile & Settings — GymBuddy" },
-      { property: "og:description", content: "Manage your GymBuddy profile, email, password, and account security." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
   component: ProfilePage,
 });
 
@@ -64,10 +54,6 @@ function ProfilePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isPro, loaded, openPaywall } = usePro();
-  const loadSettings = getAccountSettings;
-  const saveEmail = updateAccountEmail;
-  const removeAccount = deleteAccount;
-  const exportData = exportMyData;
   const [editingEmail, setEditingEmail] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [savingEmail, setSavingEmail] = useState(false);
@@ -81,7 +67,7 @@ function ProfilePage() {
 
   const { data: account, isLoading } = useQuery({
     queryKey: ["account-settings"],
-    queryFn: () => loadSettings(),
+    queryFn: () => getAccountSettings(),
   });
   const normalizedSearch = lingoSearch.trim().toLowerCase();
   const filteredLingo = GYM_LINGO.filter(([term, definition]) => `${term} ${definition}`.toLowerCase().includes(normalizedSearch));
@@ -100,7 +86,7 @@ function ProfilePage() {
     }
     setSavingEmail(true);
     try {
-      await saveEmail({ data: { email: parsed.data } });
+      await updateAccountEmail({ data: { email: parsed.data } });
       setEditingEmail(false);
       toast.success("Check both inboxes to confirm your new email address.");
     } catch (error) {
@@ -130,7 +116,7 @@ function ProfilePage() {
     if (exporting) return;
     setExporting(true);
     try {
-      const payload = await exportData();
+      const payload = await exportMyData();
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       await saveFile(blob, `gymbuddy-training-history-${new Date().toISOString().slice(0, 10)}.json`, "My GymBuddy training history");
       toast.success("Your training history has been downloaded.");
@@ -151,7 +137,7 @@ function ProfilePage() {
     if (!deletePassword) return;
     setDeleting(true);
     try {
-      const result = await removeAccount({ data: { confirmation: "DELETE", password: deletePassword } });
+      const result = await deleteAccount({ data: { confirmation: "DELETE", password: deletePassword } });
       if (!result.deleted) {
         setDeleting(false);
         setDeletePassword("");

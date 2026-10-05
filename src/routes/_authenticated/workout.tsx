@@ -457,7 +457,8 @@ function Workout() {
       </div>
       <PlateVisualizer weight={Number(weight) || 0} />
 
-      <LoggedSets sets={sets.filter((x) => x.exercise_index === index)} onDelete={handleDeleteSet} onSaveEdit={saveEdit} />
+      {/* After a swap, only the new exercise's sets (the set count restarts at 1). */}
+      <LoggedSets sets={sets.filter((x) => x.exercise_index === index && x.exercise_id === exercise?.id)} onDelete={handleDeleteSet} onSaveEdit={saveEdit} />
 
       <div className="mt-8">
         <Button

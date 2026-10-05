@@ -4,10 +4,9 @@ import { getSessionDetail } from "@/lib/gym-api";
 import type { SessionSummary } from "@/components/SessionCard";
 
 export function SessionDetailSheet({ session, onClose }: { session: SessionSummary | null; onClose: () => void }) {
-  const fetchDetail = getSessionDetail;
   const { data, isLoading } = useQuery({
     queryKey: ["session-detail", session?.id],
-    queryFn: () => fetchDetail({ data: { session_id: session!.id } }),
+    queryFn: () => getSessionDetail({ data: { session_id: session!.id } }),
     enabled: Boolean(session),
   });
 

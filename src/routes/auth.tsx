@@ -13,16 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({
-    meta: [
-      { title: "Create Your Bro Profile — GymBuddy" },
-      { name: "description", content: "Sign up or log in to GymBuddy to save your training plan and track every set." },
-      { property: "og:title", content: "Create Your Bro Profile — GymBuddy" },
-      { property: "og:description", content: "Sign up or log in to GymBuddy to save your training plan and track every set." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
   component: AuthPage,
 });
 
@@ -42,7 +32,6 @@ function readLockoutUntil(): number {
 
 function AuthPage() {
   const navigate = useNavigate();
-  const ensure = ensureUserRow;
   const [mode, setMode] = useState<"signup" | "login">("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -56,6 +45,8 @@ function AuthPage() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [sendingReset, setSendingReset] = useState(false);
   const [resetSentTo, setResetSentTo] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resentAt, setResentAt] = useState<number | null>(null);
 
   const lockRemaining = Math.max(0, Math.ceil((lockedUntil - now) / 1000));
   const locked = lockRemaining > 0;
@@ -69,7 +60,7 @@ function AuthPage() {
 
 
   const enterApp = async () => {
-    const result = await ensure();
+    const result = await ensureUserRow();
     if (result.accountMissing) {
       clearAccountData();
       await supabase.auth.signOut();
@@ -95,6 +86,25 @@ function AuthPage() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Re-send the sign-up confirmation (once per screen; the auth server rate-limits too).
+  const resendConfirmation = async () => {
+    if (!sentTo || resending) return;
+    setResending(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: sentTo,
+        options: { emailRedirectTo: authRedirectUrl("/auth") },
+      });
+      if (error) throw error;
+      setResentAt(Date.now());
+    } catch {
+      toast.error("Couldn't resend the email. Wait a minute and try again.");
+    } finally {
+      setResending(false);
+    }
+  };
 
   const sendResetLink = async (event: FormEvent) => {
     event.preventDefault();
@@ -138,7 +148,10 @@ function AuthPage() {
         });
         if (error) throw error;
         if (data.session) await enterApp();
-        else setSentTo(parsed.data.email);
+        else {
+          setResentAt(null);
+          setSentTo(parsed.data.email);
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: parsed.data.email,
@@ -194,7 +207,10 @@ function AuthPage() {
           <p className="mt-4 text-muted-foreground">
             We sent a confirmation link to <span className="text-foreground">{sentTo}</span>. Tap it to activate your Bro Profile and start onboarding.
           </p>
-          <button type="button" onClick={() => { setSentTo(null); setMode("login"); }} className="mt-10 text-sm font-medium text-primary underline-offset-4 hover:underline">
+          <Button type="button" variant="outline" onClick={() => void resendConfirmation()} disabled={resending || resentAt !== null} className="mt-10 h-12 w-full rounded-lg">
+            {resending ? "Sending…" : resentAt ? "Sent again — check spam too" : "Didn't get it? Resend email"}
+          </Button>
+          <button type="button" onClick={() => { setSentTo(null); setMode("login"); }} className="mt-6 text-sm font-medium text-primary underline-offset-4 hover:underline">
             Already confirmed? Log in
           </button>
         </section>

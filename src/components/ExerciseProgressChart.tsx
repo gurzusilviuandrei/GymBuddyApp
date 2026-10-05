@@ -6,10 +6,9 @@ const shortDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(un
 
 // Best estimated 1RM per training day across the trailing 8 weeks.
 export function ExerciseProgressChart({ exerciseId }: { exerciseId: string }) {
-  const fetchProgress = getExerciseProgress;
   const { data, isLoading } = useQuery({
     queryKey: ["exercise-progress", exerciseId],
-    queryFn: () => fetchProgress({ data: { exercise_id: exerciseId, tz_offset: new Date().getTimezoneOffset() } }),
+    queryFn: () => getExerciseProgress({ data: { exercise_id: exerciseId, tz_offset: new Date().getTimezoneOffset() } }),
   });
 
   if (isLoading) return <p className="py-6 text-center text-xs text-muted-foreground">Loading your progress…</p>;

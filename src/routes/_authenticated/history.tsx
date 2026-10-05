@@ -11,37 +11,24 @@ import { SessionDetailSheet } from "@/components/history/SessionDetailSheet";
 import type { SessionSummary } from "@/components/SessionCard";
 
 export const Route = createFileRoute("/_authenticated/history")({
-  head: () => ({
-    meta: [
-      { title: "Workout History — GymBuddy" },
-      { name: "description", content: "Look back at every GymBuddy session you have completed." },
-      { property: "og:title", content: "Workout History — GymBuddy" },
-      { property: "og:description", content: "Look back at every GymBuddy session you have completed." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
   component: HistoryPage,
 });
 
 
 function HistoryPage() {
-  const fetchHistory = getWorkoutHistory;
-  const removeSession = deleteWorkoutSession;
   const queryClient = useQueryClient();
-  const fetchActivity = getActivityDays;
   const [openSession, setOpenSession] = useState<SessionSummary | null>(null);
   const { data: activeDays } = useQuery({
     queryKey: ["workout-history", "activity"],
-    queryFn: () => fetchActivity({ data: { tz_offset: new Date().getTimezoneOffset() } }),
+    queryFn: () => getActivityDays({ data: { tz_offset: new Date().getTimezoneOffset() } }),
   });
   const { data: sessions, isLoading } = useQuery({
     queryKey: ["workout-history"],
-    queryFn: () => fetchHistory({ data: {} }),
+    queryFn: () => getWorkoutHistory({ data: {} }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (sessionId: string) => removeSession({ data: { session_id: sessionId } }),
+    mutationFn: (sessionId: string) => deleteWorkoutSession({ data: { session_id: sessionId } }),
     onSuccess: async () => {
       // The weekly ring counts sessions since Monday, so refreshing stats deducts it.
       await Promise.all([

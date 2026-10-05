@@ -63,16 +63,6 @@ function readProfile(): Profile {
 }
 
 export const Route = createFileRoute("/_authenticated/home")({
-  head: () => ({
-    meta: [
-      { title: "Home — GymBuddy" },
-      { name: "description", content: "Your GymBuddy home. Get ready for your next guided workout." },
-      { property: "og:title", content: "Home — GymBuddy" },
-      { property: "og:description", content: "Your GymBuddy home. Get ready for your next guided workout." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
   component: Home,
 });
 
@@ -90,14 +80,10 @@ function Home() {
   const navigate = useNavigate();
   const { isPro, requirePro } = usePro();
   const queryClient = useQueryClient();
-  const fetchWorkout = getDayOneWorkout;
-  const fetchStats = getUserStats;
-  const fetchHistory = getWorkoutHistory;
   const { data: recent } = useQuery({
     queryKey: ["workout-history", "recent"],
-    queryFn: () => fetchHistory({ data: { limit: 3 } }),
+    queryFn: () => getWorkoutHistory({ data: { limit: 3 } }),
   });
-  const ensure = ensureUserRow;
 
   // Offline sets are flushed app-wide by <OfflineSyncWorker /> in the authenticated layout,
   // so they keep syncing even if the member stays on History or Profile after reconnecting.
@@ -139,7 +125,7 @@ function Home() {
     queryClient
       .fetchQuery({
         queryKey: ["ensure-user-row"],
-        queryFn: () => ensure(),
+        queryFn: () => ensureUserRow(),
         staleTime: 5 * 60 * 1000,
       })
       .then(async (result) => {
@@ -166,12 +152,12 @@ function Home() {
 
   const { data: stats, isError: statsError, refetch: refetchStats } = useQuery({
     queryKey: ["user-stats"],
-    queryFn: () => fetchStats({ data: { tz_offset: new Date().getTimezoneOffset() } }),
+    queryFn: () => getUserStats({ data: { tz_offset: new Date().getTimezoneOffset() } }),
   });
 
   const { data: workout } = useQuery({
     queryKey: ["day-one-workout"],
-    queryFn: () => fetchWorkout({ data: {} }),
+    queryFn: () => getDayOneWorkout({ data: {} }),
   });
 
   const firstName = profile.name?.trim().split(/\s+/)[0] ?? "";

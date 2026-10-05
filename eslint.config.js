@@ -1,5 +1,7 @@
 import js from "@eslint/js";
-import eslintPluginPrettier from "eslint-plugin-prettier/recommended";
+// Formatting is Prettier's job (`npm run format`), not a lint error: this only
+// switches off the style rules that would fight it.
+import prettierConfig from "eslint-config-prettier";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
@@ -24,5 +26,5 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
-  eslintPluginPrettier,
+  prettierConfig,
 );

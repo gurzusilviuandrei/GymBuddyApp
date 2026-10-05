@@ -8,16 +8,6 @@ import { cn } from "@/lib/utils";
 import { durableStorage } from "@/lib/durable-storage";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
-  head: () => ({
-    meta: [
-      { title: "Get Started — GymBuddy" },
-      { name: "description", content: "Set up your GymBuddy profile, pick your weekly commitment and choose the equipment you have available." },
-      { property: "og:title", content: "Get Started — GymBuddy" },
-      { property: "og:description", content: "Set up your GymBuddy profile, pick your weekly commitment and choose the equipment you have available." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
   component: Onboarding,
 });
 

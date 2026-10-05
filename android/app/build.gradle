@@ -1,5 +1,11 @@
 apply plugin: 'com.android.application'
 
+// One version for the whole app: package.json's "version" (also the Sentry release).
+// versionCode is derived from it (1.2.3 -> 10203), so bump the version for every
+// Play Store upload and both numbers move together.
+def appVersion = new groovy.json.JsonSlurper().parse(rootProject.file('../package.json')).version
+def appVersionCode = appVersion.tokenize('.').collect { it.toInteger() }.with { it[0] * 10000 + it[1] * 100 + it[2] }
+
 android {
     namespace = "app.gymbuddyapp.gymbuddy"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +13,8 @@ android {
         applicationId "app.gymbuddyapp.gymbuddy"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName appVersion
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

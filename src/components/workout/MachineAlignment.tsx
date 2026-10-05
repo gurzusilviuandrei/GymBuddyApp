@@ -9,10 +9,8 @@ const OPTIONS = ["", "1", "2", "3", "4", "5", "6", "7", "8", "A", "B", "C", "D",
 
 export function MachineAlignment({ exerciseId }: { exerciseId: string }) {
   const qc = useQueryClient();
-  const fetchSetting = getMachineSetting;
-  const save = saveMachineSetting;
   const key = ["machine-setting", exerciseId];
-  const { data } = useQuery({ queryKey: key, queryFn: () => fetchSetting({ data: { exercise_id: exerciseId } }) });
+  const { data } = useQuery({ queryKey: key, queryFn: () => getMachineSetting({ data: { exercise_id: exerciseId } }) });
   const [open, setOpen] = useState(false);
   const [seat, setSeat] = useState("");
   const [pad, setPad] = useState("");
@@ -34,7 +32,7 @@ export function MachineAlignment({ exerciseId }: { exerciseId: string }) {
     setSaving(true);
     const next = { exercise_id: exerciseId, seat_notch: seat, pad_notch: pad, custom_setting_notes: note.slice(0, 120) };
     try {
-      await save({ data: next });
+      await saveMachineSetting({ data: next });
       qc.setQueryData(key, { ...data, seat_notch: seat, pad_notch: pad, custom_setting_notes: next.custom_setting_notes });
       toast.success("Setup saved, Bro. We'll remember it next time.");
       setOpen(false);
