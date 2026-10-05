@@ -1,4 +1,6 @@
 // Mid-workout recovery cache. Browser-only: call from effects or handlers.
+import { durableStorage } from "@/lib/durable-storage";
+
 export const ACTIVE_SESSION_KEY = "gymbuddy-active-session";
 
 export type CachedExercise = {
@@ -38,7 +40,7 @@ export type CachedSet = {
 export function readActiveSession(): ActiveSession | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(ACTIVE_SESSION_KEY);
+    const raw = durableStorage.getItem(ACTIVE_SESSION_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as ActiveSession;
     if (typeof s.current_exercise_index !== "number" || !s.session_start_time) return null;
@@ -56,7 +58,7 @@ export function readActiveSession(): ActiveSession | null {
 
 export function writeActiveSession(s: ActiveSession) {
   try {
-    localStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(s));
+    durableStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(s));
   } catch {
     /* storage full or blocked */
   }
@@ -64,7 +66,7 @@ export function writeActiveSession(s: ActiveSession) {
 
 export function clearActiveSession() {
   try {
-    localStorage.removeItem(ACTIVE_SESSION_KEY);
+    durableStorage.removeItem(ACTIVE_SESSION_KEY);
   } catch {
     /* ignore */
   }

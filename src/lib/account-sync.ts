@@ -1,3 +1,5 @@
+import { durableStorage } from "@/lib/durable-storage";
+
 type EnsureResult = {
   userId: string;
   onboarded: boolean;
@@ -16,19 +18,19 @@ export function syncLocalProfile(r: EnsureResult): "/home" | "/onboarding" {
   if (r.equipment) profile["equipment"] = r.equipment;
   let existing: Record<string, unknown> = {};
   try {
-    existing = JSON.parse(localStorage.getItem("gymbuddy-profile") ?? "{}");
+    existing = JSON.parse(durableStorage.getItem("gymbuddy-profile") ?? "{}");
     if (existing["userId"] !== r.userId) existing = {};
   } catch {
     existing = {};
   }
-  localStorage.setItem("gymbuddy-profile", JSON.stringify({ ...existing, ...profile }));
+  durableStorage.setItem("gymbuddy-profile", JSON.stringify({ ...existing, ...profile }));
   return r.onboarded ? "/home" : "/onboarding";
 }
 
 /** The profile cached on this device for `userId`, if any (used when offline). */
 export function readLocalProfile(userId: string): Record<string, unknown> | null {
   try {
-    const profile = JSON.parse(localStorage.getItem("gymbuddy-profile") ?? "null") as Record<string, unknown> | null;
+    const profile = JSON.parse(durableStorage.getItem("gymbuddy-profile") ?? "null") as Record<string, unknown> | null;
     return profile && profile["userId"] === userId ? profile : null;
   } catch {
     return null;

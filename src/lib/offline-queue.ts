@@ -1,6 +1,7 @@
 // Offline set queue ("basement gym" support). Browser-only: call from effects or handlers.
 import { useEffect, useState } from "react";
 import type { CachedSet } from "./active-session";
+import { durableStorage } from "@/lib/durable-storage";
 
 export const OFFLINE_QUEUE_KEY = "gymbuddy_offline_queue";
 export const PENDING_DELETES_KEY = "gymbuddy_pending_deletes";
@@ -10,7 +11,7 @@ const EVENT = QUEUE_EVENT;
 export function readOfflineQueue(): CachedSet[] {
   if (typeof window === "undefined") return [];
   try {
-    const q = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) ?? "[]");
+    const q = JSON.parse(durableStorage.getItem(OFFLINE_QUEUE_KEY) ?? "[]");
     return Array.isArray(q) ? (q as CachedSet[]) : [];
   } catch {
     return [];
@@ -19,8 +20,8 @@ export function readOfflineQueue(): CachedSet[] {
 
 export function writeOfflineQueue(q: CachedSet[]) {
   try {
-    if (q.length === 0) localStorage.removeItem(OFFLINE_QUEUE_KEY);
-    else localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(q));
+    if (q.length === 0) durableStorage.removeItem(OFFLINE_QUEUE_KEY);
+    else durableStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(q));
   } catch {
     /* storage blocked */
   }
@@ -28,13 +29,13 @@ export function writeOfflineQueue(q: CachedSet[]) {
 }
 
 /**
- * Deletions that still have to reach the account. Kept in localStorage (not a
+ * Deletions that still have to reach the account. Kept in durable storage (not a
  * React ref) so closing the tab offline can never resurrect a removed set.
  */
 export function readPendingDeletes(): string[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = JSON.parse(localStorage.getItem(PENDING_DELETES_KEY) ?? "[]");
+    const raw = JSON.parse(durableStorage.getItem(PENDING_DELETES_KEY) ?? "[]");
     return Array.isArray(raw) ? (raw as unknown[]).filter((x): x is string => typeof x === "string") : [];
   } catch {
     return [];
@@ -43,8 +44,8 @@ export function readPendingDeletes(): string[] {
 
 function writePendingDeletes(ids: string[]) {
   try {
-    if (ids.length === 0) localStorage.removeItem(PENDING_DELETES_KEY);
-    else localStorage.setItem(PENDING_DELETES_KEY, JSON.stringify([...new Set(ids)]));
+    if (ids.length === 0) durableStorage.removeItem(PENDING_DELETES_KEY);
+    else durableStorage.setItem(PENDING_DELETES_KEY, JSON.stringify([...new Set(ids)]));
   } catch {
     /* storage blocked */
   }

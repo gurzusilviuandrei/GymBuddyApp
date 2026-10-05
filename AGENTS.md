@@ -8,7 +8,9 @@ GymBuddy uses separate typed routes for Welcome, Onboarding, Home, and Workout. 
 - Workout `mode` selects premade or custom independently. Why: a custom routine must not hide the guided plan.
 - Home blocks only browser Back; Android Back on Welcome/Auth/Home minimizes the app (`NativeBridge`). Sign Out clears protected caches and replaces history. Why: avoid stale protected screens without trapping the member.
 - Auth emails redirect to `app.gymbuddyapp.gymbuddy://auth-callback/...` on phones (`authRedirectUrl`); `NativeBridge` turns the link into a session. The URL must be in Supabase Auth → Redirect URLs. Why: links must reopen the app, not a browser.
-- Login sessions are stored with Capacitor Preferences on phones. Why: the OS may clear WebView storage.
+- Login sessions are stored with Capacitor Preferences on phones, and data a member must never lose (offline set queue, workout in progress, cached profile, offline data cache) goes through `src/lib/durable-storage.ts`, loaded before first render. Why: the OS may clear WebView storage.
+- The rest timer mirrors into a native Android short foreground service (`RestTimerService.java`, via `src/lib/native-workout.ts`): live lock-screen countdown and an on-time alert, silent if the app is on screen. Don't switch it to scheduled notifications. Why: Android 14+ denies exact alarms by default, so scheduled alerts arrive about a minute late, and requesting them opens system settings mid-workout.
+- Haptics and keep-awake go through `src/lib/native-workout.ts`. Why: `navigator.vibrate` and the Wake Lock API are ignored in the iOS/Android WebViews.
 - Home, History, and Profile share the bottom tabs; Onboarding and Workout omit them. Why: avoid mid-session exits.
 - Exercise cues live on exercise rows; completion totals only this session's log IDs. Why: guidance and totals stay accurate.
 - Custom routine order lives in `custom_exercise_ids` and edits stay local until save. Why: drafts must not alter the active plan.

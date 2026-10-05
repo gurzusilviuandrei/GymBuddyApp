@@ -24,6 +24,7 @@ import { authRedirectUrl } from "@/lib/platform";
 import { saveFile } from "@/lib/native-files";
 import { deleteAccount, exportMyData, getAccountSettings, updateAccountEmail } from "@/lib/account-api";
 import { usePro } from "@/components/pro/ProProvider";
+import { durableStorage } from "@/lib/durable-storage";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
@@ -159,7 +160,7 @@ function ProfilePage() {
       }
       await queryClient.cancelQueries();
       queryClient.clear();
-      localStorage.removeItem("gymbuddy-profile");
+      durableStorage.removeItem("gymbuddy-profile");
       await supabase.auth.signOut({ scope: "local" });
       navigate({ to: "/", replace: true });
     } catch {

@@ -18,6 +18,7 @@ import { OfflineSyncBadge } from "@/components/OfflineSyncBadge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { RecoveryModeCard } from "@/components/RecoveryModeCard";
+import { durableStorage } from "@/lib/durable-storage";
 
 
 const FREQUENCY_TARGETS: Record<string, number> = {
@@ -54,7 +55,7 @@ function readBagChecklist(): BagItemId[] {
 function readProfile(): Profile {
   if (typeof window === "undefined") return {};
   try {
-    return JSON.parse(localStorage.getItem("gymbuddy-profile") ?? "{}") as Profile;
+    return JSON.parse(durableStorage.getItem("gymbuddy-profile") ?? "{}") as Profile;
   } catch {
     return {};
   }

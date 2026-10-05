@@ -17,6 +17,7 @@ import { createBroCardBlob, downloadBroCard, type BroCardStats } from "@/lib/bro
 import { shareFile } from "@/lib/native-files";
 import { ExerciseDemo } from "@/components/workout/ExerciseDemo";
 import { isChimeMuted, playRestOverChime, setChimeMuted, unlockChime } from "@/lib/rest-chime";
+import { haptic, keepScreenOn, prepareRestAlerts, startRestTimer, stopRestTimer } from "@/lib/native-workout";
 
 
 
@@ -153,7 +154,7 @@ function Workout() {
         setRestEndsAt(null);
         // Chime for headphones, buzz for pockets — rest is over.
         playRestOverChime();
-        try { navigator.vibrate?.([120, 80, 120]); } catch { /* unsupported */ }
+        haptic("restOver");
       }
     };
     tick();
@@ -165,30 +166,15 @@ function Workout() {
   // Keep the screen awake while training; released on finish or leaving the page.
   useEffect(() => {
     if (complete) return;
-    type Sentinel = { release: () => Promise<void> };
-    const nav = navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<Sentinel> } };
-    if (!nav.wakeLock) return;
-    let lock: Sentinel | null = null;
-    let active = true;
-    const acquire = async () => {
-      if (!active || document.visibilityState !== "visible") return;
-      try {
-        lock = await nav.wakeLock!.request("screen");
-        if (!active) void lock.release().catch(() => {});
-      } catch {
-        // Unsupported, denied or low battery — the workout still works normally.
-      }
-    };
-    // The browser drops the lock when the tab is hidden, so re-acquire on return.
-    const onVisible = () => void acquire();
-    void acquire();
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      active = false;
-      document.removeEventListener("visibilitychange", onVisible);
-      void lock?.release().catch(() => {});
-    };
+    return keepScreenOn();
   }, [complete]);
+
+  // A locked phone pauses the in-app countdown, so mirror it in a native countdown
+  // that alerts on time; it follows rest-length changes and clears when rest ends.
+  useEffect(() => {
+    void (restEndsAt === null ? stopRestTimer() : startRestTimer(restEndsAt));
+  }, [restEndsAt]);
+  useEffect(() => () => void stopRestTimer(), []);
 
   // Identity comes from the signed-in session on the server, so this loads even
   // when the local copy of the profile is missing. `mode` picks the program:
@@ -285,7 +271,7 @@ function Workout() {
       if (row.is_personal_record && !prShown.current.has(key)) {
         prShown.current.add(key);
         const name = session.find((e) => e.id === item.exercise_id)?.name ?? (exercise?.id === item.exercise_id ? exercise.name : "lift");
-        try { navigator.vibrate?.(50); } catch { /* unsupported */ }
+        haptic("success");
         setPr({ weight: item.weight_kg, name });
       }
       if (current.weight_kg !== item.weight_kg || current.reps !== item.reps) {
@@ -420,7 +406,7 @@ function Workout() {
             const name =
               session.find((e) => e.id === target.exercise_id)?.name ??
               (exercise?.id === target.exercise_id ? exercise.name : "lift");
-            try { navigator.vibrate?.(50); } catch { /* unsupported */ }
+            haptic("success");
             setPr({ weight: w, name });
           } else {
             prShown.current.delete(target.key);
@@ -605,8 +591,11 @@ function Workout() {
     logLock.current = true;
     setLogging(true);
     window.setTimeout(() => { logLock.current = false; setLogging(false); }, 400);
+    haptic("tap");
     // Start at the tap, not after the network request completes.
     if (setNumber < targetSets) {
+      // First rest: ask (once) to alert when it's over, even with the phone locked.
+      void prepareRestAlerts();
       setSecondsLeft(restSecs);
       setRestEndsAt(Date.now() + restSecs * 1000);
     }

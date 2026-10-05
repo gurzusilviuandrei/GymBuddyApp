@@ -5,6 +5,7 @@ import { createUserProfile } from "@/lib/gym-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { durableStorage } from "@/lib/durable-storage";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   head: () => ({
@@ -80,8 +81,8 @@ function Onboarding() {
 
   const saveProfile = (patch: Record<string, unknown>) => {
     try {
-      const existing = JSON.parse(localStorage.getItem("gymbuddy-profile") ?? "{}");
-      localStorage.setItem("gymbuddy-profile", JSON.stringify({ ...existing, ...patch }));
+      const existing = JSON.parse(durableStorage.getItem("gymbuddy-profile") ?? "{}");
+      durableStorage.setItem("gymbuddy-profile", JSON.stringify({ ...existing, ...patch }));
     } catch {
       // storage unavailable — continue anyway
     }

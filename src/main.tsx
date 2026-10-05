@@ -10,6 +10,7 @@ import "@fontsource/space-grotesk/600.css";
 import "@fontsource/space-grotesk/700.css";
 import "./styles.css";
 import { routeTree } from "./routeTree.gen";
+import { durableStorage, initDurableStorage } from "./lib/durable-storage";
 
 const OFFLINE_CACHE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -26,11 +27,14 @@ const queryClient = new QueryClient({
   },
 });
 
+// Native storage must be in memory before anything reads it (cache, offline sets).
+await initDurableStorage();
+
 // Remember the last loaded plan, stats and history on the device, so opening the
 // app with no signal (basement gyms) still shows them. Sign Out clears the cache.
 persistQueryClient({
   queryClient,
-  persister: createSyncStoragePersister({ storage: window.localStorage, key: "gymbuddy-query-cache" }),
+  persister: createSyncStoragePersister({ storage: durableStorage, key: "gymbuddy-query-cache" }),
   maxAge: OFFLINE_CACHE_MS,
   buster: "1",
 });
