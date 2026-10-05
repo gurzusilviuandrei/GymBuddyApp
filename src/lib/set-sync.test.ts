@@ -165,6 +165,17 @@ describe("flushPending", () => {
     expect(r.pendingAfter).toBe(1);
   });
 
+  it("counts a pass that saved everything as progress, even if a new set arrived meanwhile", async () => {
+    const h = harness([set("a", { status: "local" })]);
+    h.api.log.mockImplementationOnce(async (s) => {
+      h.store.commit((prev) => [...prev, set("b", { status: "local" })]); // logged mid-pass
+      return { id: `row-${s.key}`, is_personal_record: false };
+    });
+    const r = await flushPending(h.store, h.api, h.env, (k) => h.sync(k));
+    expect(r).toMatchObject({ pendingBefore: 1, pendingAfter: 0 });
+    expect(nextRetryDelay(20_000, r)).toBe(RETRY_MIN_MS);
+  });
+
   it("keeps a deletion queued when the server rejects it", async () => {
     const h = harness([]);
     h.env.addPendingDelete("row-x");

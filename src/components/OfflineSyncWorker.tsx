@@ -78,8 +78,10 @@ export function OfflineSyncWorker() {
       try {
         // One tab at a time across the whole browser: without this, a second tab
         // could upload its older copy of a set over an edit made here.
+        // Opening the workout screen hands syncing over: stop after the current set.
+        const env = { ...syncEnv, online: () => !cancelled && syncEnv.online() };
         const gotLock = await withSyncLock(async () => {
-          pass.result = await flushPending(queueStore, syncApi, syncEnv, (key) => syncSet(key, queueStore, syncApi, syncEnv));
+          pass.result = await flushPending(queueStore, syncApi, env, (key) => syncSet(key, queueStore, syncApi, env));
         });
         // Another tab holds the lock: try again shortly rather than racing it.
         delay = !gotLock ? 3000 : pass.result ? nextRetryDelay(delay, pass.result) : RETRY_MIN_MS;

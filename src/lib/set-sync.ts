@@ -113,11 +113,14 @@ export async function flushPending(
   } catch {
     /* retried on the next pass */
   }
+  // Counted over what this pass started with: a set logged or deleted meanwhile
+  // must not make a pass that got everything through look stuck.
+  const pendingKeys = new Set(pending.map((s) => s.key));
   return {
     pendingBefore: pending.length,
     deletesBefore: deletes.length,
-    pendingAfter: store.get().filter((s) => s.status === "local").length,
-    deletesAfter: env.readPendingDeletes().length,
+    pendingAfter: store.get().filter((s) => s.status === "local" && pendingKeys.has(s.key)).length,
+    deletesAfter: env.readPendingDeletes().filter((id) => deletes.includes(id)).length,
   };
 }
 

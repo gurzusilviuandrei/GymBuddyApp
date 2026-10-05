@@ -214,7 +214,8 @@ function Workout() {
       const result = await flushPending({ get: () => setsRef.current, commit: commitSets }, syncApi, syncEnv, (key) => syncSetRef.current(key));
       running = false;
       delay = nextRetryDelay(delay, result);
-      if (result.pendingAfter > 0 || result.deletesAfter > 0) schedule();
+      // Anything still waiting, including sets logged during this pass.
+      if (setsRef.current.some((s) => s.status === "local") || readPendingDeletes().length > 0) schedule();
     };
 
     const kick = () => { delay = RETRY_MIN_MS; void retry(); };

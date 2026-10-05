@@ -6,7 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { isNativeApp } from "@/lib/platform";
 
 // Screens where Android Back leaves the app instead of walking back through history.
-const EXIT_ROUTES = new Set(["/", "/auth", "/home"]);
+// Onboarding is always opened in place of the previous screen: minimizing keeps the
+// answers in progress, where going "back" to the start screen would restart it.
+const EXIT_ROUTES = new Set(["/", "/auth", "/home", "/onboarding"]);
 
 /** Native-only glue: auth email deep links and the Android Back button. */
 export function NativeBridge() {
