@@ -22,7 +22,7 @@ function HistoryPage() {
     queryKey: ["workout-history", "activity"],
     queryFn: () => getActivityDays({ data: { tz_offset: new Date().getTimezoneOffset() } }),
   });
-  const { data: sessions, isLoading } = useQuery({
+  const { data: sessions, isLoading, isError, refetch } = useQuery({
     queryKey: ["workout-history"],
     queryFn: () => getWorkoutHistory({ data: {} }),
   });
@@ -55,7 +55,14 @@ function HistoryPage() {
         <section className="mt-10 space-y-4">
           {isLoading && <p className="text-sm text-muted-foreground">Loading your sessions…</p>}
 
-          {!isLoading && (!sessions || sessions.length === 0) && (
+          {isError && !sessions && (
+            <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-foreground">
+              <span>Couldn't load your workouts. Check your signal.</span>
+              <button type="button" onClick={() => void refetch()} className="font-semibold text-primary">Retry</button>
+            </div>
+          )}
+
+          {!isLoading && !isError && (!sessions || sessions.length === 0) && (
             <div className="rounded-lg border border-border bg-card p-8 text-center">
               <div className="mx-auto flex size-12 items-center justify-center rounded-lg border border-primary/40 bg-primary/10 text-primary">
                 <CalendarDays size={22} strokeWidth={1.7} aria-hidden="true" />

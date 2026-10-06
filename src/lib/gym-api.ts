@@ -136,11 +136,12 @@ export async function getDayOneWorkout({ data }: Input<{ mode?: "auto" | "premad
 
 export async function getExerciseLibrary() {
   const userId = await currentUserId();
-  const [{ data: rows, error }, { data: user }] = await Promise.all([
+  const [{ data: rows, error }, { data: user, error: userError }] = await Promise.all([
     supabase.from("exercises").select("id, name, movement_type, equipment_type, target").order("name"),
     supabase.from("users").select("custom_exercise_ids").eq("id", userId).maybeSingle(),
   ]);
-  if (error) throw new Error("Could not load exercises");
+  // An unreadable routine must not open as empty: saving it would wipe the real one.
+  if (error || userError) throw new Error("Could not load exercises");
   return { exercises: rows ?? [], selected: user?.custom_exercise_ids ?? [] };
 }
 
@@ -236,7 +237,7 @@ export async function getLastLog({ data }: Input<{ exercise_id: string }>) {
 
 export async function getMachineSetting({ data }: Input<{ exercise_id: string }>) {
   const userId = await currentUserId();
-  const [{ data: ex }, { data: row }] = await Promise.all([
+  const [{ data: ex, error: exError }, { data: row, error: rowError }] = await Promise.all([
     supabase.from("exercises").select("equipment_type").eq("id", data.exercise_id).maybeSingle(),
     supabase
       .from("user_machine_settings")
@@ -245,6 +246,9 @@ export async function getMachineSetting({ data }: Input<{ exercise_id: string }>
       .eq("exercise_id", data.exercise_id)
       .maybeSingle(),
   ]);
+  // Fail rather than answer "no settings": the cached notches stay on screen offline,
+  // and a blank form can't be saved over the real ones.
+  if (exError || rowError) throw new Error("Could not load your machine setup");
   return {
     is_machine: /machine|cable/i.test(ex?.equipment_type ?? ""),
     seat_notch: row?.seat_notch ?? "",
@@ -341,9 +345,10 @@ export async function getWorkoutHistory({ data }: Input<{ limit?: number | undef
     .order("completed_at", { ascending: false })
     .limit(data.limit ?? 100);
   if (error) {
-    // A hiccup returns an empty list so it never blanks the screen.
+    // Fail rather than return an empty list: the last loaded history (kept on the
+    // device) stays on screen, instead of "No workouts yet" with no signal.
     console.error("getWorkoutHistory failed", error.code, error.message);
-    return [];
+    throw new Error("Could not load your workouts");
   }
   return (rows ?? []).map((r) => ({
     id: r.id,
@@ -382,12 +387,13 @@ export async function getActivityDays({ data }: Input<{ tz_offset: number }>) {
 // Every set recorded during one finished session.
 export async function getSessionDetail({ data }: Input<{ session_id: string }>) {
   const userId = await currentUserId();
-  const { data: session } = await supabase
+  const { data: session, error: sessionError } = await supabase
     .from("workout_sessions")
     .select("started_at, completed_at")
     .eq("id", data.session_id)
     .eq("user_id", userId)
     .maybeSingle();
+  if (sessionError) throw new Error("Could not load workout details");
   if (!session) return [];
   const cols = "id, exercise_id, set_number, weight_kg, reps_completed, timestamp, exercises(name)";
   let { data: logs, error } = await supabase

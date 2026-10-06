@@ -4,7 +4,7 @@ import { getSessionDetail } from "@/lib/gym-api";
 import type { SessionSummary } from "@/components/SessionCard";
 
 export function SessionDetailSheet({ session, onClose }: { session: SessionSummary | null; onClose: () => void }) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["session-detail", session?.id],
     queryFn: () => getSessionDetail({ data: { session_id: session!.id } }),
     enabled: Boolean(session),
@@ -26,7 +26,8 @@ export function SessionDetailSheet({ session, onClose }: { session: SessionSumma
 
           <div className="mt-8 space-y-4">
             {isLoading && <p className="text-sm text-muted-foreground">Loading every set…</p>}
-            {!isLoading && data?.length === 0 && <p className="text-sm text-muted-foreground">No set details were found for this workout.</p>}
+            {isError && !data && <p className="text-sm text-muted-foreground">Couldn't load this workout's sets. Check your signal and open it again.</p>}
+            {!isLoading && data?.length === 0 &&<p className="text-sm text-muted-foreground">No set details were found for this workout.</p>}
             {data?.map((ex) => (
               <section key={ex.exercise_id} className="rounded-lg border border-border bg-card">
                 <h3 className="border-b border-border px-4 py-3 font-semibold text-foreground">{ex.name}</h3>

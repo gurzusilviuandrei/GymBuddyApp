@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowLeft, ArrowUp, Check, LineChart, Plus, X } from "lucide-react";
@@ -65,7 +65,14 @@ function CustomRoutineEditor() {
   const [chartId, setChartId] = useState<string | null>(null);
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["exercise-library"], queryFn: () => getExerciseLibrary() });
 
-  useEffect(() => { if (data?.selected) setSelected([...new Set(data.selected)]); }, [data]);
+  // Start from the saved routine once; a later refetch (e.g. signal returning) must
+  // not wipe edits that haven't been saved yet.
+  const initialised = useRef(false);
+  useEffect(() => {
+    if (initialised.current || !data?.selected) return;
+    initialised.current = true;
+    setSelected([...new Set(data.selected)]);
+  }, [data]);
   const exercises = useMemo(() => data?.exercises ?? [], [data]);
   // Derived lists are memoized so taps on filters or reorder arrows don't
   // rebuild the whole exercise index every render.
@@ -132,7 +139,7 @@ function CustomRoutineEditor() {
       <section className="mt-9" aria-label="My Custom Routine Overview">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
           <h2 className="min-w-0 text-lg font-semibold">My Custom Routine Overview</h2>
-          <span className="shrink-0 text-sm font-semibold text-primary" aria-live="polite">{selected.length} {selected.length === 1 ? "exercise" : "exercises"}</span>
+          {data && <span className="shrink-0 text-sm font-semibold text-primary" aria-live="polite">{selected.length} {selected.length === 1 ? "exercise" : "exercises"}</span>}
         </div>
         {isLoading && <p className="mt-6 text-sm text-muted-foreground">Loading exercises…</p>}
         {isError && <div className="mt-6 flex items-center gap-3 text-sm text-muted-foreground">Couldn't load exercises. <Button variant="link" onClick={() => refetch()} className="px-0">Retry</Button></div>}

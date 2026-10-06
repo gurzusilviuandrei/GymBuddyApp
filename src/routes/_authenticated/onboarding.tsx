@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { createUserProfile } from "@/lib/gym-api";
 import { Button } from "@/components/ui/button";
@@ -64,6 +65,7 @@ function Onboarding() {
   const [selected, setSelected] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const createUser = createUserProfile;
 
   const ageNumber = Number(age);
@@ -111,6 +113,9 @@ function Onboarding() {
         },
       });
       saveProfile({ userId: id });
+      // Drop anything cached from before onboarding (e.g. "not onboarded yet",
+      // or no plan), so Home loads the new profile instead of sending them back.
+      await queryClient.invalidateQueries();
       navigate({ to: "/home" });
     } catch {
       toast.error("Couldn't save your profile. Please try again.");
