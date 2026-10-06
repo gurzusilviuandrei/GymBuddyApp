@@ -135,6 +135,30 @@ Bottom tabs: Home, History, Profile. Android Back minimizes the app on `/`, `/au
 - `v1/features` (long-lived): bigger features, so they stay separate from polish.
 - Don't push a branch until the member says so: every push starts a CI run.
 
+## Session log: 2026-10-06 (read this first when resuming)
+
+**State at the end of the session:** `main` = `v1/polish` = `origin/*` at `20d1d43` ("Fix H2…"); everything fixed so far is pushed, merged and CI-green. `v1/features` exists only locally, still at the old `a80eb44` (no commits; bring it up to date with `main` before starting a feature). Live Supabase has every migration through `20261006150000_finish_at_last_set.sql` applied (the member pastes SQL into the Supabase SQL Editor; give them the SQL or open the file in Notepad for them). The emulator window may have closed: restart it (see the gotchas below).
+
+**What was done today, in order**
+1. CI moved to Node 24 and current action versions; Ubuntu 24.04 pinned.
+2. First full audit of the migration, then fixes: account data on the phone is stamped per account and erased when another account signs in (`device-owner.ts`); Pro status cached per account for offline starts; abandoning a workout removes its saved sets, and the database refuses to delete sets of a finished workout; email-change links reopen the app; one tested background-sync path (`set-sync.ts` + `set-sync-client.ts`); removed dead code (36 UI components, 31 packages, Lovable/PWA files); typed rpc names; Android version from `package.json`; Android backups off; Back/link handling; SessionGuard only on start and foreground; lint clean with 0 warnings and in CI.
+3. Known-issue fixes: Home "Abandon" asks first; swap totals/pre-fill; starting a different workout while one is open asks; Bro Card waits for fonts; plate math only on barbell, equipment-aware warm-up; new sets limited to 0–1000 kg / 1–100 reps.
+4. Release prep and email: R8 shrinking + signing config (`android/keystore.properties`, gitignored; the member must create the upload key, README → Release builds); index on `workout_logs(user_id, exercise_id, timestamp)`; MailerSend SMTP from `no-reply@gymbuddyapp.app` (domain DNS managed in Lovable), branded templates in `supabase/templates/`, Site URL `https://gymbuddyapp.app`, redirect URL `app.gymbuddyapp.gymbuddy://auth-callback/**`; clear "wait N seconds" wording for email rate limits.
+5. `CLAUDE.md` created; branch policy agreed (`v1/polish` for fixes and small improvements, `v1/features` for features; never push without the member's say-so; merge to `main` only after the member confirms the branch's latest CI run is green, since the repo is private and Actions can't be read).
+6. Production-readiness audit (25 areas). **Fixed, pushed, merged:** H1 forgotten workout (12-hour rule, Finish it / Discard it, `p_end_at_last_set` in `complete_workout`, `back-stack.ts`), H2 heatmap and export row cap (`paging.ts`, `activity.ts`), H3 login dead ends (`auth-errors.ts`), M3 price removed, M6 whole-number age, M12 decimal comma, L8 vitest 5 + `npm audit` 0.
+
+**Still open from the audit (details in Known issues below):** M1 Profile layout with large fonts on small phones; M2 reset links over a custom scheme (switch to PKCE, later verified web links); M4 add `assembleRelease` to CI; M5 Sentry source maps (the member must add a Sentry token as a GitHub secret; never ask for it in chat); M7 Assisted Pull-Up progression direction; M8 swaps ignore equipment + "Barbell only" plans contain dumbbell exercises; M9 corrupted email link fails silently; M10 duplicate set numbers in History after deleting a middle set; M11 "Leave it for now" option (the Back-closes-dialog part is done); M13 Pro expiry (with billing); Low L1, L2, L3 ("Machine Setup" label), L4–L7, L9; Informational I1 (test `delete_account` on the real Supabase with a throwaway account), I2 (record hand-pasted migrations), I3 iOS, I4 contrast/TalkBack.
+**Suggested order:** M1 + M9 + M10, then M4 + M7, then M8 + M2, then M5 when the member can add the secret.
+**Less tested than wanted:** H3 against a real unconfirmed account; H1 "Finish it" while offline; the real 1,000-row cap (H2 used a fake cap on purpose, no bulk test data in the real account).
+
+**Working notes and gotchas (so they aren't rediscovered)**
+- Put the new web code on the emulator with `npm run app:sync` (builds, then copies) → `cd android && ./gradlew assembleDebug` → `adb -s emulator-5554 install -r`. `npx cap sync` alone does not rebuild the web app (this caused a stale install twice).
+- Emulator: `emulator -avd Pixel_8_Pro -dns-server 8.8.8.8,1.1.1.1` (needs the long timeout); after boot wake it (`KEYCODE_WAKEUP`, `wm dismiss-keyguard`, `svc power stayon true`) or the app freezes and requests hang. It stays signed in as the member. In Git Bash use `MSYS_NO_PATHCONV=1` for adb paths. Drive the app over `adb forward tcp:9333 localabstract:webview_devtools_remote_<pid>` + the DevTools protocol; don't poll while the app starts (it slows start-up by ~20 s and fakes a perf bug). Debug builds allow `adb shell run-as app.gymbuddyapp.gymbuddy cat cache/<file>`.
+- Test data in the member's real account: always clean up (abandon, or delete via History) and verify 0 sets/workouts remain. Never create accounts or type real passwords; fake the server's replies in the browser instead (browser pane, dev server `gymbuddy-app` from `.claude/launch.json` in the old folder).
+- Edit tool quirks: CRLF files need exact text (read first); regex backslashes get eaten in shell heredocs, so write files with the editor and check the result.
+- A safety check blocks `run-as … rm` and the Paddle-column drop migration; both are left for the member.
+- Test setup: vitest 5, tests may import with `@/`; tests that import `client.ts` fail in CI (it needs `VITE_*` env), so keep logic in pure modules. There are no component/UI tests; screens are checked on the emulator or in the browser.
+
 ## Known issues (as of 2026-10-06)
 
 ### Open bugs (found in review, not fixed yet; member said to note them first)
