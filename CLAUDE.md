@@ -145,12 +145,19 @@ Bottom tabs: Home, History, Profile. Android Back minimizes the app on `/`, `/au
 4. **The strength graph hides load errors.** `ExerciseProgressChart` ignores `isError`, so a failed load reads "No sets logged in the last 8 weeks".
 5. **Swap suggestions ignore the member's equipment** (`get_alternative_options` only matches `movement_type`), so a "Dumbbells only" member can be offered machines or barbells.
 6. Cosmetic: a stray duplicate doc comment above `MAX_SET_WEIGHT_KG` in `workout-logic.ts`.
+7. **Row cap of 1000 hides data for active members.** Supabase returns at most 1000 rows per query by default. `getActivityDays` (heatmap, asks for 5000 sets over 20 weeks, no ordering) and `exportMyData` (all sets) are cut off after roughly 33 workouts, so the heatmap silently drops days and the "every logged set" export is incomplete. Fix: derive heatmap days from `workout_sessions` (or a database function returning distinct days) and page the export with `.range()`.
+8. **Onboarding accepts a decimal age** (`type="number"`, only `Number.isFinite` is checked). The database column is an integer, so the save fails with the generic "Couldn't save your profile". Require a whole number.
+9. **Login dead ends:** "Email not confirmed" has no resend button on the login screen (the resend exists only on the sign-up confirmation screen), so a tester who closes the app before confirming is stuck. Offline login shows the raw "Failed to fetch". Signing up with an already-registered email says "Check your email" but sends nothing (Supabase hides which emails exist).
+10. **Misleading Profile text:** the upgrade card says "€9.99/mo" though billing doesn't exist, and the export button says "(CSV/JSON)" but exports JSON only.
+11. **Onboarding has no Back button** between its 4 steps, and Android Back minimizes the app there, so a wrong answer can't be corrected without finishing and re-doing it (see the edit-profile feature).
 
 ### Improvements (go on `v1/polish`)
 
 - Undo on "Set removed" (deleting a set is one tap today).
 - Remember the member's rest length between workouts (it resets to 90 s).
 - Equipment-aware weight steps: the +/− buttons and the step-up are always 2.5 kg; dumbbells usually go up in 2 kg pairs, machines in 5 kg.
+- Home shows Rest & Recovery on every visit once the weekly target is met, so training again needs "Train anyway" each time the screen opens.
+- History lists only the latest 100 workouts, with no paging.
 
 ### Features (go on `v1/features`)
 
