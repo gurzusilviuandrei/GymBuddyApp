@@ -195,7 +195,7 @@ function ProfilePage() {
               </div>
               <div className="min-w-0 flex-1">
                 <h2 className="text-base font-semibold text-foreground">Upgrade to Pro</h2>
-                <p className="mt-1 text-sm text-muted-foreground">Custom routines, multi-swap & advanced analytics — €9.99/mo.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Custom routines, multi-swap & advanced analytics. Coming soon.</p>
               </div>
               <span className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground">See Pro</span>
             </div>
