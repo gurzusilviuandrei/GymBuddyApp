@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { authRedirectUrl } from "@/lib/platform";
+import { emailSendError } from "@/lib/auth-errors";
 import { ensureUserRow } from "@/lib/gym-api";
 import { syncLocalProfile } from "@/lib/account-sync";
 import { clearAccountData } from "@/lib/device-owner";
@@ -99,8 +100,8 @@ function AuthPage() {
       });
       if (error) throw error;
       setResentAt(Date.now());
-    } catch {
-      toast.error("Couldn't resend the email. Wait a minute and try again.");
+    } catch (err) {
+      toast.error(emailSendError(err, "Couldn't resend the email. Check your signal and try again."));
     } finally {
       setResending(false);
     }
@@ -120,8 +121,8 @@ function AuthPage() {
       });
       if (error) throw error;
       setResetSentTo(parsed.data);
-    } catch {
-      toast.error("Couldn't send the reset link. Try again in a moment.");
+    } catch (err) {
+      toast.error(emailSendError(err, "Couldn't send the reset link. Check your signal and try again."));
     } finally {
       setSendingReset(false);
     }

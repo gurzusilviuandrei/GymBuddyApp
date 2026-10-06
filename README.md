@@ -21,7 +21,8 @@ A session companion for people who have a gym membership and still freeze in the
    npx supabase db push
    ```
 3. In the Supabase dashboard → **Authentication → URL Configuration**, add this Redirect URL:
-   `app.gymbuddyapp.gymbuddy://auth-callback/**`
+   `app.gymbuddyapp.gymbuddy://auth-callback/**`, and set the Site URL to `https://gymbuddyapp.app`.
+   Then set up email: under **Authentication → Emails → SMTP Settings**, use MailerSend (`smtp.mailersend.net`, port 587, sender `no-reply@gymbuddyapp.app`). Paste the templates from `supabase/templates/` into **Email Templates**, and raise **Rate Limits → emails per hour**.
 4. Copy `.env.example` to `.env` and fill in your project URL and publishable key (Project Settings → API).
 5. `npm install`
 

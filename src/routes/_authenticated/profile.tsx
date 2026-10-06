@@ -21,6 +21,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { authRedirectUrl } from "@/lib/platform";
+import { emailSendError } from "@/lib/auth-errors";
 import { saveFile } from "@/lib/native-files";
 import { deleteAccount, exportMyData, getAccountSettings, updateAccountEmail } from "@/lib/account-api";
 import { usePro } from "@/components/pro/ProProvider";
@@ -105,8 +106,8 @@ function ProfilePage() {
       });
       if (error) throw error;
       toast.success("A secure reset link has been dispatched to your email.");
-    } catch {
-      toast.error("Couldn't send the reset link. Try again.");
+    } catch (err) {
+      toast.error(emailSendError(err, "Couldn't send the reset link. Check your signal and try again."));
     } finally {
       setSendingReset(false);
     }

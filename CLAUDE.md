@@ -89,7 +89,9 @@ Two of them have extra rules:
 
 - Supabase email and password sign-up with email confirmation. Phones store the session in Capacitor Preferences; the web build uses localStorage.
 - The publishable key (`sb_publishable_…`) is sent only as the `apikey` header (see `client.ts`).
-- Email links (confirm sign-up, reset password, change email) point to `app.gymbuddyapp.gymbuddy://auth-callback/...` on phones (`authRedirectUrl` in `platform.ts`). Supabase Redirect URLs must include `app.gymbuddyapp.gymbuddy://auth-callback/**`.
+- Email links (confirm sign-up, reset password, change email) point to `app.gymbuddyapp.gymbuddy://auth-callback/...` on phones (`authRedirectUrl` in `platform.ts`). Supabase Redirect URLs must include `app.gymbuddyapp.gymbuddy://auth-callback/**`. Without it, Supabase silently falls back to the Site URL (now `https://gymbuddyapp.app`).
+- Auth emails go out through MailerSend SMTP from `no-reply@gymbuddyapp.app`; the domain is verified there with SPF, DKIM and return-path records. The domain was bought through Lovable, and its DNS is managed in Lovable's domain settings (Name.com nameservers). The branded templates live in `supabase/templates/` and are pasted into Supabase → Email Templates; re-paste after editing them.
+- The auth server allows about one email per account per minute; `emailSendError` (`src/lib/auth-errors.ts`) turns that refusal into a "wait N seconds" message.
 - The `/_authenticated` layout route redirects to `/auth` when there's no session, and runs `claimDeviceData`.
 - Deleting an account re-checks the password inside the database (`delete_account`).
 - The login lockout after failed attempts lives on the device only; Supabase's own rate limits are the real protection.
@@ -132,7 +134,7 @@ No open bugs. Things that look like bugs but aren't:
 - `workout_logs.is_personal_record` means "was a record when it was logged". It only triggers the 🏆 popup in the response, and no screen reads it back. Deleting a set leaves other sets' flags unchanged on purpose: record checks always compare against the sets that exist.
 
 Before launch:
-   - SMTP email provider (Supabase's built-in email only reaches the project team), sending from the member's own domain
+   - Check how `gymbuddyapp.app` renews if Lovable is cancelled, and consider transferring it to the member's own registrar account (losing it breaks the app's emails)
    - The member creates the Play upload key and `android/keystore.properties` (README → Release builds); the build setup is done
    - Privacy policy and account-deletion web pages (required by Play), then the Play Console listing and internal testing
    - Store billing via RevenueCat, including `subscription_period_end` expiry
