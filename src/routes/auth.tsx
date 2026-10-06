@@ -5,7 +5,15 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { authRedirectUrl } from "@/lib/platform";
-import { emailSendError } from "@/lib/auth-errors";
+import {
+  cooldownSecondsLeft,
+  emailSendError,
+  friendlyAuthError,
+  isAlreadyRegistered,
+  isEmailNotConfirmed,
+  isFakeSignUp,
+  RESEND_COOLDOWN_MS,
+} from "@/lib/auth-errors";
 import { ensureUserRow } from "@/lib/gym-api";
 import { syncLocalProfile } from "@/lib/account-sync";
 import { clearAccountData } from "@/lib/device-owner";
@@ -47,17 +55,22 @@ function AuthPage() {
   const [sendingReset, setSendingReset] = useState(false);
   const [resetSentTo, setResetSentTo] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
-  const [resentAt, setResentAt] = useState<number | null>(null);
+  // When the next confirmation email may be requested (shared by the sign-up and login screens).
+  const [resendUntil, setResendUntil] = useState(0);
+  // Login was refused because this address hasn't confirmed its email yet.
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
 
   const lockRemaining = Math.max(0, Math.ceil((lockedUntil - now) / 1000));
   const locked = lockRemaining > 0;
 
+  const resendRemaining = cooldownSecondsLeft(resendUntil, now);
+
   // Only tick while a cooldown is actually counting down.
   useEffect(() => {
-    if (lockedUntil <= Date.now()) return;
+    if (Math.max(lockedUntil, resendUntil) <= Date.now()) return;
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
-  }, [lockedUntil]);
+  }, [lockedUntil, resendUntil]);
 
 
   const enterApp = async () => {
@@ -88,18 +101,22 @@ function AuthPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Re-send the sign-up confirmation (once per screen; the auth server rate-limits too).
-  const resendConfirmation = async () => {
-    if (!sentTo || resending) return;
+  // Re-send the sign-up confirmation. A one-minute cooldown stops spamming; the auth
+  // server rate-limits too and its wait time is shown if it refuses.
+  const resendConfirmation = async (target: string) => {
+    if (resending || resendRemaining > 0) return;
     setResending(true);
     try {
       const { error } = await supabase.auth.resend({
         type: "signup",
-        email: sentTo,
+        email: target,
         options: { emailRedirectTo: authRedirectUrl("/auth") },
       });
       if (error) throw error;
-      setResentAt(Date.now());
+      const sentAt = Date.now();
+      setNow(sentAt);
+      setResendUntil(sentAt + RESEND_COOLDOWN_MS);
+      toast.success("Confirmation email sent. Check your inbox, and your spam folder.");
     } catch (err) {
       toast.error(emailSendError(err, "Couldn't resend the email. Check your signal and try again."));
     } finally {
@@ -148,11 +165,14 @@ function AuthPage() {
           options: { emailRedirectTo: authRedirectUrl("/auth") },
         });
         if (error) throw error;
-        if (data.session) await enterApp();
-        else {
-          setResentAt(null);
-          setSentTo(parsed.data.email);
+        if (isFakeSignUp(data.user?.identities)) {
+          // The server hides which emails exist: an empty identity list means "already registered".
+          toast.error("That email already has an account. Log in, or reset your password if you forgot it.");
+          setMode("login");
+          return;
         }
+        if (data.session) await enterApp();
+        else setSentTo(parsed.data.email);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: parsed.data.email,
@@ -160,11 +180,22 @@ function AuthPage() {
         });
         if (error) throw error;
         setFailures(0);
+        setUnconfirmedEmail(null);
         localStorage.removeItem(LOCKOUT_KEY);
         await enterApp();
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Something went wrong";
+      if (mode === "login" && isEmailNotConfirmed(err)) {
+        // Not a wrong password: offer to send the confirmation link again.
+        setUnconfirmedEmail(parsed.data.email);
+        return;
+      }
+      if (mode === "signup" && isAlreadyRegistered(err)) {
+        toast.error("That email already has an account. Log in, or reset your password if you forgot it.");
+        setMode("login");
+        return;
+      }
+      const msg = err instanceof Error ? err.message : "";
       const wrongCredentials = mode === "login" && (msg.includes("Invalid login") || msg.includes("Invalid credentials"));
       if (wrongCredentials) {
         const next = failures + 1;
@@ -183,7 +214,7 @@ function AuthPage() {
 
         }
       } else {
-        toast.error(msg);
+        toast.error(friendlyAuthError(err));
       }
     } finally {
       setBusy(false);
@@ -208,8 +239,8 @@ function AuthPage() {
           <p className="mt-4 text-muted-foreground">
             We sent a confirmation link to <span className="text-foreground">{sentTo}</span>. Tap it to activate your Bro Profile and start onboarding.
           </p>
-          <Button type="button" variant="outline" onClick={() => void resendConfirmation()} disabled={resending || resentAt !== null} className="mt-10 h-12 w-full rounded-lg">
-            {resending ? "Sending…" : resentAt ? "Sent again — check spam too" : "Didn't get it? Resend email"}
+          <Button type="button" variant="outline" onClick={() => void resendConfirmation(sentTo)} disabled={resending || resendRemaining > 0} className="mt-10 h-12 w-full rounded-lg">
+            {resending ? "Sending…" : resendRemaining > 0 ? `Sent. Check spam too (resend in ${resendRemaining}s)` : "Didn't get it? Resend email"}
           </Button>
           <button type="button" onClick={() => { setSentTo(null); setMode("login"); }} className="mt-6 text-sm font-medium text-primary underline-offset-4 hover:underline">
             Already confirmed? Log in
@@ -225,7 +256,7 @@ function AuthPage() {
           </p>
 
           <div className="mt-12 flex flex-col gap-5">
-            <Input type="email" autoComplete="email" placeholder="Enter your email" aria-label="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-14 rounded-lg border-border bg-card px-4 text-base" />
+            <Input type="email" autoComplete="email" placeholder="Enter your email" aria-label="Email" value={email} onChange={(e) => { setEmail(e.target.value); if (unconfirmedEmail && e.target.value.trim() !== unconfirmedEmail) setUnconfirmedEmail(null); }} className="h-14 rounded-lg border-border bg-card px-4 text-base" />
             <Input type="password" autoComplete={isSignup ? "new-password" : "current-password"} placeholder={isSignup ? "Create a password" : "Your password"} aria-label="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-14 rounded-lg border-border bg-card px-4 text-base" />
           </div>
 
@@ -237,6 +268,23 @@ function AuthPage() {
             >
               Forgot password?
             </button>
+          )}
+
+          {!isSignup && unconfirmedEmail && (
+            <div role="alert" className="mt-5 rounded-lg border border-primary/40 bg-primary/10 px-4 py-4 text-sm text-foreground">
+              <p>
+                Your email isn't confirmed yet. Tap the link we sent to <span className="font-semibold">{unconfirmedEmail}</span>, or send a new one.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void resendConfirmation(unconfirmedEmail)}
+                disabled={resending || resendRemaining > 0}
+                className="mt-3 h-11 w-full rounded-lg"
+              >
+                {resending ? "Sending…" : resendRemaining > 0 ? `Sent. Check spam too (resend in ${resendRemaining}s)` : "Resend confirmation email"}
+              </Button>
+            </div>
           )}
 
           {locked && (

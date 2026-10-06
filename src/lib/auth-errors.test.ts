@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { emailSendError } from "./auth-errors";
+import {
+  cooldownSecondsLeft,
+  emailSendError,
+  friendlyAuthError,
+  isAlreadyRegistered,
+  isEmailNotConfirmed,
+  isFakeSignUp,
+  isNetworkError,
+  OFFLINE_MESSAGE,
+  RESEND_COOLDOWN_MS,
+} from "./auth-errors";
 
 const fallback = "Couldn't send the email. Try again.";
 
@@ -14,8 +24,74 @@ describe("emailSendError", () => {
     expect(emailSendError({ status: 429, message: "Email rate limit exceeded" }, fallback)).toMatch(/Wait a few minutes/);
   });
 
+  it("says there is no connection instead of a generic failure", () => {
+    expect(emailSendError(new TypeError("Failed to fetch"), fallback)).toBe(OFFLINE_MESSAGE);
+  });
+
   it("falls back for anything else", () => {
-    expect(emailSendError(new Error("Failed to fetch"), fallback)).toBe(fallback);
+    expect(emailSendError(new Error("boom"), fallback)).toBe(fallback);
     expect(emailSendError(null, fallback)).toBe(fallback);
+  });
+});
+
+describe("email not confirmed (login)", () => {
+  it("recognises the server's refusal by code or by message", () => {
+    expect(isEmailNotConfirmed({ code: "email_not_confirmed", message: "x" })).toBe(true);
+    expect(isEmailNotConfirmed({ message: "Email not confirmed" })).toBe(true);
+    expect(isEmailNotConfirmed(new Error("email NOT confirmed"))).toBe(true);
+  });
+
+  it("does not mistake other login failures for it", () => {
+    expect(isEmailNotConfirmed({ code: "invalid_credentials", message: "Invalid login credentials" })).toBe(false);
+    expect(isEmailNotConfirmed(null)).toBe(false);
+  });
+});
+
+describe("resend cooldown", () => {
+  it("counts down whole seconds and stops at zero", () => {
+    const sentAt = 1_000_000;
+    const until = sentAt + RESEND_COOLDOWN_MS;
+    expect(cooldownSecondsLeft(until, sentAt)).toBe(60);
+    expect(cooldownSecondsLeft(until, sentAt + 59_001)).toBe(1);
+    expect(cooldownSecondsLeft(until, until)).toBe(0);
+    expect(cooldownSecondsLeft(until, until + 5_000)).toBe(0);
+  });
+});
+
+describe("offline wording", () => {
+  it("shows a friendly message for every way a request can fail to leave the phone", () => {
+    for (const err of [
+      new TypeError("Failed to fetch"),
+      new TypeError("Load failed"),
+      new TypeError("NetworkError when attempting to fetch resource."),
+      { name: "AuthRetryableFetchError", message: "x", status: 0 },
+      { status: 0, message: "" },
+    ]) {
+      expect(isNetworkError(err), JSON.stringify(err)).toBe(true);
+      expect(friendlyAuthError(err)).toBe(OFFLINE_MESSAGE);
+    }
+  });
+
+  it("keeps the server's own text for real refusals", () => {
+    expect(isNetworkError({ status: 400, message: "Password should be at least 8 characters." })).toBe(false);
+    expect(friendlyAuthError({ message: "Password should be at least 8 characters." })).toBe("Password should be at least 8 characters.");
+    expect(friendlyAuthError({}, "Try again.")).toBe("Try again.");
+    expect(friendlyAuthError(null)).toBe("Something went wrong. Try again.");
+  });
+});
+
+describe("sign-up with an email that already has an account", () => {
+  it("spots the look-alike user the server returns when confirmation is on", () => {
+    expect(isFakeSignUp([])).toBe(true);
+    expect(isFakeSignUp([{ id: "x" }])).toBe(false);
+    expect(isFakeSignUp(undefined)).toBe(false);
+    expect(isFakeSignUp(null)).toBe(false);
+  });
+
+  it("spots the explicit refusal when confirmation is off", () => {
+    expect(isAlreadyRegistered({ code: "user_already_exists", message: "x" })).toBe(true);
+    expect(isAlreadyRegistered({ message: "User already registered" })).toBe(true);
+    expect(isAlreadyRegistered({ message: "Password should be at least 8 characters." })).toBe(false);
+    expect(isAlreadyRegistered(null)).toBe(false);
   });
 });
