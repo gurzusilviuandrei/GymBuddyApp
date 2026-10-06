@@ -40,6 +40,34 @@ Run `npm run app:sync` after every code change you want on the phone.
 
 On Windows PowerShell, use `npm.cmd` instead of `npm` (e.g. `npm.cmd test`).
 
+## Release builds (Google Play)
+
+Release builds are code-shrunk and signed with your **upload key**. Create the key
+once, keep it out of git, and back it up somewhere safe (a password manager or
+an encrypted drive). If you lose it you can ask Google to reset it, but that takes days.
+
+1. Create the key (run inside `android/`; pick your own passwords when asked):
+   ```
+   keytool -genkeypair -v -keystore gymbuddy-upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
+   ```
+2. Create `android/keystore.properties` (gitignored) next to it:
+   ```
+   storeFile=gymbuddy-upload.jks
+   storePassword=YOUR-STORE-PASSWORD
+   keyAlias=upload
+   keyPassword=YOUR-KEY-PASSWORD
+   ```
+3. Bump `"version"` in `package.json` (each Play upload needs a higher version), then:
+   ```
+   npm run app:sync
+   cd android
+   gradlew bundleRelease
+   ```
+   Upload `android/app/build/outputs/bundle/release/app-release.aab` in Play Console.
+
+Without `keystore.properties`, `gradlew assembleRelease` still builds a release APK
+signed with the debug key, for testing the shrunk build on a phone; Play rejects it.
+
 ## Automatic checks
 
 Every push to GitHub runs `.github/workflows/ci.yml`: type check, lint, tests, app build and an Android debug build (the APK is downloadable from the run for 14 days). Only merge to `main` when the check is green.

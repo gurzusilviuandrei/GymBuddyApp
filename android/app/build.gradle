@@ -22,10 +22,32 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Release signing with the Play upload key, read from android/keystore.properties
+    // (gitignored; see README). Without that file, release builds are signed with the
+    // debug key so they can still be installed and tested locally; Google Play
+    // rejects debug-signed uploads, so such a build can never reach the store.
+    def keystorePropsFile = rootProject.file('keystore.properties')
+    def hasUploadKey = keystorePropsFile.exists()
+    signingConfigs {
+        if (hasUploadKey) {
+            upload {
+                def props = new Properties()
+                keystorePropsFile.withInputStream { props.load(it) }
+                storeFile rootProject.file(props['storeFile'])
+                storePassword props['storePassword']
+                keyAlias props['keyAlias']
+                keyPassword props['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
-            minifyEnabled false
+            // Shrink and obfuscate Java code and drop unused resources (smaller, harder
+            // to tamper with). Capacitor and its plugins ship their own keep rules.
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig hasUploadKey ? signingConfigs.upload : signingConfigs.debug
         }
     }
 }
