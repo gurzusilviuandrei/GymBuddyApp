@@ -13,6 +13,7 @@ import {
   newSetKey,
   parseCorrection,
   parseNewSet,
+  parseWeightText,
   progression,
   removeSet,
   restRemaining,
@@ -214,5 +215,39 @@ describe("a forgotten workout (12-hour rule)", () => {
     const lastSet = Date.parse("2026-10-06T08:47:00Z");
     expect(durationMinutes(start, lastSet)).toBe(47);
     expect(durationMinutes(start, now)).toBeGreaterThan(1000); // the inflated number this avoids
+  });
+});
+
+describe("a decimal comma in a typed weight (22,5)", () => {
+  it("reads a comma as the decimal point", () => {
+    expect(parseWeightText("22,5")).toBe(22.5);
+    expect(parseWeightText("22.5")).toBe(22.5);
+    expect(parseWeightText(" 22,50 ")).toBe(22.5);
+    expect(parseWeightText("100")).toBe(100);
+    expect(parseWeightText(",5")).toBe(0.5);
+    expect(parseWeightText("5,")).toBe(5);
+  });
+
+  it("still refuses anything that is not a plain weight", () => {
+    for (const typed of ["", " ", ",", ".", "abc", "22,5,1", "1.2.3", "-5", "1e3", "22 kg", "Infinity", "1,000,5"]) {
+      expect(parseWeightText(typed), JSON.stringify(typed)).toBeNaN();
+    }
+  });
+
+  it("logs a new set typed with a comma, as the logging screen and the edit row both do", () => {
+    expect(parseNewSet("22,5", "8")).toEqual({ weight: 22.5, reps: 8 });
+    expect(parseNewSet("0,5", "10")).toEqual({ weight: 0.5, reps: 10 });
+  });
+
+  it("saves an edited set typed with a comma (the edit-set row passes raw text)", () => {
+    expect(parseCorrection("22,5", "8")).toEqual({ weight: 22.5, reps: 8 });
+    expect(parseCorrection("1000,0", "100")).toEqual({ weight: 1000, reps: 100 });
+  });
+
+  it("keeps the limits: too heavy, a bad comma entry, empty reps", () => {
+    expect(parseCorrection("1000,5", "10")).toBeNull();
+    expect(parseCorrection("22,5,1", "10")).toBeNull();
+    expect(parseCorrection("22,5", "")).toBeNull();
+    expect(parseCorrection("22,5", "7,5")).toBeNull();
   });
 });

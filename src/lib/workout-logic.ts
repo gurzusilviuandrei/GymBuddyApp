@@ -73,11 +73,22 @@ export function parseNewSet(weight: string, reps: string): { weight: number; rep
   return parseCorrection(weight, reps);
 }
 
+/**
+ * A typed weight as a number, NaN when it isn't one. A single comma counts as the
+ * decimal point, because phones in Romania and most of Europe type "22,5". Digits
+ * and one separator only: no signs, exponents or thousands separators.
+ */
+export function parseWeightText(text: string): number {
+  const t = text.trim().replace(",", ".");
+  if (!/^\d*\.?\d*$/.test(t) || t === "" || t === ".") return NaN;
+  return Number(t);
+}
+
 /** A correction to a logged set; same limits as a new set. */
 export function parseCorrection(weight: string, reps: string): { weight: number; reps: number } | null {
-  const w = Number(weight);
+  const w = parseWeightText(weight);
   const r = Number(reps);
-  if (weight === "" || !Number.isFinite(w) || w < 0 || w > MAX_SET_WEIGHT_KG || !Number.isInteger(r) || r < 1 || r > MAX_SET_REPS) return null;
+  if (!Number.isFinite(w) || w < 0 || w > MAX_SET_WEIGHT_KG || reps.trim() === "" || !Number.isInteger(r) || r < 1 || r > MAX_SET_REPS) return null;
   return { weight: w, reps: r };
 }
 
