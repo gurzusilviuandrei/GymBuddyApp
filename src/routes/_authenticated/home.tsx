@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { BottomNav } from "@/components/BottomNav";
-import { LeaveWorkoutDialog } from "@/components/workout/WorkoutDialogs";
+import { LeaveWorkoutDialog, UnfinishedWorkoutDialog } from "@/components/workout/WorkoutDialogs";
+import { isStaleWorkout, lastActivityMs } from "@/lib/workout-logic";
 import { usePro } from "@/components/pro/ProProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureUserRow, getDayOneWorkout, getUserStats, getWorkoutHistory } from "@/lib/gym-api";
@@ -75,6 +76,20 @@ function Home() {
   const [bagOpen, setBagOpen] = useState(true);
   const [checkInMode, setCheckInMode] = useState<"premade" | "custom" | null>(null);
   const [confirmAbandon, setConfirmAbandon] = useState(false);
+  // The saved workout was last touched more than 12 hours ago: ask what to do with it.
+  const staleActive = active ? isStaleWorkout(active) : false;
+  const [staleDialogOpen, setStaleDialogOpen] = useState(true);
+  const staleSetCount = active ? (active.logged_sets?.length ?? active.logged_set_ids.length) : 0;
+  const staleDate = active
+    ? new Date(lastActivityMs(active)).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })
+    : "";
+  // Nothing was logged in it: there is nothing to finish or lose, so just clear it.
+  useEffect(() => {
+    if (active && staleActive && staleSetCount === 0) {
+      abandonActiveSession();
+      setActive(null);
+    }
+  }, [active, staleActive, staleSetCount]);
   const [pendingStart, setPendingStart] = useState<{ mode: "premade" | "custom"; superSore: boolean } | null>(null);
 
   // Super sore skips the check-in (the answer is already known); otherwise ask.
@@ -85,7 +100,9 @@ function Home() {
   // A different kind of workout would silently replace the one in progress, leaving
   // its saved sets counted but in no workout: ask first. The same kind resumes it.
   const startWorkout = (mode: "premade" | "custom", superSore: boolean) => {
-    if (active && active.is_custom_workout !== (mode === "custom")) setPendingStart({ mode, superSore });
+    // A workout forgotten for 12+ hours is never resumed (or replaced) silently.
+    if (active && staleActive) setStaleDialogOpen(true);
+    else if (active && active.is_custom_workout !== (mode === "custom")) setPendingStart({ mode, superSore });
     else proceedToWorkout(mode, superSore);
   };
   const [trainAnyway, setTrainAnyway] = useState(false);
@@ -248,7 +265,19 @@ function Home() {
         </Collapsible>
       )}
 
-      {active && (
+      {active && staleActive && (
+        <section className="mt-10 rounded-lg border-2 border-primary bg-primary/10 p-6 shadow-neon" aria-label="Unfinished workout">
+          <h2 className="text-lg font-semibold text-foreground">Unfinished workout ⚡</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            From {staleDate}, with {staleSetCount} logged {staleSetCount === 1 ? "set" : "sets"}. Finish it or discard it.
+          </p>
+          <Button type="button" onClick={() => setStaleDialogOpen(true)} className="mt-5 h-14 w-full rounded-lg text-base font-semibold shadow-neon">
+            Decide now
+          </Button>
+        </section>
+      )}
+
+      {active && !staleActive && (
         <section className="mt-10 rounded-lg border-2 border-primary bg-primary/10 p-6 shadow-neon" aria-label="Workout in progress">
           <h2 className="text-lg font-semibold text-foreground">Workout in Progress ⚡</h2>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -430,6 +459,21 @@ function Home() {
     </main>
     <BottomNav />
     {/* Abandoning deletes sets already saved to the account, so it is never one tap. */}
+    {active && staleActive && staleSetCount > 0 && staleDialogOpen && (
+      <UnfinishedWorkoutDialog
+        dateLabel={staleDate}
+        setCount={staleSetCount}
+        onClose={() => setStaleDialogOpen(false)}
+        onFinish={() => {
+          void navigate({ to: "/workout", search: { mode: active.is_custom_workout ? "custom" : "premade", finish: "stale" } });
+        }}
+        onDiscard={() => {
+          abandonActiveSession();
+          setActive(null);
+          toast.success("Unfinished workout discarded. Its sets were removed.");
+        }}
+      />
+    )}
     {confirmAbandon && (
       <LeaveWorkoutDialog
         onStay={() => setConfirmAbandon(false)}

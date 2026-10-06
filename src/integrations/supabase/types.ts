@@ -335,6 +335,7 @@ export type Database = {
           p_started_at: string
           p_split_day?: string | null
           p_auto_regulated?: boolean
+          p_end_at_last_set?: boolean
         }
         Returns: Json
       }

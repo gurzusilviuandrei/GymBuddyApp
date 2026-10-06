@@ -6,7 +6,14 @@ import { Button } from "@/components/ui/button";
 import { createBroCardBlob, downloadBroCard, type BroCardStats } from "@/lib/bro-card";
 import { shareFile } from "@/lib/native-files";
 
-export type WorkoutSummary = { sets: number; volume: number; durationMinutes: number; weeklyWorkouts: number };
+export type WorkoutSummary = {
+  sets: number;
+  volume: number;
+  durationMinutes: number;
+  weeklyWorkouts: number;
+  /** When the workout ended (ms). Differs from today for a forgotten workout finished later. */
+  finishedAt?: number;
+};
 
 /** Finished-workout screen: totals, recovery advice and the shareable Bro Card. */
 export function WorkoutComplete({ summary, exerciseCount }: { summary: WorkoutSummary | null; exerciseCount: number }) {
@@ -23,7 +30,7 @@ export function WorkoutComplete({ summary, exerciseCount }: { summary: WorkoutSu
     setCreatingCard(true);
     try {
       const stats: BroCardStats = {
-        date: new Intl.DateTimeFormat(undefined, { day: "numeric", month: "long", year: "numeric" }).format(new Date()),
+        date: new Intl.DateTimeFormat(undefined, { day: "numeric", month: "long", year: "numeric" }).format(new Date(summary.finishedAt ?? Date.now())),
         durationMinutes: summary.durationMinutes,
         volumeKg: summary.volume,
         weeklyWorkouts: summary.weeklyWorkouts,

@@ -4,6 +4,9 @@ import {
   buildCues,
   canResume,
   durationMinutes,
+  isStaleWorkout,
+  lastActivityMs,
+  STALE_WORKOUT_MS,
   formatClock,
   exercisesDone,
   lastSetFor,
@@ -176,5 +179,40 @@ describe("misc", () => {
     const start = new Date(0).toISOString();
     expect(durationMinutes(start, 10_000)).toBe(1);
     expect(durationMinutes(start, 45 * 60_000)).toBe(45);
+  });
+});
+
+describe("a forgotten workout (12-hour rule)", () => {
+  const HOUR = 3_600_000;
+  const now = Date.parse("2026-10-07T09:00:00Z");
+  const started = "2026-10-06T08:00:00Z";
+
+  it("is only stale once more than 12 hours have passed since the last set", () => {
+    const lastSet = now - 12 * HOUR;
+    expect(isStaleWorkout({ session_start_time: started, last_set_at: lastSet + 1 }, now)).toBe(false); // 11h59m59s
+    expect(isStaleWorkout({ session_start_time: started, last_set_at: lastSet }, now)).toBe(false); // exactly 12h
+    expect(isStaleWorkout({ session_start_time: started, last_set_at: lastSet - 1 }, now)).toBe(true); // 12h and a moment
+  });
+
+  it("judges by the last set, not by when the workout began", () => {
+    // Started 25 hours ago, but a set was logged 2 hours ago: still in progress.
+    expect(isStaleWorkout({ session_start_time: new Date(now - 25 * HOUR).toISOString(), last_set_at: now - 2 * HOUR }, now)).toBe(false);
+  });
+
+  it("falls back to the start time when no set time was recorded", () => {
+    expect(lastActivityMs({ session_start_time: started })).toBe(Date.parse(started));
+    expect(isStaleWorkout({ session_start_time: started }, now)).toBe(true); // 25h ago
+    expect(isStaleWorkout({ session_start_time: new Date(now - HOUR).toISOString() }, now)).toBe(false);
+  });
+
+  it("uses the 12-hour limit the database caps a session at", () => {
+    expect(STALE_WORKOUT_MS).toBe(12 * HOUR);
+  });
+
+  it("measures active time to the last set, not to the moment the member finally taps Finish", () => {
+    const start = "2026-10-06T08:00:00Z";
+    const lastSet = Date.parse("2026-10-06T08:47:00Z");
+    expect(durationMinutes(start, lastSet)).toBe(47);
+    expect(durationMinutes(start, now)).toBeGreaterThan(1000); // the inflated number this avoids
   });
 });

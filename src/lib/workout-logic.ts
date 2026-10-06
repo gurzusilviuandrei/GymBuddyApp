@@ -134,6 +134,21 @@ export function newSetKey(now = Date.now(), random = Math.random()): string {
   return `${now}-${random.toString(36).slice(2, 8)}`;
 }
 
+/** An unfinished workout this long after its last activity is treated as forgotten. */
+export const STALE_WORKOUT_MS = 12 * 60 * 60 * 1000;
+
+/** When the member last did something in this workout: the last set, else its start. */
+export function lastActivityMs(s: Pick<ActiveSession, "last_set_at" | "session_start_time">): number {
+  if (typeof s.last_set_at === "number" && Number.isFinite(s.last_set_at)) return s.last_set_at;
+  const started = Date.parse(s.session_start_time);
+  return Number.isFinite(started) ? started : 0;
+}
+
+/** More than 12 hours since the last activity: don't resume it silently. */
+export function isStaleWorkout(s: Pick<ActiveSession, "last_set_at" | "session_start_time">, now = Date.now()): boolean {
+  return now - lastActivityMs(s) > STALE_WORKOUT_MS;
+}
+
 /** Whole minutes between start and now, at least 1. */
 export function durationMinutes(startedAt: string, now = Date.now()): number {
   return Math.max(1, Math.round((now - new Date(startedAt).getTime()) / 60_000));

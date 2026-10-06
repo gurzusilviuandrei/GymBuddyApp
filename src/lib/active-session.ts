@@ -24,6 +24,8 @@ export interface ActiveSession {
   total_exercises: number;
   logged_set_ids: string[];
   logged_sets?: CachedSet[];
+  /** When (ms since epoch) the member last logged a set; decides if an old workout was forgotten. */
+  last_set_at?: number;
 }
 
 export type CachedSet = {

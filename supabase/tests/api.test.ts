@@ -157,6 +157,61 @@ describe("finishing a workout", () => {
     expect(row?.ok).toBe(true);
   });
 
+  describe("a forgotten workout, finished the next day", () => {
+    const backdate = async (id: string, hoursAgo: number) => {
+      await t.asAdmin();
+      await t.db.query(`UPDATE workout_logs SET "timestamp" = now() - make_interval(secs => $2) WHERE id = $1`, [id, hoursAgo * 3600]);
+      await t.as(A);
+    };
+    const times = async (id: string) => {
+      await t.asAdmin();
+      const [r] = await t.rows<{ started: string; completed: string; mins: number; ago_h: number }>(
+        `SELECT started_at AS started, completed_at AS completed,
+                round(extract(epoch FROM completed_at - started_at) / 60)::int AS mins,
+                round((extract(epoch FROM now() - completed_at) / 3600)::numeric, 1)::float AS ago_h
+         FROM workout_sessions WHERE id = $1`, [id]);
+      await t.as(A);
+      return r!;
+    };
+
+    it("ends at its last set, so its date and duration are the real ones", async () => {
+      const a = await log(30, "old1", "db-row", 1);
+      const b = await log(30, "old2", "db-row", 2);
+      await backdate(a.id, 30);
+      await backdate(b.id, 29.5); // 30 minutes after the first set
+      const w = await t.rpc<{ id: string }>(
+        `SELECT public.complete_workout('custom', $1, $2, $3, NULL, false, true)`,
+        [["db-row"], [a.id, b.id], new Date(Date.now() - 31 * 3600e3).toISOString()],
+      );
+      const r = await times(w.id);
+      expect(r.ago_h).toBeCloseTo(29.5, 1); // completed when the last set was logged, not now
+      expect(r.mins).toBeGreaterThanOrEqual(30);
+      expect(r.mins).toBeLessThanOrEqual(90); // started 1h before the first set at most, never hours of idle time
+      expect(new Date(r.started).getTime()).toBeLessThanOrEqual(new Date(r.completed).getTime());
+    });
+
+    it("a normal finish still ends now", async () => {
+      const a = await log(30, "old3", "db-row", 1);
+      await backdate(a.id, 30);
+      const w = await t.rpc<{ id: string }>(`SELECT public.complete_workout('custom', $1, $2, now())`, [["db-row"], [a.id]]);
+      const r = await times(w.id);
+      expect(r.ago_h).toBeLessThan(0.1);
+      expect(r.mins).toBe(720); // the old 12-hour cap on a stretched session
+    });
+
+    it("cannot be backdated or stretched by a forged start time", async () => {
+      const a = await log(30, "old4", "db-row", 1);
+      await backdate(a.id, 5);
+      const w = await t.rpc<{ id: string }>(
+        `SELECT public.complete_workout('custom', $1, $2, $3, NULL, false, true)`,
+        [["db-row"], [a.id], "2100-01-01T00:00:00Z"],
+      );
+      const r = await times(w.id);
+      expect(r.ago_h).toBeCloseTo(5, 1);
+      expect(new Date(r.started).getTime()).toBeLessThanOrEqual(new Date(r.completed).getTime());
+    });
+  });
+
   it("refuses to save another member's sets", async () => {
     await t.as(B);
     expect(await errorOf(t.rpc(`SELECT public.complete_workout('custom', $1, $2, now())`, [["db-bench"], [logIds[0]]]))).toMatch(/Could not read/);

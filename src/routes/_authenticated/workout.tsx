@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { createFileRoute, Link, useBlocker } from "@tanstack/react-router";
+import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { ArrowRightLeft } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ import {
   canResume,
   durationMinutes,
   exercisesDone,
+  isStaleWorkout,
   lastSetFor,
   newSetKey,
   parseCorrection,
@@ -42,14 +43,17 @@ export const Route = createFileRoute("/_authenticated/workout")({
   validateSearch: (search: Record<string, unknown>) => ({
     mode: search["mode"] === "premade" || search["mode"] === "custom" ? search["mode"] : undefined,
     sore: search["sore"] === "fresh" || search["sore"] === "little" || search["sore"] === "super" ? search["sore"] : undefined,
-  }) as { mode?: "premade" | "custom"; sore?: "fresh" | "little" | "super" },
+    // Set by Home's "Finish it" for a forgotten workout: save it, dated at its last set.
+    finish: search["finish"] === "stale" ? "stale" : undefined,
+  }) as { mode?: "premade" | "custom"; sore?: "fresh" | "little" | "super"; finish?: "stale" },
   component: Workout,
 });
 
 // How sets reach the account: see src/lib/set-sync.ts and set-sync-client.ts.
 
 function Workout() {
-  const { mode, sore } = Route.useSearch();
+  const { mode, sore, finish } = Route.useSearch();
+  const navigate = useNavigate();
   const superSore = sore === "super";
   const queryClient = useQueryClient();
   const { isPro, requirePro } = usePro();
@@ -79,6 +83,11 @@ function Workout() {
   const logLock = useRef(false);
   // Set once the member abandons, so nothing re-saves the workout on the way out.
   const abandoned = useRef(false);
+  // When (ms) the last set was logged: tells a forgotten workout from one in progress.
+  const lastSetAtRef = useRef<number | undefined>(undefined);
+  // Set when this screen is being left on purpose (nothing to ask about).
+  const leaveFreely = useRef(false);
+  const staleFinishStarted = useRef(false);
 
   useEffect(() => {
     if (!pr) return;
@@ -122,7 +131,15 @@ function Workout() {
   useEffect(() => {
     if (!workout || restored) return;
     const cached = readActiveSession();
+    if (cached && finish !== "stale" && isStaleWorkout(cached)) {
+      // A workout forgotten for 12+ hours is never resumed silently: Home asks whether
+      // to finish or discard it.
+      leaveFreely.current = true;
+      void navigate({ to: "/home", replace: true });
+      return;
+    }
     if (canResume(cached, Boolean(workout.is_custom), workout.exercises.length)) {
+      lastSetAtRef.current = cached.last_set_at;
       setIndex(cached.current_exercise_index);
       setSetNumber(cached.current_set_number);
       setStartedAt(cached.session_start_time);
@@ -137,10 +154,11 @@ function Workout() {
         setWeight(String(previous.weight_kg));
         setReps(String(previous.reps));
       }
-      toast.success(`Resumed: Exercise ${cached.current_exercise_index + 1} of ${workout.exercises.length}`);
+      // (Not when Home's "Finish it" is saving it: the member never sees the tracker.)
+      if (finish !== "stale") toast.success(`Resumed: Exercise ${cached.current_exercise_index + 1} of ${workout.exercises.length}`);
     }
     setRestored(true);
-  }, [workout, restored]);
+  }, [workout, restored, finish, navigate]);
 
   // Mirror progress to device storage after every change (once something happened).
   useEffect(() => {
@@ -156,14 +174,15 @@ function Workout() {
       total_exercises: session.length,
       logged_set_ids: loggedSetIds.current,
       logged_sets: setsRef.current,
+      ...(lastSetAtRef.current !== undefined ? { last_set_at: lastSetAtRef.current } : {}),
     });
   }, [restored, workout, complete, index, setNumber, swapped, startedAt, session.length, sets]);
 
   // Exit guard: only while a session is actually in progress.
   const sessionActive = !complete && !finishing && (sets.length > 0 || index > 0);
   const blocker = useBlocker({
-    shouldBlockFn: () => sessionActive,
-    enableBeforeUnload: () => sessionActive,
+    shouldBlockFn: () => sessionActive && !leaveFreely.current,
+    enableBeforeUnload: () => sessionActive && !leaveFreely.current,
     withResolver: true,
   });
 
@@ -292,70 +311,98 @@ function Workout() {
     };
   }, [exerciseId]);
 
+  // Save the workout. `atLastSet` is for a forgotten workout: it is dated at its last set
+  // instead of now. Resolves to whether it was saved.
+  const finishWorkout = async (atLastSet: boolean): Promise<boolean> => {
+    // Synchronous lock: two taps in the same frame both see finishing === false,
+    // so the ref is what actually stops a second finish going out.
+    if (finishing || finishLock.current) return false;
+    // Nothing logged: there is no workout to save yet.
+    if (setsRef.current.length === 0 || loggedSetIds.current.length === 0) {
+      toast.error("Log at least one set before finishing, Bro.");
+      return false;
+    }
+    finishLock.current = true;
+    setFinishing(true);
+    // Push any locally saved sets and pending deletions before totalling.
+    await Promise.all(setsRef.current.filter((x) => !x.id).map((x) => syncSet(x.key)));
+    if (!allSaved(setsRef.current)) {
+      finishLock.current = false;
+      setFinishing(false);
+      toast.error("Some sets are only saved locally. Check your connection and try again.");
+      return false;
+    }
+    await Promise.all(
+      readPendingDeletes().map((id) =>
+        deleteWorkoutSet({ data: { id } })
+          .then(() => removePendingDelete(id))
+          .catch(() => {}),
+      ),
+    );
+    try {
+      const saved = await completeWorkout({
+        data: {
+          program_type: workout?.is_custom ? "custom" : "premade",
+          // From the sets themselves, so an exercise swapped out mid-way is still listed.
+          exercise_ids: exercisesDone(setsRef.current),
+          log_ids: loggedSetIds.current,
+          started_at: startedAt,
+          split_day: workout?.is_custom ? undefined : workout?.split_day,
+          auto_regulated: superSore,
+          end_at_last_set: atLastSet,
+        },
+      });
+      // Saved for good — only now is it safe to drop the local copy.
+      // Deletions that didn't get through stay queued for the background sync.
+      clearActiveSession();
+      writeOfflineQueue([]);
+      // A stats hiccup must never look like a failed save; fall back to a local count.
+      let weeklyWorkouts = 1;
+      try {
+        const freshStats = await getUserStats({ data: { tz_offset: new Date().getTimezoneOffset() } });
+        weeklyWorkouts = freshStats.completedWorkouts;
+      } catch {
+        /* totals refresh on Home */
+      }
+      // A forgotten workout ends at its last set, so "Active time" and the Bro Card's date
+      // are the real ones, not the moment it was finally tapped.
+      const endedAt = atLastSet ? (lastSetAtRef.current ?? Date.parse(startedAt)) : Date.now();
+      setSummary({ sets: saved.sets, volume: saved.volume, durationMinutes: durationMinutes(startedAt, endedAt), weeklyWorkouts, finishedAt: endedAt });
+      queryClient.invalidateQueries({ queryKey: ["user-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["workout-history"] });
+      // Next split day loads when Home mounts; don't swap this screen's plan now.
+      queryClient.invalidateQueries({ queryKey: ["day-one-workout"], refetchType: "none" });
+      setComplete(true);
+      return true;
+    } catch {
+      // Release the lock so a retry is possible after a failed save.
+      finishLock.current = false;
+      toast.error("Couldn't save your workout. Your sets are safe — try again.");
+      return false;
+    } finally {
+      setFinishing(false);
+    }
+  };
+
+  // Home's "Finish it" on a forgotten workout: save it as soon as it has been restored.
+  useEffect(() => {
+    if (finish !== "stale" || !restored || staleFinishStarted.current) return;
+    staleFinishStarted.current = true;
+    const leave = () => {
+      leaveFreely.current = true;
+      void navigate({ to: "/home", replace: true });
+    };
+    if (setsRef.current.length === 0) return leave();
+    void finishWorkout(true).then((saved) => {
+      // Not saved (e.g. no signal): the workout stays on the phone and Home asks again.
+      if (!saved) leave();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finish, restored]);
+
   const handleNext = async () => {
     if (isLastExercise) {
-      // Synchronous lock: two taps in the same frame both see finishing === false,
-      // so the ref is what actually stops a second finish going out.
-      if (finishing || finishLock.current) return;
-      // Nothing logged: there is no workout to save yet.
-      if (setsRef.current.length === 0 || loggedSetIds.current.length === 0) {
-        toast.error("Log at least one set before finishing, Bro.");
-        return;
-      }
-      finishLock.current = true;
-      setFinishing(true);
-      // Push any locally saved sets and pending deletions before totalling.
-      await Promise.all(setsRef.current.filter((x) => !x.id).map((x) => syncSet(x.key)));
-      if (!allSaved(setsRef.current)) {
-        finishLock.current = false;
-        setFinishing(false);
-        toast.error("Some sets are only saved locally. Check your connection and try again.");
-        return;
-      }
-      await Promise.all(
-        readPendingDeletes().map((id) =>
-          deleteWorkoutSet({ data: { id } })
-            .then(() => removePendingDelete(id))
-            .catch(() => {}),
-        ),
-      );
-      try {
-        const saved = await completeWorkout({
-          data: {
-            program_type: workout?.is_custom ? "custom" : "premade",
-            // From the sets themselves, so an exercise swapped out mid-way is still listed.
-            exercise_ids: exercisesDone(setsRef.current),
-            log_ids: loggedSetIds.current,
-            started_at: startedAt,
-            split_day: workout?.is_custom ? undefined : workout?.split_day,
-            auto_regulated: superSore,
-          },
-        });
-        // Saved for good — only now is it safe to drop the local copy.
-        // Deletions that didn't get through stay queued for the background sync.
-        clearActiveSession();
-        writeOfflineQueue([]);
-        // A stats hiccup must never look like a failed save; fall back to a local count.
-        let weeklyWorkouts = 1;
-        try {
-          const freshStats = await getUserStats({ data: { tz_offset: new Date().getTimezoneOffset() } });
-          weeklyWorkouts = freshStats.completedWorkouts;
-        } catch {
-          /* totals refresh on Home */
-        }
-        setSummary({ sets: saved.sets, volume: saved.volume, durationMinutes: durationMinutes(startedAt), weeklyWorkouts });
-        queryClient.invalidateQueries({ queryKey: ["user-stats"] });
-        queryClient.invalidateQueries({ queryKey: ["workout-history"] });
-        // Next split day loads when Home mounts; don't swap this screen's plan now.
-        queryClient.invalidateQueries({ queryKey: ["day-one-workout"], refetchType: "none" });
-        setComplete(true);
-      } catch {
-        // Release the lock so a retry is possible after a failed save.
-        finishLock.current = false;
-        toast.error("Couldn't save your workout. Your sets are safe — try again.");
-      } finally {
-        setFinishing(false);
-      }
+      await finishWorkout(false);
       return;
     }
     setIndex((i) => i + 1);
@@ -395,6 +442,7 @@ function Workout() {
     }
     if (logging || logLock.current || rest.resting) return;
     logLock.current = true;
+    lastSetAtRef.current = Date.now();
     setLogging(true);
     window.setTimeout(() => { logLock.current = false; setLogging(false); }, 400);
     haptic("tap");
@@ -414,6 +462,14 @@ function Workout() {
   };
 
   // Count what was actually done (a swapped-out exercise included), not the plan length.
+  // Home's "Finish it" is saving a forgotten workout: no need to show the tracker meanwhile.
+  if (finish === "stale" && !complete) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-background px-7 text-center text-foreground" role="status">
+        <p className="text-lg font-semibold">Finishing your workout…</p>
+      </div>
+    );
+  }
   if (complete) return <WorkoutComplete summary={summary} exerciseCount={exercisesDone(sets).length} />;
 
   return (

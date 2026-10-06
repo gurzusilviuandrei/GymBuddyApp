@@ -320,6 +320,8 @@ export async function completeWorkout({ data }: Input<{
   started_at: string;
   split_day?: SplitDay | undefined;
   auto_regulated?: boolean | undefined;
+  /** A forgotten workout: end it at its last set instead of now (decided by the server). */
+  end_at_last_set?: boolean | undefined;
 }>) {
   const row = await call<{ id: string; sets: number; volume: number | string }>(
     "complete_workout",
@@ -330,6 +332,9 @@ export async function completeWorkout({ data }: Input<{
       p_started_at: data.started_at,
       p_split_day: data.split_day ?? null,
       p_auto_regulated: Boolean(data.auto_regulated),
+      // Only sent for a forgotten workout, so normal finishes also work on a database
+      // that doesn't have this option yet.
+      ...(data.end_at_last_set ? { p_end_at_last_set: true } : {}),
     },
     "Could not save workout",
   );

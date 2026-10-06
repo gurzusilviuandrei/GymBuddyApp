@@ -4,6 +4,7 @@ import { App } from "@capacitor/app";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { isNativeApp } from "@/lib/platform";
+import { runBackHandler } from "@/lib/back-stack";
 
 // Screens where Android Back leaves the app instead of walking back through history.
 // Onboarding is always opened in place of the previous screen: minimizing keeps the
@@ -51,6 +52,8 @@ export function NativeBridge() {
     });
 
     const backListener = App.addListener("backButton", () => {
+      // An open dialog closes first (and keeps the member's data); only then does Back navigate.
+      if (runBackHandler()) return;
       const path = router.state.location.pathname;
       if (EXIT_ROUTES.has(path)) void App.minimizeApp();
       else if (router.history.canGoBack()) window.history.back();
