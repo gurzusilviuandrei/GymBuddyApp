@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { durableStorage } from "@/lib/durable-storage";
+import { checkAge } from "@/lib/onboarding-validation";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   component: Onboarding,
@@ -68,8 +69,9 @@ function Onboarding() {
   const queryClient = useQueryClient();
   const createUser = createUserProfile;
 
-  const ageNumber = Number(age);
-  const detailsValid = name.trim().length > 0 && age.trim().length > 0 && Number.isFinite(ageNumber) && ageNumber >= 10 && ageNumber <= 100;
+  const ageCheck = checkAge(age);
+  const ageNumber = ageCheck.ok ? ageCheck.age : NaN;
+  const detailsValid = name.trim().length > 0 && ageCheck.ok;
 
   const saveProfile = (patch: Record<string, unknown>) => {
     try {
@@ -169,9 +171,17 @@ function Onboarding() {
                 inputMode="numeric"
                 min={10}
                 max={100}
+                step={1}
                 aria-label="Age"
+                aria-invalid={ageCheck.ok ? undefined : ageCheck.message !== null}
+                aria-describedby={!ageCheck.ok && ageCheck.message ? "age-error" : undefined}
                 className="h-16 rounded-lg border-2 border-border bg-card px-6 text-lg text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-0"
               />
+              {!ageCheck.ok && ageCheck.message && (
+                <p id="age-error" role="alert" className="-mt-2 text-sm font-medium text-destructive">
+                  {ageCheck.message}
+                </p>
+              )}
             </div>
 
             <div className="mt-auto pt-14">
