@@ -413,7 +413,8 @@ function Workout() {
     void syncSet(key);
   };
 
-  if (complete) return <WorkoutComplete summary={summary} exerciseCount={session.length} />;
+  // Count what was actually done (a swapped-out exercise included), not the plan length.
+  if (complete) return <WorkoutComplete summary={summary} exerciseCount={exercisesDone(sets).length} />;
 
   return (
     <div className="flex min-h-dvh flex-col bg-background px-7 pb-10 pt-14 text-foreground">

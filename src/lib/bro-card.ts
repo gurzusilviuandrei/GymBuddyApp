@@ -48,6 +48,13 @@ export async function createBroCardBlob(stats: BroCardStats): Promise<Blob> {
     context.stroke();
   }
 
+  // A canvas only draws a web font that is already loaded; otherwise it silently
+  // falls back to a plain font. Wait for the weights used below.
+  await Promise.all(
+    ["500 34px 'Space Grotesk'", "600 34px 'Space Grotesk'", "700 100px 'Space Grotesk'"].map((font) =>
+      document.fonts?.load(font).catch(() => []),
+    ),
+  );
   const logo = await loadImage(logoUrl);
   context.drawImage(logo, 210, 145, 365, 385, 390, 125, 300, 316);
 

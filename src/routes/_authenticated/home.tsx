@@ -75,6 +75,19 @@ function Home() {
   const [bagOpen, setBagOpen] = useState(true);
   const [checkInMode, setCheckInMode] = useState<"premade" | "custom" | null>(null);
   const [confirmAbandon, setConfirmAbandon] = useState(false);
+  const [pendingStart, setPendingStart] = useState<{ mode: "premade" | "custom"; superSore: boolean } | null>(null);
+
+  // Super sore skips the check-in (the answer is already known); otherwise ask.
+  const proceedToWorkout = (mode: "premade" | "custom", superSore: boolean) => {
+    if (superSore) navigate({ to: "/workout", search: { mode, sore: "super" } });
+    else setCheckInMode(mode);
+  };
+  // A different kind of workout would silently replace the one in progress, leaving
+  // its saved sets counted but in no workout: ask first. The same kind resumes it.
+  const startWorkout = (mode: "premade" | "custom", superSore: boolean) => {
+    if (active && active.is_custom_workout !== (mode === "custom")) setPendingStart({ mode, superSore });
+    else proceedToWorkout(mode, superSore);
+  };
   const [trainAnyway, setTrainAnyway] = useState(false);
   const [customAutoRegulate, setCustomAutoRegulate] = useState(false);
   const [autoRegulate, setAutoRegulate] = useState(false);
@@ -341,7 +354,7 @@ function Home() {
           )}
           <Button
             type="button"
-            onClick={() => (autoRegulate ? navigate({ to: "/workout", search: { mode: "premade", sore: "super" } }) : setCheckInMode("premade"))}
+            onClick={() => startWorkout("premade", autoRegulate)}
             className="mt-4 h-14 w-full rounded-lg text-base font-semibold shadow-neon transition-transform active:scale-[0.98]"
           >
             Start Day {workout?.split_day ?? "A"} Workout <ArrowRight className="ml-2" aria-hidden="true" />
@@ -371,7 +384,7 @@ function Home() {
               )}
               <Button
                 type="button"
-                onClick={() => (customAutoRegulate ? navigate({ to: "/workout", search: { mode: "custom", sore: "super" } }) : setCheckInMode("custom"))}
+                onClick={() => startWorkout("custom", customAutoRegulate)}
                 className="mt-4 h-14 w-full rounded-lg text-base font-semibold shadow-neon transition-transform active:scale-[0.98]"
               >
                 Start Custom Workout <ArrowRight className="ml-2" aria-hidden="true" />
@@ -427,6 +440,34 @@ function Home() {
           toast.success("Workout abandoned. Its sets were removed.");
         }}
       />
+    )}
+    {pendingStart && active && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background/90 px-6 backdrop-blur-sm" role="alertdialog" aria-modal="true" aria-labelledby="switch-title">
+        <div className="w-full max-w-sm rounded-lg border border-primary/40 bg-card p-6 text-center">
+          <p id="switch-title" className="text-xl font-semibold text-foreground">You have a workout in progress</p>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            Starting a new workout abandons the one in progress, and the sets you logged in it will be removed.
+          </p>
+          <Button asChild className="mt-6 h-12 w-full font-semibold shadow-neon">
+            <Link to="/workout" search={{ mode: active.is_custom_workout ? "custom" : "premade" }}>Resume it</Link>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              const next = pendingStart;
+              abandonActiveSession();
+              setActive(null);
+              setPendingStart(null);
+              proceedToWorkout(next.mode, next.superSore);
+            }}
+            className="mt-3 h-12 w-full border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          >
+            Abandon &amp; start new
+          </Button>
+          <Button type="button" variant="ghost" onClick={() => setPendingStart(null)} className="mt-2 w-full text-muted-foreground">Cancel</Button>
+        </div>
+      </div>
     )}
     {checkInMode && (
       <div className="fixed inset-0 z-[60] flex items-end justify-center bg-background/90 px-5 pb-8 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="checkin-title" onClick={() => setCheckInMode(null)}>
