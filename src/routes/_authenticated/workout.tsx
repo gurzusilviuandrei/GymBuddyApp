@@ -386,7 +386,7 @@ function Workout() {
     if (setsDone) return handleNext();
     const entry = parseNewSet(weight, reps);
     if (!entry) {
-      toast.error("Enter a weight and at least 1 rep.");
+      toast.error("Enter a weight (0–1000 kg) and 1–100 reps.");
       return;
     }
     if (!exercise) {
@@ -433,7 +433,7 @@ function Workout() {
         />
         {exercise ? <MachineAlignment key={`machine-${exercise.id}`} exerciseId={exercise.id} /> : null}
         {exercise ? (
-          <WarmUpCalculator key={`warmup-${exercise.id}`} exerciseId={exercise.id} weight={Number(weight) || 0} />
+          <WarmUpCalculator key={`warmup-${exercise.id}`} exerciseId={exercise.id} equipment={exercise.equipment_type} weight={Number(weight) || 0} />
         ) : (
           <p className="mt-4 text-muted-foreground">{isLoading ? "Loading exercise details…" : "No exercise is assigned to this workout."}</p>
         )}
@@ -455,7 +455,8 @@ function Workout() {
         <Stepper label="Weight (kg)" unit="kg" value={weight} onChange={setWeight} step={2.5} min={0} max={500} inputMode="decimal" />
         <Stepper label="Reps" unit="rep" value={reps} onChange={setReps} step={1} min={0} max={100} inputMode="numeric" />
       </div>
-      <PlateVisualizer weight={Number(weight) || 0} />
+      {/* Plate math only means something on a barbell (shown when the type isn't known yet). */}
+      {(!exercise?.equipment_type || exercise.equipment_type === "Barbell") && <PlateVisualizer weight={Number(weight) || 0} />}
 
       {/* After a swap, only the new exercise's sets (the set count restarts at 1). */}
       <LoggedSets sets={sets.filter((x) => x.exercise_index === index && x.exercise_id === exercise?.id)} onDelete={handleDeleteSet} onSaveEdit={saveEdit} />

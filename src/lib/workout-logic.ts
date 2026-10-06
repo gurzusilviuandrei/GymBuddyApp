@@ -11,6 +11,8 @@ export type Exercise = {
   movement_cue: string | null;
   video_url: string | null;
   alternative_exercise_id: string | null;
+  /** "Barbell" | "Dumbbell" | "Machine"; missing on workouts cached before it was loaded. */
+  equipment_type?: string;
 };
 
 export const REST_OPTIONS = [45, 60, 90, 120] as const;
@@ -59,18 +61,23 @@ export function progression(last: LastLog, targetSets: number, targetReps: numbe
 }
 
 /** A new set from the inputs; null when the entry is not a loggable set. */
+/** The database's limits for one set (workout_logs CHECK constraints). */
+export const MAX_SET_WEIGHT_KG = 1000;
+export const MAX_SET_REPS = 100;
+
+/**
+ * A new set, within the database's limits. A set outside them would be rejected
+ * on every upload, stay "saved locally" forever and block finishing the workout.
+ */
 export function parseNewSet(weight: string, reps: string): { weight: number; reps: number } | null {
-  const w = Number(weight);
-  const r = Number(reps);
-  if (weight === "" || !Number.isFinite(w) || w < 0 || !Number.isInteger(r) || r < 1) return null;
-  return { weight: w, reps: r };
+  return parseCorrection(weight, reps);
 }
 
-/** A correction to a logged set; stricter bounds matching the database limits. */
+/** A correction to a logged set; same limits as a new set. */
 export function parseCorrection(weight: string, reps: string): { weight: number; reps: number } | null {
   const w = Number(weight);
   const r = Number(reps);
-  if (weight === "" || !Number.isFinite(w) || w < 0 || w > 1000 || !Number.isInteger(r) || r < 1 || r > 100) return null;
+  if (weight === "" || !Number.isFinite(w) || w < 0 || w > MAX_SET_WEIGHT_KG || !Number.isInteger(r) || r < 1 || r > MAX_SET_REPS) return null;
   return { weight: w, reps: r };
 }
 

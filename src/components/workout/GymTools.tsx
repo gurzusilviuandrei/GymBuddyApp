@@ -142,17 +142,24 @@ export function PlateVisualizer({ weight }: { weight: number }) {
   );
 }
 
-export function WarmUpCalculator({ weight, exerciseId }: { weight: number; exerciseId: string }) {
+// The lightest way to start warming up, by equipment ("Barbell" | "Dumbbell" | "Machine").
+const FIRST_WARM_UP: Record<string, string> = {
+  Barbell: "Empty bar (20 kg)",
+  Dumbbell: "Light dumbbells",
+  Machine: "Lightest machine setting",
+};
+
+export function WarmUpCalculator({ weight, exerciseId, equipment }: { weight: number; exerciseId: string; equipment?: string | undefined }) {
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState<Record<string, boolean>>({});
   const steps = useMemo(() => {
     const round = (n: number) => Math.round(n / 2.5) * 2.5;
     return [
-      { label: "Empty bar (20 kg) or light dumbbells", reps: 8 },
+      { label: (equipment && FIRST_WARM_UP[equipment]) ?? "Empty bar (20 kg) or light dumbbells", reps: 8 },
       { label: weight > 0 ? `${round(weight * 0.5)} kg (50%)` : "50% of working weight", reps: 5 },
       { label: weight > 0 ? `${round(weight * 0.75)} kg (75%)` : "75% of working weight", reps: 3 },
     ];
-  }, [weight]);
+  }, [weight, equipment]);
   return (
     <section className="mt-5 rounded-lg border border-border bg-card">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center justify-between px-5 py-4 text-left text-sm font-semibold text-foreground">

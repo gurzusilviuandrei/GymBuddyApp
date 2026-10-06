@@ -133,14 +133,21 @@ Bottom tabs: Home, History, Profile. Android Back minimizes the app on `/`, `/au
 No open bugs. Things that look like bugs but aren't:
 - `workout_logs.is_personal_record` means "was a record when it was logged". It only triggers the 🏆 popup in the response, and no screen reads it back. Deleting a set leaves other sets' flags unchanged on purpose: record checks always compare against the sets that exist.
 
-Before launch:
-   - Check how `gymbuddyapp.app` renews if Lovable is cancelled, and consider transferring it to the member's own registrar account (losing it breaks the app's emails)
-   - The member creates the Play upload key and `android/keystore.properties` (README → Release builds); the build setup is done
-   - Privacy policy and account-deletion web pages (required by Play), then the Play Console listing and internal testing
-   - Store billing via RevenueCat, including `subscription_period_end` expiry
-   - HTTPS App Links instead of the custom URL scheme
-   - iOS project and an iOS rest timer
-   - Decide whether to drop the Paddle columns
+## Later: launch steps (parked by the member on 2026-10-06; don't start until asked)
+
+The current focus is features, bugs and performance. These wait.
+
+1. **Website decision (ask first):** is the old Lovable website still live at `www.gymbuddyapp.app`?
+   - If yes and the member keeps it, they add the two pages in Lovable, with text Claude writes.
+   - Otherwise, build a small free-hosted GymBuddy site on the domain: home, privacy policy, account deletion.
+2. **Privacy policy and account-deletion pages**, which Google Play requires as public URLs.
+3. **Play upload key:** the member creates it plus `android/keystore.properties` (README → Release builds). The build setup is done.
+4. **Play Console:** developer account ($25 one-time), store listing, internal testing (closed beta).
+5. **Domain ownership:** check how `gymbuddyapp.app` renews if Lovable is cancelled, and consider transferring it to the member's own registrar account. Losing it breaks the app's emails.
+6. **Store billing** via RevenueCat, including `subscription_period_end` expiry.
+7. **HTTPS App Links** on `gymbuddyapp.app` instead of the custom URL scheme.
+8. **iOS:** project and iOS rest timer.
+9. **Paddle columns:** decide whether to drop them.
 
 ## Things Claude must not change without asking
 

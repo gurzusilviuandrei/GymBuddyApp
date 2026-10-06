@@ -99,6 +99,11 @@ describe("parsing sets", () => {
       expect(parseNewSet(w!, r!), `${w}/${r}`).toBeNull();
     }
   });
+  it("rejects a typed set the database would refuse (it would never sync and block Finish)", () => {
+    expect(parseNewSet("1000", "100")).toEqual({ weight: 1000, reps: 100 });
+    expect(parseNewSet("1000.5", "10")).toBeNull();
+    expect(parseNewSet("60", "150")).toBeNull();
+  });
   it("bounds corrections to what the database accepts", () => {
     expect(parseCorrection("1000", "100")).toEqual({ weight: 1000, reps: 100 });
     expect(parseCorrection("1000.5", "10")).toBeNull();

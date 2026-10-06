@@ -36,7 +36,7 @@ const SPLIT_FOCUS: Record<SplitDay, string> = {
 const SPLIT_DAY_NUMBER: Record<SplitDay, number> = { A: 1, B: 2, C: 3 };
 export type SplitDay = "A" | "B" | "C";
 
-const EX_FIELDS = "id, name, instructions, setup_cue, position_cue, movement_cue, video_url, alternative_exercise_id";
+const EX_FIELDS = "id, name, instructions, setup_cue, position_cue, movement_cue, video_url, alternative_exercise_id, equipment_type";
 
 // ── Profile ────────────────────────────────────────────────────────────────
 
