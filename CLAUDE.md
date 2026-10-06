@@ -58,6 +58,8 @@ Phone (Capacitor WebView, bundled dist/)  ──HTTPS──▶  Supabase
 - **Offline-first workout:** sets are optimistic, `client_key` makes retries idempotent, and finishing requires every set to have a server id.
 - **Native rest timer** is a short foreground service, not scheduled notifications: exact alarms are denied by default on Android 14+, so scheduled alerts arrive about a minute late.
 - **Android backups are off** (`allowBackup="false"`), so the login session can't be restored onto another phone.
+- **Release builds are shrunk** (R8 + resource shrinking) and signed with the upload key from the gitignored `android/keystore.properties`; without it they fall back to the debug key (installable locally, rejected by Play). After changing native code or plugins, test a release build (`gradlew assembleRelease`): shrinking can strip classes that are only found by name.
+- **Loaders fail instead of returning "empty"** on errors, so the copy saved on the phone stays on screen offline and a blank form can't be saved over real data.
 - **One version number:** `package.json` "version". Android derives `versionName` and `versionCode` from it (1.2.3 → 10203), and Sentry uses it as the release.
 - **Lint checks code rules only.** Formatting is Prettier (`npm run format`); about 50 older files aren't formatted yet, on purpose, to avoid a huge diff.
 
@@ -130,11 +132,11 @@ No open bugs. Things that look like bugs but aren't:
 - `workout_logs.is_personal_record` means "was a record when it was logged". It only triggers the 🏆 popup in the response, and no screen reads it back. Deleting a set leaves other sets' flags unchanged on purpose: record checks always compare against the sets that exist.
 
 Before launch:
-   - SMTP email provider (Supabase's built-in email is rate-limited)
-   - Release signing and code shrinking
+   - SMTP email provider (Supabase's built-in email only reaches the project team), sending from the member's own domain
+   - The member creates the Play upload key and `android/keystore.properties` (README → Release builds); the build setup is done
+   - Privacy policy and account-deletion web pages (required by Play), then the Play Console listing and internal testing
    - Store billing via RevenueCat, including `subscription_period_end` expiry
    - HTTPS App Links instead of the custom URL scheme
-   - Index on `workout_logs(user_id, exercise_id, timestamp)`
    - iOS project and an iOS rest timer
    - Decide whether to drop the Paddle columns
 
