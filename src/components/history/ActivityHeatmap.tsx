@@ -1,11 +1,7 @@
 import { useMemo } from "react";
+import { HEATMAP_WEEKS as WEEKS, localDayKey as localKey } from "@/lib/activity";
 
-const WEEKS = 12;
 const DAY_LABELS = ["M", "", "W", "", "F", "", "S"];
-
-function localKey(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 // GitHub-style grid: columns are Monday-start weeks, rows are weekdays.
 export function ActivityHeatmap({ days }: { days: string[] }) {

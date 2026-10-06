@@ -1,6 +1,7 @@
 // Account settings, data export and deletion for the signed-in member.
 import { supabase } from "@/integrations/supabase/client";
 import { authRedirectUrl } from "@/lib/platform";
+import { readEntireTable } from "@/lib/paging";
 
 async function currentUser() {
   const { data } = await supabase.auth.getSession();
@@ -31,19 +32,35 @@ export async function updateAccountEmail({ data }: { data: { email: string } }) 
   return { email: data.email };
 }
 
+// Everything the app stores about the member. The server returns at most 1,000 rows per
+// request, so each table is counted and then read page by page (see paging.ts); if the
+// pages don't add up to the count the export fails rather than hand over a short file.
+// The file states its own row counts so they can be checked against the app.
 export async function exportMyData() {
   const user = await currentUser();
-  const [profile, logs, sessions] = await Promise.all([
+  const [profile, logs, sessions, settings] = await Promise.all([
     supabase.from("users").select("*").eq("id", user.id).maybeSingle(),
-    supabase.from("workout_logs").select("*").eq("user_id", user.id).order("timestamp"),
-    supabase.from("workout_sessions").select("*").eq("user_id", user.id).order("completed_at"),
+    readEntireTable(
+      () => supabase.from("workout_logs").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+      (from, to) => supabase.from("workout_logs").select("*").eq("user_id", user.id).order("timestamp").order("id").range(from, to),
+    ),
+    readEntireTable(
+      () => supabase.from("workout_sessions").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+      (from, to) => supabase.from("workout_sessions").select("*").eq("user_id", user.id).order("completed_at").order("id").range(from, to),
+    ),
+    readEntireTable(
+      () => supabase.from("user_machine_settings").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+      (from, to) => supabase.from("user_machine_settings").select("*").eq("user_id", user.id).order("exercise_id").order("id").range(from, to),
+    ),
   ]);
-  if (profile.error || logs.error || sessions.error) throw new Error("Could not export your data");
+  if (profile.error) throw new Error("Could not export your data");
   return {
     exported_at: new Date().toISOString(),
     account: { email: user.email ?? null, profile: profile.data },
-    workout_logs: logs.data ?? [],
-    workout_sessions: sessions.data ?? [],
+    workout_logs: logs,
+    workout_sessions: sessions,
+    machine_settings: settings,
+    counts: { workout_logs: logs.length, workout_sessions: sessions.length, machine_settings: settings.length },
   };
 }
 

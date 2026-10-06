@@ -291,7 +291,7 @@ function ProfilePage() {
         <div className="mt-5 rounded-lg border border-border bg-card p-5">
           <p className="text-sm leading-relaxed text-muted-foreground">Download a copy of your profile, every logged set, and all completed workouts.</p>
           <Button variant="outline" className="mt-4 w-full border-primary/50 text-primary hover:bg-primary/10 hover:text-primary" disabled={exporting} onClick={handleExport}>
-            <FileDown aria-hidden="true" /> {exporting ? "Preparing…" : "Export Training History (CSV/JSON)"}
+            <FileDown aria-hidden="true" /> {exporting ? "Preparing…" : "Export Training History (JSON)"}
           </Button>
         </div>
       </section>

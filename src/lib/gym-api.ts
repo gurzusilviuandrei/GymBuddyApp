@@ -4,6 +4,7 @@
 // Each call takes `{ data }` so screens call it like the old server functions.
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { activityDays, heatmapLookbackMs } from "@/lib/activity";
 
 type Input<T> = { data: T };
 type DbFunction = keyof Database["public"]["Functions"];
@@ -370,23 +371,22 @@ export function deleteWorkoutSession({ data }: Input<{ session_id: string }>) {
   return call<{ deleted: boolean }>("delete_workout_session", { p_session_id: data.session_id }, "Could not delete that workout");
 }
 
-// Local calendar dates (YYYY-MM-DD) with at least one logged set, last ~20 weeks.
-export async function getActivityDays({ data }: Input<{ tz_offset: number }>) {
+// Local calendar dates (YYYY-MM-DD) with a finished workout, for the History heatmap.
+// Reads finished workouts (about three a week) rather than every logged set (about
+// thirty a workout), so it stays far below the server's 1,000-row cap, and reads only
+// the weeks the heatmap shows.
+export async function getActivityDays() {
   const userId = await currentUserId();
-  const since = new Date(Date.now() - 20 * 7 * 86_400_000).toISOString();
+  const since = new Date(Date.now() - heatmapLookbackMs()).toISOString();
   const { data: rows, error } = await supabase
-    .from("workout_logs")
-    .select("timestamp")
+    .from("workout_sessions")
+    .select("completed_at")
     .eq("user_id", userId)
-    .gte("timestamp", since)
-    .limit(5000);
+    .gte("completed_at", since)
+    .order("completed_at", { ascending: false })
+    .limit(1000);
   if (error) throw new Error("Could not load activity");
-  const days = new Set<string>();
-  for (const r of rows ?? []) {
-    const local = new Date(new Date(r.timestamp).getTime() - data.tz_offset * 60_000);
-    days.add(local.toISOString().slice(0, 10));
-  }
-  return [...days];
+  return activityDays((rows ?? []).map((r) => r.completed_at));
 }
 
 // Every set recorded during one finished session.

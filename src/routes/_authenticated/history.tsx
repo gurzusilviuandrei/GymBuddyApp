@@ -20,7 +20,7 @@ function HistoryPage() {
   const [openSession, setOpenSession] = useState<SessionSummary | null>(null);
   const { data: activeDays } = useQuery({
     queryKey: ["workout-history", "activity"],
-    queryFn: () => getActivityDays({ data: { tz_offset: new Date().getTimezoneOffset() } }),
+    queryFn: () => getActivityDays(),
   });
   const { data: sessions, isLoading, isError, refetch } = useQuery({
     queryKey: ["workout-history"],
