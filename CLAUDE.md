@@ -128,9 +128,36 @@ Bottom tabs: Home, History, Profile. Android Back minimizes the app on `/`, `/au
 - **Applying migrations:** `supabase link` returns 403 for this account, so new migration files are pasted into the Supabase SQL Editor by the member. Always give them the SQL to paste.
 - **Git workflow:** work on a branch, push, wait for the green CI check, then fast-forward `main`.
 
+## Branches
+
+- `main` is what ships; it only moves by fast-forward from a branch whose latest CI run is green.
+- `v1/polish` (long-lived): bug fixes and small improvements.
+- `v1/features` (long-lived): bigger features, so they stay separate from polish.
+- Don't push a branch until the member says so: every push starts a CI run.
+
 ## Known issues (as of 2026-10-06)
 
-No open bugs. Things that look like bugs but aren't:
+### Open bugs (found in review, not fixed yet; member said to note them first)
+
+1. **Assisted Pull-Up progresses the wrong way.** The weight entered is the machine's assistance, so more is easier, but the step-up card says "step up +2.5 kg". For that exercise it should suggest less assistance. (`progression` in `workout-logic.ts`; the exercise is `assisted-pullup`.)
+2. **"Machine Setup" label on non-machine exercises.** `buildCues` always labels the first cue "Machine Setup", even for barbell and dumbbell exercises; it should be "Setup" unless the exercise is a machine.
+3. **"Syncing N sets…" forever** when the server keeps refusing a set. Rare since new sets are limited to the database's range, but the badge should say a set couldn't be saved and let the member edit it.
+4. **The strength graph hides load errors.** `ExerciseProgressChart` ignores `isError`, so a failed load reads "No sets logged in the last 8 weeks".
+5. **Swap suggestions ignore the member's equipment** (`get_alternative_options` only matches `movement_type`), so a "Dumbbells only" member can be offered machines or barbells.
+6. Cosmetic: a stray duplicate doc comment above `MAX_SET_WEIGHT_KG` in `workout-logic.ts`.
+
+### Improvements (go on `v1/polish`)
+
+- Undo on "Set removed" (deleting a set is one tap today).
+- Remember the member's rest length between workouts (it resets to 90 s).
+- Equipment-aware weight steps: the +/− buttons and the step-up are always 2.5 kg; dumbbells usually go up in 2 kg pairs, machines in 5 kg.
+
+### Features (go on `v1/features`)
+
+- **Edit training profile** after onboarding (name, equipment, days per week, goal). Today a member who starts on "Dumbbells only" is stuck on that plan. The `users` columns already exist; it needs a database function and a Profile section. Top priority.
+- Pounds (lbs) as well as kg, only if the audience needs it.
+
+### Things that look like bugs but aren't
 - `workout_logs.is_personal_record` means "was a record when it was logged". It only triggers the 🏆 popup in the response, and no screen reads it back. Deleting a set leaves other sets' flags unchanged on purpose: record checks always compare against the sets that exist.
 
 ## Later: launch steps (parked by the member on 2026-10-06; don't start until asked)
