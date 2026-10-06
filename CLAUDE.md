@@ -156,6 +156,9 @@ Bottom tabs: Home, History, Profile. Android Back minimizes the app on `/`, `/au
 15. **Finishing again with extra sets leaves them orphaned** (confirmed): `complete_workout` returns the already-finished workout and ignores sets added after it. Needs a crash between the server saving and the phone clearing its copy, then logging more; rare.
 16. **"Barbell only" plans contain dumbbell exercises** (confirmed in the seed): days 2 and 3 include Dumbbell Pullover, Dumbbell Bulgarian Split Squat and Incline Dumbbell Press. A content decision: swap them for barbell exercises, or rename the option.
 17. **The swap drawer is blank offline** (read from the code): a failed load shows neither results nor a message.
+19. **A malformed sign-in link fails silently** (confirmed on the emulator): `supabase.auth.setSession` *throws* ("Invalid UTF-8 sequence") for a corrupted token instead of returning an error, and `NativeBridge` doesn't catch it, so there is no message at all. A link cut off by an email app would hit this. Wrap the call in try/catch and show "That link is invalid or has expired." The session is untouched either way.
+20. **Android Back doesn't dismiss the "abandon workout?" dialog** (confirmed): it stays open. Back should act like "Continue Training".
+21. **A workout can't be paused to look at other screens:** "Back to home" and the tab bar only offer "Abandon Session"; the only way to leave a workout and keep it is to close the app. Consider a third option, "Leave it for now".
 18. Hardening: `authenticated` still has `GRANT UPDATE` on `users`. RLS (no UPDATE policy) blocks it, confirmed by a probe, but revoking the grant would be defense in depth, since every write goes through functions.
 
 ### Improvements (go on `v1/polish`)
@@ -170,6 +173,10 @@ Bottom tabs: Home, History, Profile. Android Back minimizes the app on `/`, `/au
 
 - **Edit training profile** after onboarding (name, equipment, days per week, goal). Today a member who starts on "Dumbbells only" is stuck on that plan. The `users` columns already exist; it needs a database function and a Profile section. Top priority.
 - Pounds (lbs) as well as kg, only if the audience needs it.
+
+### Verified working on the emulator (2026-10-06)
+
+Offline logging, closing and reopening the app offline, and the background sync after reconnecting (queue empty in ~6 s, server has the sets, workout resumes with no "Saved locally" tags); finishing a workout whose sets the background worker uploaded (totals and links correct); Abandon from Home and from the workout; the "workout in progress" dialog; Android Back on every screen; expired-link and bad-code email links; landscape (Home and the rest overlay); the release (shrunk) build; start-up 3–5 s; all main screens at fonts up to 2.0× except Profile (bug 12).
 
 ### Things that look like bugs but aren't
 - `workout_logs.is_personal_record` means "was a record when it was logged". It only triggers the 🏆 popup in the response, and no screen reads it back. Deleting a set leaves other sets' flags unchanged on purpose: record checks always compare against the sets that exist.
