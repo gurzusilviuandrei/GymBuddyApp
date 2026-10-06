@@ -23,7 +23,6 @@ export interface ActiveSession {
   session_start_time: string;
   total_exercises: number;
   logged_set_ids: string[];
-  used_exercise_ids: Record<number, string>;
   logged_sets?: CachedSet[];
 }
 
@@ -49,7 +48,6 @@ export function readActiveSession(): ActiveSession | null {
       ...s,
       swapped_exercises_map: s.swapped_exercises_map ?? {},
       logged_set_ids: s.logged_set_ids ?? [],
-      used_exercise_ids: s.used_exercise_ids ?? {},
       logged_sets: (s.logged_sets ?? []).map((x) => (x.status === "syncing" ? { ...x, status: "local" as const } : x)),
     };
   } catch {

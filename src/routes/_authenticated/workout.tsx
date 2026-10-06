@@ -27,6 +27,7 @@ import {
   buildCues,
   canResume,
   durationMinutes,
+  exercisesDone,
   lastSetFor,
   newSetKey,
   parseCorrection,
@@ -72,7 +73,6 @@ function Workout() {
 
   const prShown = useRef(new Set<string>());
   const loggedSetIds = useRef<string[]>([]);
-  const usedExerciseIds = useRef<Record<number, string>>({});
   const swappedMap = useRef<Record<number, Exercise>>({});
   const setsRef = useRef<CachedSet[]>([]);
   const finishLock = useRef(false);
@@ -130,9 +130,9 @@ function Workout() {
       setSwapped((cached.swapped_exercises_map[cached.current_exercise_index] as Exercise | undefined) ?? null);
       loggedSetIds.current = cached.logged_set_ids;
       if (cached.logged_sets?.length) commitSets(() => cached.logged_sets!);
-      usedExerciseIds.current = cached.used_exercise_ids;
       // Auto-fill from the last set logged for this exercise, like live progression does.
-      const previous = lastSetFor(cached.logged_sets ?? [], cached.current_exercise_index);
+      const current = (cached.swapped_exercises_map[cached.current_exercise_index] as Exercise | undefined) ?? workout.exercises[cached.current_exercise_index];
+      const previous = current ? lastSetFor(cached.logged_sets ?? [], cached.current_exercise_index, current.id) : undefined;
       if (previous) {
         setWeight(String(previous.weight_kg));
         setReps(String(previous.reps));
@@ -155,7 +155,6 @@ function Workout() {
       session_start_time: startedAt,
       total_exercises: session.length,
       logged_set_ids: loggedSetIds.current,
-      used_exercise_ids: usedExerciseIds.current,
       logged_sets: setsRef.current,
     });
   }, [restored, workout, complete, index, setNumber, swapped, startedAt, session.length, sets]);
@@ -321,11 +320,11 @@ function Workout() {
         ),
       );
       try {
-        const doneIds = session.map((e, i) => usedExerciseIds.current[i] ?? e.id);
         const saved = await completeWorkout({
           data: {
             program_type: workout?.is_custom ? "custom" : "premade",
-            exercise_ids: doneIds,
+            // From the sets themselves, so an exercise swapped out mid-way is still listed.
+            exercise_ids: exercisesDone(setsRef.current),
             log_ids: loggedSetIds.current,
             started_at: startedAt,
             split_day: workout?.is_custom ? undefined : workout?.split_day,
@@ -377,7 +376,6 @@ function Workout() {
     swappedMap.current = { ...swappedMap.current, [index]: alt };
     setSwapped(alt);
     setSetNumber(1);
-    usedExerciseIds.current[index] = alt.id;
     toast.success(`Swapped to ${alt.name}`);
     setSwapOpen(false);
   };
@@ -407,7 +405,6 @@ function Workout() {
       ...prev,
       { key, id: null, exercise_index: index, exercise_id: exercise.id, set_number: setNumber, weight_kg: entry.weight, reps: entry.reps, status: "syncing" },
     ]);
-    usedExerciseIds.current[index] = exercise.id;
     setLastLog({ weight_kg: entry.weight, reps_completed: entry.reps });
     setSetNumber((n) => n + 1);
     // Auto-fill: keep this set's numbers ready for the next one.

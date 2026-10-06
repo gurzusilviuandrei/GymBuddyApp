@@ -5,6 +5,7 @@ import {
   canResume,
   durationMinutes,
   formatClock,
+  exercisesDone,
   lastSetFor,
   newSetKey,
   parseCorrection,
@@ -140,8 +141,25 @@ describe("resuming a workout", () => {
   });
   it("pre-fills from the last set of the current exercise", () => {
     const sets = [set("a", 0, 1, { weight_kg: 10 }), set("b", 1, 1, { weight_kg: 30 }), set("c", 0, 2, { weight_kg: 12 })];
-    expect(lastSetFor(sets, 0)?.weight_kg).toBe(12);
-    expect(lastSetFor(sets, 2)).toBeUndefined();
+    expect(lastSetFor(sets, 0, "goblet-squat")?.weight_kg).toBe(12);
+    expect(lastSetFor(sets, 2, "goblet-squat")).toBeUndefined();
+  });
+  it("never pre-fills from the exercise that was swapped out", () => {
+    const sets = [set("a", 0, 1, { weight_kg: 60, exercise_id: "back-squat" }), set("b", 0, 1, { weight_kg: 100, exercise_id: "leg-press" })];
+    expect(lastSetFor(sets, 0, "leg-press")?.weight_kg).toBe(100);
+    expect(lastSetFor([sets[0]!], 0, "leg-press")).toBeUndefined();
+  });
+});
+
+describe("saving a workout", () => {
+  it("lists every exercise with sets in plan order, including one swapped out mid-way", () => {
+    const sets = [
+      set("a", 1, 1, { exercise_id: "db-bench" }),
+      set("b", 0, 1, { exercise_id: "back-squat" }),
+      set("c", 0, 1, { exercise_id: "leg-press" }), // swapped in after one squat set
+      set("d", 1, 2, { exercise_id: "db-bench" }),
+    ];
+    expect(exercisesDone(sets)).toEqual(["back-squat", "leg-press", "db-bench"]);
   });
 });
 

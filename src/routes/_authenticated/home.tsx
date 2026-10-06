@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { BottomNav } from "@/components/BottomNav";
+import { LeaveWorkoutDialog } from "@/components/workout/WorkoutDialogs";
 import { usePro } from "@/components/pro/ProProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureUserRow, getDayOneWorkout, getUserStats, getWorkoutHistory } from "@/lib/gym-api";
@@ -73,6 +74,7 @@ function Home() {
   const [active, setActive] = useState<ActiveSession | null>(() => readActiveSession());
   const [bagOpen, setBagOpen] = useState(true);
   const [checkInMode, setCheckInMode] = useState<"premade" | "custom" | null>(null);
+  const [confirmAbandon, setConfirmAbandon] = useState(false);
   const [trainAnyway, setTrainAnyway] = useState(false);
   const [customAutoRegulate, setCustomAutoRegulate] = useState(false);
   const [autoRegulate, setAutoRegulate] = useState(false);
@@ -247,11 +249,7 @@ function Home() {
           <Button
             type="button"
             variant="link"
-            onClick={() => {
-              abandonActiveSession();
-              setActive(null);
-              toast.success("Workout abandoned. Its sets were removed.");
-            }}
+            onClick={() => setConfirmAbandon(true)}
             className="mt-2 w-full text-sm text-muted-foreground hover:text-destructive"
           >
             Abandon Workout
@@ -418,6 +416,18 @@ function Home() {
       </section>
     </main>
     <BottomNav />
+    {/* Abandoning deletes sets already saved to the account, so it is never one tap. */}
+    {confirmAbandon && (
+      <LeaveWorkoutDialog
+        onStay={() => setConfirmAbandon(false)}
+        onAbandon={() => {
+          abandonActiveSession();
+          setActive(null);
+          setConfirmAbandon(false);
+          toast.success("Workout abandoned. Its sets were removed.");
+        }}
+      />
+    )}
     {checkInMode && (
       <div className="fixed inset-0 z-[60] flex items-end justify-center bg-background/90 px-5 pb-8 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="checkin-title" onClick={() => setCheckInMode(null)}>
         <div className="w-full max-w-md rounded-lg border border-primary/40 bg-card p-6 animate-scale-in" onClick={(e) => e.stopPropagation()}>

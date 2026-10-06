@@ -104,9 +104,22 @@ export function canResume(cached: ActiveSession | null, isCustom: boolean, exerc
   return Boolean(cached) && cached!.is_custom_workout === isCustom && cached!.current_exercise_index < exerciseCount;
 }
 
-/** The weight and reps of the last set logged for an exercise, to pre-fill the inputs. */
-export function lastSetFor(sets: CachedSet[], exerciseIndex: number): CachedSet | undefined {
-  return [...sets].reverse().find((s) => s.exercise_index === exerciseIndex);
+/**
+ * The weight and reps of the last set logged for an exercise, to pre-fill the inputs.
+ * After a swap the slot holds a different exercise: only its own sets count.
+ */
+export function lastSetFor(sets: CachedSet[], exerciseIndex: number, exerciseId: string): CachedSet | undefined {
+  return [...sets].reverse().find((s) => s.exercise_index === exerciseIndex && s.exercise_id === exerciseId);
+}
+
+/**
+ * Every exercise that has sets in this workout, in plan order (and, within a slot,
+ * in the order they were done), so an exercise swapped out after a few sets
+ * still appears in the saved workout next to the one that replaced it.
+ */
+export function exercisesDone(sets: CachedSet[]): string[] {
+  const ordered = [...sets].sort((a, b) => a.exercise_index - b.exercise_index);
+  return [...new Set(ordered.map((s) => s.exercise_id))];
 }
 
 /** Unique per set on this device; makes retried uploads idempotent on the server. */
