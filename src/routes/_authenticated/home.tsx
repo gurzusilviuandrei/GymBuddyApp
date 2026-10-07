@@ -22,6 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { RecoveryModeCard } from "@/components/RecoveryModeCard";
 import { durableStorage } from "@/lib/durable-storage";
 import { useBackToClose } from "@/lib/back-stack";
+import { readTrainAnywayToday, rememberTrainAnywayToday } from "@/lib/train-anyway";
 import { clearAccountData } from "@/lib/device-owner";
 
 
@@ -109,7 +110,8 @@ function Home() {
     else if (active && active.is_custom_workout !== (mode === "custom")) setPendingStart({ mode, superSore });
     else proceedToWorkout(mode, superSore);
   };
-  const [trainAnyway, setTrainAnyway] = useState(false);
+  // "Train anyway" lasts for the rest of the day, not just until this screen closes.
+  const [trainAnyway, setTrainAnyway] = useState(() => readTrainAnywayToday());
   const [customAutoRegulate, setCustomAutoRegulate] = useState(false);
   const [autoRegulate, setAutoRegulate] = useState(false);
   const [bagChecked, setBagChecked] = useState<BagItemId[]>(() => readBagChecklist());
@@ -355,7 +357,7 @@ function Home() {
 
       {isRestDay ? (
       <section className="mt-14" aria-label="Rest and recovery">
-        <RecoveryModeCard onTrainAnyway={() => setTrainAnyway(true)} />
+        <RecoveryModeCard onTrainAnyway={() => { rememberTrainAnywayToday(); setTrainAnyway(true); }} />
       </section>
       ) : (
       <section className="mt-14 space-y-6" aria-label="Your programs">

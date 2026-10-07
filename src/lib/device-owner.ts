@@ -18,7 +18,7 @@ export const ACCOUNT_DATA_KEYS = [
 ] as const;
 
 // Per-account conveniences that live in plain WebView storage.
-const ACCOUNT_WEB_KEYS = ["gymbuddy-bag-checklist"];
+const ACCOUNT_WEB_KEYS = ["gymbuddy-bag-checklist", "gymbuddy-train-anyway"];
 
 /** Erase every account's data from this phone (e.g. after deleting the account). */
 export function clearAccountData() {
