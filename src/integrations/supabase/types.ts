@@ -341,6 +341,10 @@ export type Database = {
       }
       delete_workout_session: { Args: { p_session_id: string }; Returns: Json }
       get_alternative_options: { Args: { p_exercise_id: string; p_exclude?: string[] }; Returns: Json }
+      update_training_profile: {
+        Args: { p_full_name: string; p_age: number; p_frequency: string; p_primary_goal: string; p_equipment_type: string }
+        Returns: Json
+      }
       get_exercise_progress: { Args: { p_exercise_id: string; p_tz_offset: number }; Returns: Json }
       delete_account: { Args: { p_password: string }; Returns: Json }
     }
