@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { durableStorage } from "@/lib/durable-storage";
 import { checkAge } from "@/lib/onboarding-validation";
 import { EQUIPMENT_OPTIONS, FREQUENCY_OPTIONS, GOAL_OPTIONS } from "@/lib/training-profile";
+import { rememberWeightUnit } from "@/lib/use-weight-unit";
+import { defaultUnitForLocale, WEIGHT_UNITS, type WeightUnit } from "@/lib/weight-units";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   component: Onboarding,
@@ -47,6 +49,8 @@ function Onboarding() {
   const [frequency, setFrequency] = useState<string | null>(null);
   const [goal, setGoal] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  // Pounds for phones set to the United States (and the few other places that use them), else kilograms.
+  const [unit, setUnit] = useState<WeightUnit>(() => defaultUnitForLocale(typeof navigator === "undefined" ? undefined : navigator.language));
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -67,7 +71,7 @@ function Onboarding() {
 
   const goToStep2 = () => {
     if (!detailsValid) return;
-    saveProfile({ name: name.trim(), age: ageNumber });
+    saveProfile({ name: name.trim(), age: ageNumber, unit });
     setStep(2);
   };
 
@@ -95,9 +99,11 @@ function Onboarding() {
           frequency: frequency as "2-days",
           primary_goal: goal as "gain-muscle",
           equipment_type: selected as "full-gym",
+          weight_unit: unit,
         },
       });
       saveProfile({ userId: id });
+      rememberWeightUnit(unit);
       // Drop anything cached from before onboarding (e.g. "not onboarded yet",
       // or no plan), so Home loads the new profile instead of sending them back.
       await queryClient.invalidateQueries();
@@ -165,6 +171,26 @@ function Onboarding() {
                   {ageCheck.message}
                 </p>
               )}
+              <div role="radiogroup" aria-label="Weights in" className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Weights in</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {WEIGHT_UNITS.map((o) => (
+                    <button
+                      key={o.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={unit === o.id}
+                      onClick={() => setUnit(o.id)}
+                      className={cn(
+                        "min-h-12 rounded-lg border-2 px-3 text-sm font-semibold transition-colors",
+                        unit === o.id ? "border-primary bg-primary/10 text-primary" : "border-input text-foreground hover:border-primary/60",
+                      )}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="mt-auto pt-14">

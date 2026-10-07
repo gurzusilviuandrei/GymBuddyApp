@@ -130,6 +130,7 @@ export type Database = {
           subscription_status: string | null
           subscription_tier: string
           weekly_goal_days: number | null
+          weight_unit: string
         }
         Insert: {
           age?: number | null
@@ -148,6 +149,7 @@ export type Database = {
           subscription_status?: string | null
           subscription_tier?: string
           weekly_goal_days?: number | null
+          weight_unit?: string
         }
         Update: {
           age?: number | null
@@ -166,6 +168,7 @@ export type Database = {
           subscription_status?: string | null
           subscription_tier?: string
           weekly_goal_days?: number | null
+          weight_unit?: string
         }
         Relationships: []
       }
@@ -313,7 +316,7 @@ export type Database = {
       is_pro_user: { Args: never; Returns: boolean }
       ensure_user_row: { Args: never; Returns: Json }
       create_user_profile: {
-        Args: { p_full_name: string; p_age: number; p_frequency: string; p_primary_goal: string; p_equipment_type: string }
+        Args: { p_full_name: string; p_age: number; p_frequency: string; p_primary_goal: string; p_equipment_type: string; p_weight_unit?: string }
         Returns: string
       }
       save_custom_routine: { Args: { p_exercise_ids: string[] }; Returns: undefined }
@@ -342,7 +345,7 @@ export type Database = {
       delete_workout_session: { Args: { p_session_id: string }; Returns: Json }
       get_alternative_options: { Args: { p_exercise_id: string; p_exclude?: string[] }; Returns: Json }
       update_training_profile: {
-        Args: { p_full_name: string; p_age: number; p_frequency: string; p_primary_goal: string; p_equipment_type: string }
+        Args: { p_full_name: string; p_age: number; p_frequency: string; p_primary_goal: string; p_equipment_type: string; p_weight_unit?: string }
         Returns: Json
       }
       get_exercise_progress: { Args: { p_exercise_id: string; p_tz_offset: number }; Returns: Json }

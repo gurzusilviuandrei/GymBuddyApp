@@ -56,6 +56,8 @@ export async function exportMyData() {
   if (profile.error) throw new Error("Could not export your data");
   return {
     exported_at: new Date().toISOString(),
+    // Every weight in this file is in kilograms, whatever unit the member sees in the app.
+    units: { weight: "kg" },
     account: { email: user.email ?? null, profile: profile.data },
     workout_logs: logs,
     workout_sessions: sessions,

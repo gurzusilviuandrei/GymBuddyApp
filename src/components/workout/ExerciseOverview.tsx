@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { buildCues, progression, type Exercise, type LastLog } from "@/lib/workout-logic";
+import { formatWeight, weightStep, weightStepKg, type WeightUnit } from "@/lib/weight-units";
 
 type Targets = { targetSets: number; targetReps: number; baseSets: number; baseReps: number };
 
@@ -67,6 +68,7 @@ export function ProgressionCard({
   targetSets,
   targetReps,
   assisted = false,
+  unit,
   onUse,
 }: {
   lastLog: LastLog;
@@ -74,10 +76,14 @@ export function ProgressionCard({
   targetReps: number;
   /** The weight is the machine's help: stepping up means less of it. */
   assisted?: boolean;
+  /** The member's unit; weights arrive and leave in kilograms, only the text and the step follow the unit. */
+  unit: WeightUnit;
   onUse: (weight: number, reps: number) => void;
 }) {
-  const { base, setsLast, repsLast, hitAll, atLimit, stepUp, suggested } = progression(lastLog, targetSets, targetReps, assisted);
-  const unit = assisted ? "kg assistance" : "kg";
+  const { base, setsLast, repsLast, hitAll, atLimit, stepUp, suggested } = progression(lastLog, targetSets, targetReps, assisted, weightStepKg(unit));
+  // "30 kg", or "30 kg assistance" for the exercise where the number is the machine's help.
+  const show = (kg: number) => (assisted ? `${formatWeight(kg, unit)} assistance` : formatWeight(kg, unit));
+  const step = weightStep(unit);
   return (
     <div className="mt-6 rounded-2xl border border-primary/40 bg-card p-5" aria-live="polite">
       <p className="text-xs font-semibold uppercase tracking-widest text-primary">
@@ -85,22 +91,22 @@ export function ProgressionCard({
       </p>
       <p className="mt-2 text-sm text-muted-foreground">
         {hitAll
-          ? `Last time you crushed ${setsLast}×${repsLast} @ ${base} ${unit}.`
-          : `Last time: ${base} ${unit} × ${lastLog.reps_completed} ${lastLog.reps_completed === 1 ? "rep" : "reps"}.`}
+          ? `Last time you crushed ${setsLast}×${repsLast} @ ${show(base)}.`
+          : `Last time: ${show(base)} × ${lastLog.reps_completed} ${lastLog.reps_completed === 1 ? "rep" : "reps"}.`}
       </p>
       <p className="mt-1 text-base font-medium text-foreground">
         {hitAll ? (
           assisted ? (
-            <>Ready for less help: <span className="text-primary">{stepUp} kg assistance</span> today, Bro?</>
+            <>Ready for less help: <span className="text-primary">{show(stepUp)}</span> today, Bro?</>
           ) : (
-            <>Ready to step up to <span className="text-primary">{stepUp} kg</span> today, Bro?</>
+            <>Ready to step up to <span className="text-primary">{show(stepUp)}</span> today, Bro?</>
           )
         ) : atLimit ? (
           <>No assistance left, Bro! Aim for {targetReps} clean reps, or more.</>
         ) : assisted ? (
-          <>Lock in form at <span className="text-primary">{base} kg assistance</span> and aim for {targetReps} clean reps.</>
+          <>Lock in form at <span className="text-primary">{show(base)}</span> and aim for {targetReps} clean reps.</>
         ) : (
-          <>Lock in form at <span className="text-primary">{base} kg</span> and aim for {targetReps} clean reps.</>
+          <>Lock in form at <span className="text-primary">{show(base)}</span> and aim for {targetReps} clean reps.</>
         )}
       </p>
       <Button
@@ -108,11 +114,11 @@ export function ProgressionCard({
         variant="outline"
         onClick={() => {
           onUse(suggested, targetReps);
-          toast.success(hitAll ? `Loaded ${stepUp} ${unit}. Let's go, Bro!` : `Loaded ${base} ${unit}. Smooth reps today.`);
+          toast.success(hitAll ? `Loaded ${show(stepUp)}. Let's go, Bro!` : `Loaded ${show(base)}. Smooth reps today.`);
         }}
         className="mt-4 h-12 w-full rounded-lg border-primary/60 text-sm font-semibold text-primary hover:bg-primary/10 hover:text-primary"
       >
-        {hitAll ? (assisted ? "Accept Step-Up (−2.5 kg assistance)" : "Accept Step-Up (+2.5 kg)") : `Use ${base} ${unit} again`}
+        {hitAll ? (assisted ? `Accept Step-Up (−${step} ${unit} assistance)` : `Accept Step-Up (+${step} ${unit})`) : `Use ${show(base)} again`}
       </Button>
     </div>
   );

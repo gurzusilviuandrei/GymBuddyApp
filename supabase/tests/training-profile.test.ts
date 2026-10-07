@@ -47,7 +47,7 @@ describe("update_training_profile", () => {
   it("changes every field and trims the name", async () => {
     await t.rpc(`SELECT public.create_user_profile('Ana', 30, '3-days', 'gain-muscle', 'dumbbells')`);
     const r = await update("  Ana Maria  ", 31, "4-plus", "lose-weight", "dumbbells");
-    expect(r).toEqual({ equipment: "dumbbells", restarted: false });
+    expect(r).toEqual({ equipment: "dumbbells", restarted: false, weightUnit: "kg" });
     expect(await rowOf(C)).toMatchObject({ full_name: "Ana Maria", age: 31, weekly_goal_days: 4, primary_goal: "lose-weight", equipment_type: "dumbbells" });
   });
 
@@ -69,7 +69,7 @@ describe("update_training_profile", () => {
     await t.db.query(`UPDATE users SET subscription_tier = 'pro', is_custom = true, custom_exercise_ids = ARRAY['db-bench','goblet-squat'] WHERE id = $1`, [C]);
     await t.as(C);
     const r = await update("Ana Maria", 31, "3-days", "gain-muscle", "barbell");
-    expect(r).toEqual({ equipment: "barbell", restarted: true });
+    expect(r).toEqual({ equipment: "barbell", restarted: true, weightUnit: "kg" });
     expect(await rowOf(C)).toMatchObject({ equipment_type: "barbell", next_split_day: "A", is_custom: true, custom_exercise_ids: ["db-bench", "goblet-squat"], subscription_tier: "pro" });
   });
 

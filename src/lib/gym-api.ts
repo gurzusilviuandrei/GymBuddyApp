@@ -8,6 +8,7 @@ import { activityDays, heatmapLookbackMs } from "@/lib/activity";
 import { groupSessionSets, type SessionLogRow } from "@/lib/session-detail";
 import { isRefusalCode, ServerRefusedError } from "@/lib/server-refusal";
 import { profileFromRow, type TrainingProfile } from "@/lib/training-profile";
+import { isWeightUnit, type WeightUnit } from "@/lib/weight-units";
 
 type Input<T> = { data: T };
 type DbFunction = keyof Database["public"]["Functions"];
@@ -66,6 +67,8 @@ export async function createUserProfile({ data }: Input<{
   frequency: "2-days" | "3-days" | "4-plus";
   primary_goal: "lose-weight" | "gain-muscle" | "sports-performance";
   equipment_type: "full-gym" | "dumbbells" | "barbell";
+  /** Left out by older app builds; the database then keeps kilograms (or the existing choice). */
+  weight_unit?: WeightUnit | undefined;
 }>) {
   const id = await call<string>(
     "create_user_profile",
@@ -75,6 +78,7 @@ export async function createUserProfile({ data }: Input<{
       p_frequency: data.frequency,
       p_primary_goal: data.primary_goal,
       p_equipment_type: data.equipment_type,
+      p_weight_unit: data.weight_unit,
     },
     "Could not save profile",
   );
@@ -86,7 +90,7 @@ export async function getTrainingProfile(): Promise<TrainingProfile> {
   const userId = await currentUserId();
   const { data: row, error } = await supabase
     .from("users")
-    .select("full_name, age, weekly_goal_days, primary_goal, equipment_type")
+    .select("full_name, age, weekly_goal_days, primary_goal, equipment_type, weight_unit")
     .eq("id", userId)
     .maybeSingle();
   if (error) throw new Error("Could not load your training profile");
@@ -95,9 +99,17 @@ export async function getTrainingProfile(): Promise<TrainingProfile> {
   return profile;
 }
 
+/** The member's chosen weight unit. Fails rather than guess, so a hiccup never flips every weight on screen. */
+export async function getWeightUnit(): Promise<WeightUnit> {
+  const userId = await currentUserId();
+  const { data: row, error } = await supabase.from("users").select("weight_unit").eq("id", userId).maybeSingle();
+  if (error) throw new Error("Could not load your weight unit");
+  return isWeightUnit(row?.weight_unit) ? row.weight_unit : "kg";
+}
+
 /** Saves the edit form. `restarted` is true when changing equipment sent the plan back to Day A. */
 export function updateTrainingProfile({ data }: Input<TrainingProfile>) {
-  return call<{ equipment: string; restarted: boolean }>(
+  return call<{ equipment: string; restarted: boolean; weightUnit: WeightUnit }>(
     "update_training_profile",
     {
       p_full_name: data.name,
@@ -105,6 +117,7 @@ export function updateTrainingProfile({ data }: Input<TrainingProfile>) {
       p_frequency: data.frequency,
       p_primary_goal: data.goal,
       p_equipment_type: data.equipment,
+      p_weight_unit: data.weightUnit,
     },
     "Could not save your profile",
   );

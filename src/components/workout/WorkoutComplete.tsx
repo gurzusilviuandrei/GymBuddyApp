@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { createBroCardBlob, downloadBroCard, type BroCardStats } from "@/lib/bro-card";
 import { shareFile } from "@/lib/native-files";
 import { useBackToClose } from "@/lib/back-stack";
+import { useWeightUnit } from "@/lib/use-weight-unit";
+import { formatVolume } from "@/lib/weight-units";
 
 export type WorkoutSummary = {
   sets: number;
@@ -21,6 +23,7 @@ export function WorkoutComplete({ summary, exerciseCount }: { summary: WorkoutSu
   const [broCardUrl, setBroCardUrl] = useState<string | null>(null);
   const [broCardBlob, setBroCardBlob] = useState<Blob | null>(null);
   const [creatingCard, setCreatingCard] = useState(false);
+  const unit = useWeightUnit();
   useBackToClose(broCardUrl !== null, () => setBroCardUrl(null));
 
   useEffect(() => () => {
@@ -35,6 +38,7 @@ export function WorkoutComplete({ summary, exerciseCount }: { summary: WorkoutSu
         date: new Intl.DateTimeFormat(undefined, { day: "numeric", month: "long", year: "numeric" }).format(new Date(summary.finishedAt ?? Date.now())),
         durationMinutes: summary.durationMinutes,
         volumeKg: summary.volume,
+        unit,
         weeklyWorkouts: summary.weeklyWorkouts,
       };
       const blob = await createBroCardBlob(stats);
@@ -68,7 +72,7 @@ export function WorkoutComplete({ summary, exerciseCount }: { summary: WorkoutSu
       <p className="mt-3 text-lg text-primary">Bro Status Upgraded 🏆</p>
       <p className="mt-4 text-base text-muted-foreground">
         {summary
-          ? `${exerciseCount} exercises · ${summary.sets} sets crushed · ${summary.volume} kg lifted. Saved to your History.`
+          ? `${exerciseCount} exercises · ${summary.sets} sets crushed · ${formatVolume(summary.volume, unit)} lifted. Saved to your History.`
           : "Saving your workout…"}
       </p>
       {summary && (

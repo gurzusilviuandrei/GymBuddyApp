@@ -2,6 +2,8 @@ import { useState } from "react";
 import { AlertTriangle, Check, CloudOff, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { CachedSet } from "@/lib/active-session";
+import { useWeightUnit } from "@/lib/use-weight-unit";
+import { formatWeight, kgToUnit } from "@/lib/weight-units";
 
 type Props = {
   sets: CachedSet[];
@@ -12,6 +14,7 @@ type Props = {
 
 /** Sets logged for the current exercise, each editable and removable. */
 export function LoggedSets({ sets, onDelete, onSaveEdit }: Props) {
+  const unit = useWeightUnit();
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editWeight, setEditWeight] = useState("");
   const [editReps, setEditReps] = useState("");
@@ -20,7 +23,7 @@ export function LoggedSets({ sets, onDelete, onSaveEdit }: Props) {
 
   const startEdit = (x: CachedSet) => {
     setEditingKey(x.key);
-    setEditWeight(String(x.weight_kg));
+    setEditWeight(String(kgToUnit(x.weight_kg, unit)));
     setEditReps(String(x.reps));
   };
 
@@ -31,8 +34,8 @@ export function LoggedSets({ sets, onDelete, onSaveEdit }: Props) {
           {editingKey === x.key ? (
             <div className="flex items-center gap-2">
               <span className="w-12 shrink-0 text-sm font-semibold text-muted-foreground">Set {x.set_number}</span>
-              <input aria-label="Corrected weight in kg" inputMode="decimal" value={editWeight} onChange={(e) => setEditWeight(e.target.value)} className="h-11 w-full min-w-0 rounded-md border border-primary/50 bg-background px-3 text-sm text-foreground outline-none focus:border-primary" />
-              <span className="text-xs text-muted-foreground">kg</span>
+              <input aria-label={`Corrected weight in ${unit === "kg" ? "kilograms" : "pounds"}`} inputMode="decimal" value={editWeight} onChange={(e) => setEditWeight(e.target.value)} className="h-11 w-full min-w-0 rounded-md border border-primary/50 bg-background px-3 text-sm text-foreground outline-none focus:border-primary" />
+              <span className="text-xs text-muted-foreground">{unit}</span>
               <input aria-label="Corrected reps" inputMode="numeric" value={editReps} onChange={(e) => setEditReps(e.target.value)} className="h-11 w-full min-w-0 rounded-md border border-primary/50 bg-background px-3 text-sm text-foreground outline-none focus:border-primary" />
               <span className="text-xs text-muted-foreground">reps</span>
               <Button type="button" size="sm" onClick={() => onSaveEdit(x, editWeight, editReps) && setEditingKey(null)}>Save</Button>
@@ -41,7 +44,7 @@ export function LoggedSets({ sets, onDelete, onSaveEdit }: Props) {
             <div className="flex items-center gap-3">
               <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
               <span className="text-sm font-semibold text-foreground">Set {x.set_number}</span>
-              <span className="text-sm tabular-nums text-muted-foreground">{x.weight_kg} kg × {x.reps}</span>
+              <span className="text-sm tabular-nums text-muted-foreground">{formatWeight(x.weight_kg, unit)} × {x.reps}</span>
               {x.status === "refused" ? (
                 <span role="alert" className="inline-flex items-center gap-1 rounded-full border border-destructive/60 px-2 py-0.5 text-xs text-destructive-text">
                   <AlertTriangle className="size-3" aria-hidden="true" /> Couldn't save · fix or delete
