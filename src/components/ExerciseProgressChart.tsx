@@ -6,12 +6,20 @@ const shortDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString(un
 
 // Best estimated 1RM per training day across the trailing 8 weeks.
 export function ExerciseProgressChart({ exerciseId }: { exerciseId: string }) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["exercise-progress", exerciseId],
     queryFn: () => getExerciseProgress({ data: { exercise_id: exerciseId, tz_offset: new Date().getTimezoneOffset() } }),
   });
 
   if (isLoading) return <p className="py-6 text-center text-xs text-muted-foreground">Loading your progress…</p>;
+  // A failed load must not read as "you logged nothing". (A copy saved on the phone still draws the graph.)
+  if (isError && !data)
+    return (
+      <div role="alert" className="py-6 text-center text-xs text-muted-foreground">
+        <p>Couldn't load your progress. Check your signal and try again.</p>
+        <button type="button" onClick={() => void refetch()} className="mt-2 font-semibold text-primary underline-offset-2 hover:underline">Try again</button>
+      </div>
+    );
   if (!data || data.length === 0)
     return <p className="py-6 text-center text-xs text-muted-foreground">No sets logged in the last 8 weeks. Log one and your graph starts here.</p>;
 
