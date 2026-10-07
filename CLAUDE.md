@@ -132,9 +132,12 @@ Bottom tabs: Home, History, Profile. Android Back minimizes the app on `/`, `/au
 
 ## Branches
 
-- `main` is what ships; it only moves by fast-forward from a branch whose latest CI run is green.
-- `v1/polish` (long-lived): bug fixes and small improvements.
-- `v1/features` (long-lived): bigger features, so they stay separate from polish.
+- `main` is the **official version**, the one real members get. It only moves by fast-forward from a branch whose latest CI run is green and that the member has confirmed.
+- `beta` (long-lived) is the **beta version**: what beta testers get (Play internal/closed testing later). New features reach members here first, and are promoted to `main` only after the beta has been tried and the member says so. Everything on `main` must also be in `beta` (after `main` moves, merge `main` into `beta`), so `beta` is always `main` plus what is still being tested.
+- `v1/polish` (long-lived): bug fixes and small improvements. They go to `main` directly (members shouldn't wait for a beta cycle for a fix), then `beta` merges `main`.
+- `v1/features` (long-lived): bigger features, so they stay separate from polish. A finished feature is merged into `beta`, not into `main`.
+- Flow: fixes: `v1/polish` → `main` → merge into `beta`. Features: `v1/features` → `beta` → (tested, member agrees) → `main`.
+- Database changes for a beta feature go live in the same Supabase project (there is only one), so make them backwards compatible: a new function or column, never a change that breaks the official app.
 - Don't push a branch until the member says so: every push starts a CI run.
 
 ## Session log: 2026-10-07 (read this first when resuming)
