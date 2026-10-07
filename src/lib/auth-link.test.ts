@@ -22,6 +22,16 @@ describe("email link parsing", () => {
     expect(parseAuthLink(`${base}/?code=abc123`)).toEqual({ kind: "code", code: "abc123", recovery: false });
   });
 
+  it("reads the code links the sign-in client sends for each email type (PKCE)", () => {
+    expect(parseAuthLink(`${base}/reset-password?code=r1`)).toEqual({ kind: "code", code: "r1", recovery: true });
+    expect(parseAuthLink(`${base}/auth?code=s1`)).toEqual({ kind: "code", code: "s1", recovery: false });
+    expect(parseAuthLink(`${base}/?code=e1`)).toEqual({ kind: "code", code: "e1", recovery: false });
+  });
+
+  it("reports a failed code link (expired or already used) as invalid", () => {
+    expect(parseAuthLink(`${base}/reset-password?error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired`)).toEqual({ kind: "invalid" });
+  });
+
   it("reports a failure the server put in the link", () => {
     expect(parseAuthLink(`${base}/#error=access_denied&error_description=Email+link+is+invalid+or+has+expired`)).toEqual({ kind: "invalid" });
     expect(parseAuthLink(`${base}/?error_description=expired`)).toEqual({ kind: "invalid" });

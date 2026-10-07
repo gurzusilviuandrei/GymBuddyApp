@@ -39,5 +39,9 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
     // Phones receive auth links through the app's URL scheme (see NativeBridge).
     detectSessionInUrl: !isNativeApp,
+    // Email links carry a one-time code instead of the login tokens themselves. The code is
+    // useless without a secret this app keeps in its own storage, so another app that also
+    // claims our link scheme can't turn an intercepted link into a session (audit M2).
+    flowType: "pkce",
   },
 });
