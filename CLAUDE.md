@@ -28,7 +28,7 @@ server-side flag. Payments are not built yet: the paywall says "Pro is coming so
 - **Backend:** Supabase (Postgres, Auth, Realtime), the member's own project `uoljwupvesnnsjipnzyn`. There is no app server.
 - **Crash reporting:** Sentry (`@sentry/capacitor` 4.4.0 and `@sentry/react` 10.69.0 are pinned exactly, because the first requires the second at that exact version).
 - **Tests:** Vitest. Database tests run every migration in an in-process Postgres (PGlite) as the real `anon`/`authenticated` roles.
-- **CI:** GitHub Actions (`.github/workflows/ci.yml`), Node 24 and ubuntu-24.04: types, lint, tests, build, plus an Android debug APK.
+- **CI:** GitHub Actions (`.github/workflows/ci.yml`), Node 24 and ubuntu-24.04: types, lint, tests, build, plus an Android debug APK and a shrunk release build (audit M4: debug-signed on CI since there is no upload key, APK not kept; the R8 `mapping.txt` is kept as an artifact for reading crash traces).
 
 ## Architecture
 

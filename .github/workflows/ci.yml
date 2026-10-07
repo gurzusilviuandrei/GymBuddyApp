@@ -66,3 +66,15 @@ jobs:
           name: gymbuddy-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
+      # The release build is what members get: R8 shrinks the code and resources, which can
+      # break things the debug build never shows. There is no upload key on CI, so it is
+      # signed with the debug key; the APK is not kept, so it can't be mistaken for a store build.
+      - name: Assemble release (shrunk) build
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon
+      # Needed later to read crash traces from a release build (see CLAUDE.md, bug 23).
+      - uses: actions/upload-artifact@v7
+        with:
+          name: gymbuddy-r8-mapping
+          path: android/app/build/outputs/mapping/release/mapping.txt
+          retention-days: 14
