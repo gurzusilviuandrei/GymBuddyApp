@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { SessionCard } from "@/components/SessionCard";
+import { Button } from "@/components/ui/button";
+import { canShowOlder, HISTORY_PAGE, nextHistoryLimit } from "@/lib/history-paging";
 import { BottomNav } from "@/components/BottomNav";
 import { useState } from "react";
 import { deleteWorkoutSession, getActivityDays, getWorkoutHistory } from "@/lib/gym-api";
@@ -22,9 +24,13 @@ function HistoryPage() {
     queryKey: ["workout-history", "activity"],
     queryFn: () => getActivityDays(),
   });
-  const { data: sessions, isLoading, isError, refetch } = useQuery({
-    queryKey: ["workout-history"],
-    queryFn: () => getWorkoutHistory({ data: {} }),
+  // The newest 100 first; "Show older workouts" asks for 100 more.
+  const [limit, setLimit] = useState(HISTORY_PAGE);
+  const { data: sessions, isLoading, isError, isFetching, refetch } = useQuery({
+    queryKey: ["workout-history", "list", limit],
+    queryFn: () => getWorkoutHistory({ data: { limit } }),
+    // Keep the workouts already on screen while the longer list loads.
+    placeholderData: keepPreviousData,
   });
 
   const deleteMutation = useMutation({
@@ -83,6 +89,12 @@ function HistoryPage() {
               deleting={deleteMutation.isPending && deleteMutation.variables === session.id}
             />
           ))}
+
+          {sessions && canShowOlder(sessions.length, limit) && (
+            <Button type="button" variant="outline" disabled={isFetching} onClick={() => setLimit(nextHistoryLimit(limit))} className="h-12 w-full rounded-lg">
+              {isFetching ? "Loading…" : "Show older workouts"}
+            </Button>
+          )}
         </section>
       </main>
       <SessionDetailSheet session={openSession} onClose={() => setOpenSession(null)} />
