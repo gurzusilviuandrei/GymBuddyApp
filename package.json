@@ -14,6 +14,7 @@
     "app:sync": "vite build && cap sync",
     "app:android": "cap open android",
     "test": "vitest run",
+    "migrations:record": "node scripts/record-migrations.mjs",
     "test:watch": "vitest",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build"
   },

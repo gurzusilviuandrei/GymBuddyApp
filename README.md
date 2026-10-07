@@ -20,11 +20,27 @@ A session companion for people who have a gym membership and still freeze in the
    npx supabase link --project-ref YOUR-PROJECT-REF
    npx supabase db push
    ```
+   **If you paste the migrations into the Supabase SQL Editor instead** (the live project was built this way), run each file in `supabase/migrations/` in order, then run `supabase/record-applied-migrations.sql` once. It records them all as applied, so a later `supabase db push` does not try to run them again. After pasting any new migration, run `npm run migrations:record` and paste the regenerated file (it is safe to run repeatedly). A test fails if the file is out of date.
 3. In the Supabase dashboard → **Authentication → URL Configuration**, add this Redirect URL:
    `app.gymbuddyapp.gymbuddy://auth-callback/**`, and set the Site URL to `https://gymbuddyapp.app`.
    Then set up email: under **Authentication → Emails → SMTP Settings**, use MailerSend (`smtp.mailersend.net`, port 587, sender `no-reply@gymbuddyapp.app`). Paste the templates from `supabase/templates/` into **Email Templates**, and raise **Rate Limits → emails per hour**.
 4. Copy `.env.example` to `.env` and fill in your project URL and publishable key (Project Settings → API).
 5. `npm install`
+
+## Settings that live only in the Supabase dashboard
+
+Migrations cover the database. These are set in the dashboard and are not in any file, so they are written down here (check them if a project is ever rebuilt):
+
+| Where | Setting |
+|---|---|
+| Authentication → URL Configuration | Site URL `https://gymbuddyapp.app`; Redirect URL `app.gymbuddyapp.gymbuddy://auth-callback/**` |
+| Authentication → Sign In / Providers → Email | Email + password on, **Confirm email on** |
+| Authentication → Emails → SMTP Settings | Custom SMTP: MailerSend (`smtp.mailersend.net`, port 587), sender `no-reply@gymbuddyapp.app`. The SMTP username and password exist only here and at MailerSend; never put them in the repo |
+| Authentication → Emails → Templates | The three templates in `supabase/templates/` (confirm sign-up, reset password, change email), pasted by hand |
+| Authentication → Rate Limits | Emails per hour raised from the default (the auth server still allows about one email per account per minute) |
+| Authentication → Password | Minimum length is the dashboard value; the app asks for 8 or more |
+| MailerSend (domain `gymbuddyapp.app`) | Domain verified (SPF, DKIM, return-path); **click and open tracking off** for auth emails, because tracked links add a redirect to every email |
+| Database → Publications | `supabase_realtime` includes `public.users` (done by a migration; listed here because Pro status updates depend on it) |
 
 ## Everyday commands
 
@@ -33,6 +49,7 @@ A session companion for people who have a gym membership and still freeze in the
 | `npm run dev` | Run the app in your browser at http://localhost:5173 |
 | `npm run typecheck` | Check the code for type errors |
 | `npm test` | Run the database, security and exercise-library tests (no internet or Supabase needed) |
+| `npm run migrations:record` | Rewrite `supabase/record-applied-migrations.sql` after adding a migration |
 | `npm run check` | Everything GitHub checks on every push: types, lint, tests and a full build |
 | `npm run app:sync` | Build the app and copy it into the Android project |
 | `npm run app:android` | Open the Android project in Android Studio (run it on a phone or emulator from there) |
