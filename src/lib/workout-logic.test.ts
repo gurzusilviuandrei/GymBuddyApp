@@ -59,6 +59,13 @@ describe("buildCues", () => {
   it("is empty while the exercise loads", () => {
     expect(buildCues(undefined)).toEqual([]);
   });
+  it("calls the first cue 'Machine Setup' only for machines", () => {
+    expect(buildCues(ex({ equipment_type: "Machine" }))[0]?.[0]).toBe("Machine Setup");
+    expect(buildCues(ex({ equipment_type: "Barbell" }))[0]?.[0]).toBe("Setup");
+    expect(buildCues(ex({ equipment_type: "Dumbbell" }))[0]?.[0]).toBe("Setup");
+    // Cached workouts from before the equipment type was loaded: no wrong claim about machines.
+    expect(buildCues(ex())[0]?.[0]).toBe("Setup");
+  });
 });
 
 describe("sessionTargets", () => {

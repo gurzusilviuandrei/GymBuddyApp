@@ -18,11 +18,14 @@ export type Exercise = {
 export const REST_OPTIONS = [45, 60, 90, 120] as const;
 export const STEP_UP_KG = 2.5;
 
-/** The three setup/form cues shown for an exercise, with safe fallbacks. */
+/**
+ * The three setup/form cues shown for an exercise, with safe fallbacks. The first one
+ * is "Machine Setup" only for a machine; barbells and dumbbells just have a "Setup".
+ */
 export function buildCues(exercise: Exercise | undefined): ReadonlyArray<readonly [string, string]> {
   if (!exercise) return [];
   return [
-    ["Machine Setup", exercise.setup_cue || "Choose a manageable load and check your equipment."],
+    [exercise.equipment_type === "Machine" ? "Machine Setup" : "Setup", exercise.setup_cue || "Choose a manageable load and check your equipment."],
     ["Starting Position", exercise.position_cue || "Get stable and brace your core before you move."],
     ["Key Movement Cue", exercise.movement_cue || exercise.instructions || "Move slowly and with control."],
   ] as const;
