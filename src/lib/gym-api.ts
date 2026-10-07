@@ -7,6 +7,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { activityDays, heatmapLookbackMs } from "@/lib/activity";
 import { groupSessionSets, type SessionLogRow } from "@/lib/session-detail";
 import { isRefusalCode, ServerRefusedError } from "@/lib/server-refusal";
+import { profileFromRow, type TrainingProfile } from "@/lib/training-profile";
 
 type Input<T> = { data: T };
 type DbFunction = keyof Database["public"]["Functions"];
@@ -78,6 +79,35 @@ export async function createUserProfile({ data }: Input<{
     "Could not save profile",
   );
   return { id };
+}
+
+/** The signed-in member's training answers, for the edit form. Fails rather than return "nothing" on an error. */
+export async function getTrainingProfile(): Promise<TrainingProfile> {
+  const userId = await currentUserId();
+  const { data: row, error } = await supabase
+    .from("users")
+    .select("full_name, age, weekly_goal_days, primary_goal, equipment_type")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) throw new Error("Could not load your training profile");
+  const profile = row ? profileFromRow(row) : null;
+  if (!profile) throw new Error("Finish setting up your profile first");
+  return profile;
+}
+
+/** Saves the edit form. `restarted` is true when changing equipment sent the plan back to Day A. */
+export function updateTrainingProfile({ data }: Input<TrainingProfile>) {
+  return call<{ equipment: string; restarted: boolean }>(
+    "update_training_profile",
+    {
+      p_full_name: data.name,
+      p_age: data.age,
+      p_frequency: data.frequency,
+      p_primary_goal: data.goal,
+      p_equipment_type: data.equipment,
+    },
+    "Could not save your profile",
+  );
 }
 
 // ── Workout plan ───────────────────────────────────────────────────────────

@@ -27,6 +27,7 @@ import { deleteAccount, exportMyData, getAccountSettings, updateAccountEmail } f
 import { usePro } from "@/components/pro/ProProvider";
 import { clearAccountData } from "@/lib/device-owner";
 import { useBackToClose } from "@/lib/back-stack";
+import { TrainingProfileCard } from "@/components/profile/TrainingProfileCard";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   component: ProfilePage,
@@ -273,6 +274,8 @@ function ProfilePage() {
           </div>
         </div>
       </section>
+
+      <TrainingProfileCard />
 
       <section className="mt-10">
         <div className="flex items-center gap-3">

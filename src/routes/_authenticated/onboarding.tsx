@@ -8,30 +8,13 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { durableStorage } from "@/lib/durable-storage";
 import { checkAge } from "@/lib/onboarding-validation";
+import { EQUIPMENT_OPTIONS, FREQUENCY_OPTIONS, GOAL_OPTIONS } from "@/lib/training-profile";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   component: Onboarding,
 });
 
 const TOTAL_STEPS = 4;
-
-const EQUIPMENT_OPTIONS = [
-  { id: "full-gym", label: "Full Gym Machines" },
-  { id: "dumbbells", label: "Dumbbells Only" },
-  { id: "barbell", label: "Barbell Only" },
-] as const;
-
-const FREQUENCY_OPTIONS = [
-  { id: "2-days", label: "2 Days / Week" },
-  { id: "3-days", label: "3 Days / Week" },
-  { id: "4-plus", label: "4+ Days / Week" },
-] as const;
-
-const GOAL_OPTIONS = [
-  { id: "lose-weight", label: "Lose Weight", subtext: "Burn fat and improve stamina" },
-  { id: "gain-muscle", label: "Gain Muscle", subtext: "Build strength and solid mass" },
-  { id: "sports-performance", label: "Sports Performance", subtext: "Improve speed and athletic agility" },
-] as const;
 
 function CheckIcon() {
   return (

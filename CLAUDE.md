@@ -75,7 +75,7 @@ Phone (Capacitor WebView, bundled dist/)  ──HTTPS──▶  Supabase
 | `user_machine_settings` | Seat and pad notches and notes, per member and exercise. |
 
 The write functions are all in `supabase/migrations/20261005120000_standalone_api.sql` (plus later migrations):
-- `ensure_user_row`, `create_user_profile`, `save_custom_routine`
+- `ensure_user_row`, `create_user_profile`, `update_training_profile` (edit profile after onboarding), `save_custom_routine`
 - `log_workout_set`, `update_workout_set`, `delete_workout_set`
 - `save_machine_setting`, `complete_workout`, `delete_workout_session`
 - `get_alternative_options`, `get_exercise_progress`, `delete_account`
@@ -83,6 +83,7 @@ The write functions are all in `supabase/migrations/20261005120000_standalone_ap
 
 Two of them have extra rules:
 - `delete_workout_set` only deletes sets that don't belong to a finished workout yet (`session_id IS NULL`).
+- `update_training_profile` changes name, age, days, goal and equipment; changing the equipment restarts the pre-made rotation at Day A (the custom routine and Pro are untouched).
 - `complete_workout` is idempotent and rotates the A → B → C split only when the day it finishes is the day due. With `p_end_at_last_set := true` (only for a forgotten workout, sent only then) it ends at the latest stored set instead of now, never at a time sent by the phone.
 
 ## Authentication
@@ -109,7 +110,7 @@ Two of them have extra rules:
 | `/workout?mode=premade\|custom&sore=fresh\|little\|super` | The tracker (no bottom tabs; leaving mid-workout asks first) |
 | `/custom-routine` | Pro routine editor |
 | `/history` | Past workouts, heatmap, per-session detail |
-| `/profile` | Account, email, password reset, data export, delete account |
+| `/profile` | Account, email, password reset, training profile (edit name, age, days, goal, equipment), data export, delete account |
 
 Bottom tabs: Home, History, Profile. Android Back minimizes the app on `/`, `/auth`, `/home` and `/onboarding`. On a screen with no history it goes to `/`; otherwise it goes back.
 
@@ -193,7 +194,7 @@ Bottom tabs: Home, History, Profile. Android Back minimizes the app on `/`, `/au
 8. ~~Onboarding accepts a decimal age~~ **Fixed (audit M6):** `checkAge` in `src/lib/onboarding-validation.ts` accepts whole numbers 10 to 100 only, and the age box shows why it refuses (verified on the emulator).
 9. ~~Login dead ends~~ **Fixed (audit H3):** login refused for "Email not confirmed" now shows a "Resend confirmation email" button (one-minute cooldown shared with the sign-up screen; the server's own wait time is shown if it refuses); offline errors read "No connection. Check your signal and try again." and don't count as wrong passwords; signing up an existing email says so and switches to login (detects both the explicit error and the empty-identities look-alike user). Logic and tests in `src/lib/auth-errors.ts`; screens checked in the browser against faked server replies. Not yet verified against the real Supabase, because that needs an unconfirmed test account.
 10. ~~Misleading Profile text~~ **Fixed:** price removed (audit M3); the export button now says "(JSON)" (audit H2).
-11. **Onboarding has no Back button** between its 4 steps, and Android Back minimizes the app there, so a wrong answer can't be corrected without finishing and re-doing it (see the edit-profile feature).
+11. **Onboarding has no Back button** between its 4 steps, and Android Back minimizes the app there, so a wrong answer can't be corrected without finishing it. (Everything can now be edited afterwards on Profile, so this is less urgent; a Back button between steps is still a small polish item.)
 12. ~~Profile is too wide with large fonts on small phones~~ **Fixed (audit M1):** the Update Email / Reset Password rows wrap (the button drops below the text), the export button wraps its label, the delete-account dialog lost a stray `mx-5` that pushed it off-centre, and the Home ring's text was shrunk so it stays inside the ring. Verified on the emulator at 360dp with 1.6× and 2.0× font (Profile top to bottom, the delete dialog, Home ring); also checked at 320dp with 1.3× font (Profile and Home: page width equals screen width, no sideways overflow). History, routine editor and workout screens were fine at every size tested. To test again: `adb shell wm density 600` (≈360dp) and `adb shell settings put system font_scale 2.0`; reset with `wm density reset` and font_scale 1.0.
 13. ~~A workout left open for hours still resumes~~ **Fixed (audit H1):** a saved workout whose last set is more than 12 hours old (`isStaleWorkout`, `STALE_WORKOUT_MS`) is never resumed. Home opens "You have an unfinished workout from [date]" with **Finish it** / **Discard it** / Decide later, shows an "Unfinished workout" card, and asks again if you tap Start; `/workout` redirects Home for a stale session. Finish it → `/workout?finish=stale` → `finishWorkout(true)` → `complete_workout(..., p_end_at_last_set := true)`, so the workout is dated at its last set (the server derives the end time from the stored sets, not from the phone), and Active time / the Bro Card date use that last set. Discard it = `abandonActiveSession` (queues deletion of its saved sets). A stale session with no sets is cleared silently. `ActiveSession.last_set_at` records the last set. **Needs `supabase/migrations/20261006150000_finish_at_last_set.sql` applied** (pasted in the SQL Editor) before "Finish it" can save; normal finishes work without it. The migration is applied on the live database. Tested: database tests, 12-hour cutoff, discard, Back, plus on the emulator against the real database (dialog, Back, Start guard, direct URL, discard, the safe failure path, and Finish it: saved with the right totals, `completed_at` equal to the last set, Bro Card dated that day with Active time 42 min instead of ~1,800).
 14. ~~Set numbers drift after deleting a middle set~~ **Fixed (audit M10):** `removeSet` still renumbers on the phone only, so the server can keep repeated or skipped `set_number`s, but History's detail view now numbers each exercise's sets by position (`groupSessionSets` in `src/lib/session-detail.ts`, unit-tested with the 1, 3, 3 case). The stored numbers are not used for display anywhere else (the export file keeps the raw rows). Reproduced end to end on the emulator against the real account: 5, 6, 7 reps with the middle set deleted gave stored numbers 1, 3, 3 (seen in the export file), and History now shows 1, 2, 3; test workout deleted afterwards (counts back to 12 sets / 1 workout / 2 machine settings).
@@ -221,8 +222,8 @@ Bottom tabs: Home, History, Profile. Android Back minimizes the app on `/`, `/au
 
 ### Features (go on `v1/features`)
 
-- **Edit training profile** after onboarding (name, equipment, days per week, goal). Today a member who starts on "Dumbbells only" is stuck on that plan. The `users` columns already exist; it needs a database function and a Profile section. Top priority.
-- Pounds (lbs) as well as kg, only if the audience needs it.
+- ~~**Edit training profile** after onboarding~~ **Built (on `v1/features`; needs `20261007150000_update_training_profile.sql` applied):** the Profile screen has a "Training profile" card (`src/components/profile/TrainingProfileCard.tsx`) with name, age, days per week, goal and equipment, validated by `src/lib/training-profile.ts` (also the source of the option lists onboarding uses). Changing the equipment shows a note and restarts the plan at Day A; it is refused while a workout is in progress (the member must finish or abandon it first). Verified on the emulator against the real account for everything that doesn't write: the summary, opening the form, validation messages, the equipment note, Back closing the form, and the workout-in-progress guard (test set abandoned, counts unchanged). **Not yet exercised: an actual Save against the live database** (the function wasn't applied yet); do a harmless one (age 23 → 24 → 23) once the member has pasted the migration. 9 unit tests and 9 database tests.
+- **Pounds (lbs) as well as kg: wanted (member confirmed 2026-10-07).** Next feature after edit profile. Plan: store everything in kg in the database as now; a per-member display unit (kg or lbs) kept on the phone and in the profile; convert only at the edges (typing a weight, showing a weight, plate math, step sizes, exports keep kg). Needs rounding rules and a decision on step sizes in lbs (2.5 kg ≈ 5 lb).
 
 ### Verified working on the emulator (2026-10-06)
 
