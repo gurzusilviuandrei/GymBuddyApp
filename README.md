@@ -22,7 +22,7 @@ A session companion for people who have a gym membership and still freeze in the
    ```
    **If you paste the migrations into the Supabase SQL Editor instead** (the live project was built this way), run each file in `supabase/migrations/` in order, then run `supabase/record-applied-migrations.sql` once. It records them all as applied, so a later `supabase db push` does not try to run them again. After pasting any new migration, run `npm run migrations:record` and paste the regenerated file (it is safe to run repeatedly). A test fails if the file is out of date.
 3. In the Supabase dashboard → **Authentication → URL Configuration**, add this Redirect URL:
-   `app.gymbuddyapp.gymbuddy://auth-callback/**`, and set the Site URL to `https://gymbuddyapp.app`.
+   `app.gymbuddyapp.gymbuddy://auth-callback/**`, and set the Site URL to `https://www.gymbuddyapp.app` (the bare `gymbuddyapp.app` has no DNS record and does not load).
    Then set up email: under **Authentication → Emails → SMTP Settings**, use MailerSend (`smtp.mailersend.net`, port 587, sender `no-reply@gymbuddyapp.app`). Paste the templates from `supabase/templates/` into **Email Templates**, and raise **Rate Limits → emails per hour**.
 4. Copy `.env.example` to `.env` and fill in your project URL and publishable key (Project Settings → API).
 5. `npm install`
@@ -33,7 +33,7 @@ Migrations cover the database. These are set in the dashboard and are not in any
 
 | Where | Setting |
 |---|---|
-| Authentication → URL Configuration | Site URL `https://gymbuddyapp.app`; Redirect URL `app.gymbuddyapp.gymbuddy://auth-callback/**` |
+| Authentication → URL Configuration | Site URL `https://www.gymbuddyapp.app`; Redirect URL `app.gymbuddyapp.gymbuddy://auth-callback/**` |
 | Authentication → Sign In / Providers → Email | Email + password on, **Confirm email on** |
 | Authentication → Emails → SMTP Settings | Custom SMTP: MailerSend (`smtp.mailersend.net`, port 587), sender `no-reply@gymbuddyapp.app`. The SMTP username and password exist only here and at MailerSend; never put them in the repo |
 | Authentication → Emails → Templates | The three templates in `supabase/templates/` (confirm sign-up, reset password, change email), pasted by hand |
