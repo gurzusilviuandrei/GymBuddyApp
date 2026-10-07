@@ -71,6 +71,28 @@ describe("signed-in members", () => {
     expect(u?.subscription_tier).toBe("basic");
   });
 
+  it("hold no UPDATE permission on profiles at all, so a later policy slip could not open it", async () => {
+    await t.as(A);
+    for (const statement of [
+      `UPDATE users SET subscription_tier = 'pro'`,
+      `UPDATE users SET full_name = 'x'`,
+      `UPDATE users SET next_split_day = 'C'`,
+      `UPDATE users SET custom_exercise_ids = ARRAY['goblet-squat']`,
+    ]) {
+      expect(await errorOf(t.db.query(statement)), statement).toMatch(/permission denied for table users/);
+    }
+    await t.asAdmin();
+    const [grants] = await t.rows<{ n: string }>(
+      `SELECT count(*) AS n FROM information_schema.role_table_grants WHERE table_schema = 'public' AND table_name = 'users' AND grantee = 'authenticated' AND privilege_type = 'UPDATE'`,
+    );
+    expect(Number(grants?.n)).toBe(0);
+  });
+
+  it("can still read their own profile after the revoke", async () => {
+    await t.as(A);
+    expect(await t.rows(`SELECT id FROM users`)).toHaveLength(1);
+  });
+
   it("cannot write workout data directly, only through the app functions", async () => {
     await t.as(A);
     await errorOf(t.db.query(`INSERT INTO workout_logs (user_id, exercise_id, weight_kg, reps_completed, set_number) VALUES ($1, 'goblet-squat', 999, 10, 1)`, [A]));
