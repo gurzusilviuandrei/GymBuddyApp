@@ -9,6 +9,7 @@ import {
   STALE_WORKOUT_MS,
   formatClock,
   exercisesDone,
+  isAssistedExercise,
   lastSetFor,
   newSetKey,
   parseCorrection,
@@ -90,6 +91,42 @@ describe("progression", () => {
   });
   it("avoids floating-point noise", () => {
     expect(progression({ weight_kg: 0.1, reps_completed: 10, sets_completed: 3, min_reps: 10 }, 3, 10).stepUp).toBe(2.6);
+  });
+
+  describe("assisted exercises (the weight is the machine's help)", () => {
+    const hit = { weight_kg: 30, reps_completed: 10, sets_completed: 3, min_reps: 10, top_weight_kg: 30, low_weight_kg: 30 };
+    it("steps DOWN by 2.5 kg after hitting every set and rep", () => {
+      expect(progression(hit, 3, 10, true)).toMatchObject({ hitAll: true, assisted: true, stepUp: 27.5, suggested: 27.5 });
+    });
+    it("measures from the least assistance of the session, not the most", () => {
+      const p = progression({ ...hit, top_weight_kg: 40, low_weight_kg: 30 }, 3, 10, true);
+      expect(p.base).toBe(30);
+      expect(p.suggested).toBe(27.5);
+    });
+    it("repeats the same assistance when a set or rep was missed", () => {
+      expect(progression({ ...hit, min_reps: 8 }, 3, 10, true)).toMatchObject({ hitAll: false, suggested: 30 });
+    });
+    it("never suggests less than 0 kg, and has no step once unassisted", () => {
+      expect(progression({ ...hit, weight_kg: 2, top_weight_kg: 2, low_weight_kg: 2 }, 3, 10, true).stepUp).toBe(0);
+      const free = progression({ ...hit, weight_kg: 0, top_weight_kg: 0, low_weight_kg: 0 }, 3, 10, true);
+      expect(free).toMatchObject({ atLimit: true, hitAll: false, targetsHit: true, suggested: 0 });
+    });
+    it("falls back to the last weight when no lightest weight is known", () => {
+      expect(progression({ weight_kg: 20, reps_completed: 10, sets_completed: 3, min_reps: 10 }, 3, 10, true).base).toBe(20);
+    });
+    it("leaves normal exercises untouched", () => {
+      expect(progression(hit, 3, 10)).toMatchObject({ assisted: false, atLimit: false, stepUp: 32.5, suggested: 32.5 });
+    });
+  });
+});
+
+describe("assisted exercise detection", () => {
+  it("recognises the Assisted Pull-Up by id or by name, and nothing else", () => {
+    expect(isAssistedExercise({ id: "assisted-pullup", name: "Assisted Pull-Up" })).toBe(true);
+    expect(isAssistedExercise({ id: "x", name: "Assisted Dip" })).toBe(true);
+    expect(isAssistedExercise({ id: "lat-pulldown", name: "Lat Pulldown" })).toBe(false);
+    expect(isAssistedExercise({ id: "y", name: "Unassisted Pull-Up" })).toBe(false);
+    expect(isAssistedExercise(undefined)).toBe(false);
   });
 });
 

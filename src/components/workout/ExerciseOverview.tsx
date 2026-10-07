@@ -66,14 +66,18 @@ export function ProgressionCard({
   lastLog,
   targetSets,
   targetReps,
+  assisted = false,
   onUse,
 }: {
   lastLog: LastLog;
   targetSets: number;
   targetReps: number;
+  /** The weight is the machine's help: stepping up means less of it. */
+  assisted?: boolean;
   onUse: (weight: number, reps: number) => void;
 }) {
-  const { base, setsLast, repsLast, hitAll, stepUp, suggested } = progression(lastLog, targetSets, targetReps);
+  const { base, setsLast, repsLast, hitAll, atLimit, stepUp, suggested } = progression(lastLog, targetSets, targetReps, assisted);
+  const unit = assisted ? "kg assistance" : "kg";
   return (
     <div className="mt-6 rounded-2xl border border-primary/40 bg-card p-5" aria-live="polite">
       <p className="text-xs font-semibold uppercase tracking-widest text-primary">
@@ -81,12 +85,20 @@ export function ProgressionCard({
       </p>
       <p className="mt-2 text-sm text-muted-foreground">
         {hitAll
-          ? `Last time you crushed ${setsLast}×${repsLast} @ ${base} kg.`
-          : `Last time: ${base} kg × ${lastLog.reps_completed} ${lastLog.reps_completed === 1 ? "rep" : "reps"}.`}
+          ? `Last time you crushed ${setsLast}×${repsLast} @ ${base} ${unit}.`
+          : `Last time: ${base} ${unit} × ${lastLog.reps_completed} ${lastLog.reps_completed === 1 ? "rep" : "reps"}.`}
       </p>
       <p className="mt-1 text-base font-medium text-foreground">
         {hitAll ? (
-          <>Ready to step up to <span className="text-primary">{stepUp} kg</span> today, Bro?</>
+          assisted ? (
+            <>Ready for less help: <span className="text-primary">{stepUp} kg assistance</span> today, Bro?</>
+          ) : (
+            <>Ready to step up to <span className="text-primary">{stepUp} kg</span> today, Bro?</>
+          )
+        ) : atLimit ? (
+          <>No assistance left, Bro! Aim for {targetReps} clean reps, or more.</>
+        ) : assisted ? (
+          <>Lock in form at <span className="text-primary">{base} kg assistance</span> and aim for {targetReps} clean reps.</>
         ) : (
           <>Lock in form at <span className="text-primary">{base} kg</span> and aim for {targetReps} clean reps.</>
         )}
@@ -96,11 +108,11 @@ export function ProgressionCard({
         variant="outline"
         onClick={() => {
           onUse(suggested, targetReps);
-          toast.success(hitAll ? `Loaded ${stepUp} kg. Let's go, Bro!` : `Loaded ${base} kg. Smooth reps today.`);
+          toast.success(hitAll ? `Loaded ${stepUp} ${unit}. Let's go, Bro!` : `Loaded ${base} ${unit}. Smooth reps today.`);
         }}
         className="mt-4 h-12 w-full rounded-lg border-primary/60 text-sm font-semibold text-primary hover:bg-primary/10 hover:text-primary"
       >
-        {hitAll ? "Accept Step-Up (+2.5 kg)" : `Use ${base} kg again`}
+        {hitAll ? (assisted ? "Accept Step-Up (−2.5 kg assistance)" : "Accept Step-Up (+2.5 kg)") : `Use ${base} ${unit} again`}
       </Button>
     </div>
   );

@@ -232,6 +232,7 @@ export async function getLastLog({ data }: Input<{ exercise_id: string }>) {
     sets_completed: session.length,
     min_reps: reps.length ? Math.min(...reps) : latest.reps_completed,
     top_weight_kg: Math.max(...session.map((r) => Number(r.weight_kg))),
+    low_weight_kg: Math.min(...session.map((r) => Number(r.weight_kg))),
   };
 }
 

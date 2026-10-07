@@ -28,6 +28,7 @@ import {
   canResume,
   durationMinutes,
   exercisesDone,
+  isAssistedExercise,
   isStaleWorkout,
   lastSetFor,
   newSetKey,
@@ -499,6 +500,7 @@ function Workout() {
             lastLog={lastLog}
             targetSets={targetSets}
             targetReps={targetReps}
+            assisted={isAssistedExercise(exercise)}
             onUse={(w, r) => {
               setWeight(String(w));
               setReps(String(r));
@@ -509,7 +511,7 @@ function Workout() {
 
       {/* Set logging inputs */}
       <div className="mt-10 grid grid-cols-1 gap-5 min-[380px]:grid-cols-2 min-[380px]:gap-3" role="group" aria-label="Log a set">
-        <Stepper label="Weight (kg)" unit="kg" value={weight} onChange={setWeight} step={2.5} min={0} max={500} inputMode="decimal" />
+        <Stepper label={isAssistedExercise(exercise) ? "Assistance (kg)" : "Weight (kg)"} unit="kg" value={weight} onChange={setWeight} step={2.5} min={0} max={500} inputMode="decimal" />
         <Stepper label="Reps" unit="rep" value={reps} onChange={setReps} step={1} min={0} max={100} inputMode="numeric" />
       </div>
       {/* Plate math only means something on a barbell (shown when the type isn't known yet). */}

@@ -45,19 +45,35 @@ export type LastLog = {
   sets_completed?: number;
   min_reps?: number;
   top_weight_kg?: number;
+  /** Lightest weight used in that session (for assisted exercises the best one). */
+  low_weight_kg?: number;
 };
 
 /**
- * Step-up progression: suggest +2.5 kg only when every target set and rep landed
- * last time; otherwise repeat the weight and clean up form.
+ * Exercises where the weight entered is the machine's help, not the load lifted
+ * (Assisted Pull-Up): a bigger number is easier, so progress means a smaller one.
  */
-export function progression(last: LastLog, targetSets: number, targetReps: number) {
-  const base = last.top_weight_kg ?? last.weight_kg;
+export function isAssistedExercise(exercise: { id?: string; name?: string } | null | undefined): boolean {
+  return exercise?.id === "assisted-pullup" || /^assisted\b/i.test(exercise?.name ?? "");
+}
+
+/**
+ * Step-up progression: suggest +2.5 kg only when every target set and rep landed
+ * last time; otherwise repeat the weight and clean up form. For an assisted
+ * exercise the step is 2.5 kg *less* assistance (never below 0), measured from
+ * the least assistance used last time.
+ */
+export function progression(last: LastLog, targetSets: number, targetReps: number, assisted = false) {
+  const base = assisted ? (last.low_weight_kg ?? last.weight_kg) : (last.top_weight_kg ?? last.weight_kg);
   const setsLast = last.sets_completed ?? 1;
   const repsLast = last.min_reps ?? last.reps_completed;
-  const hitAll = setsLast >= targetSets && repsLast >= targetReps;
-  const stepUp = Math.round((base + STEP_UP_KG) * 100) / 100;
-  return { base, setsLast, repsLast, hitAll, stepUp, suggested: hitAll ? stepUp : base };
+  const targetsHit = setsLast >= targetSets && repsLast >= targetReps;
+  const next = assisted ? Math.max(0, base - STEP_UP_KG) : base + STEP_UP_KG;
+  const stepUp = Math.round(next * 100) / 100;
+  // Nothing left to take off: the member is already unassisted, so there is no step.
+  const atLimit = assisted && base <= 0;
+  const hitAll = targetsHit && !atLimit;
+  return { base, setsLast, repsLast, hitAll, targetsHit, atLimit, assisted, stepUp, suggested: hitAll ? stepUp : base };
 }
 
 /** A new set from the inputs; null when the entry is not a loggable set. */
