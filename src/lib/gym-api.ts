@@ -5,6 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { activityDays, heatmapLookbackMs } from "@/lib/activity";
+import { groupSessionSets, type SessionLogRow } from "@/lib/session-detail";
 
 type Input<T> = { data: T };
 type DbFunction = keyof Database["public"]["Functions"];
@@ -419,18 +420,7 @@ export async function getSessionDetail({ data }: Input<{ session_id: string }>) 
       .order("timestamp"));
   }
   if (error) throw new Error("Could not load workout details");
-  const groups: { exercise_id: string; name: string; sets: { id: string; set_number: number; weight_kg: number; reps: number }[] }[] = [];
-  for (const l of logs ?? []) {
-    let g = groups.find((x) => x.exercise_id === l.exercise_id);
-    if (!g) {
-      const ex = l.exercises as { name: string } | { name: string }[] | null;
-      const name = Array.isArray(ex) ? ex[0]?.name : ex?.name;
-      g = { exercise_id: l.exercise_id, name: name ?? l.exercise_id, sets: [] };
-      groups.push(g);
-    }
-    g.sets.push({ id: l.id, set_number: l.set_number, weight_kg: Number(l.weight_kg), reps: l.reps_completed });
-  }
-  return groups;
+  return groupSessionSets((logs ?? []) as SessionLogRow[]);
 }
 
 // Best estimated 1RM (Epley) per training day over the last 8 weeks. Pro only.
