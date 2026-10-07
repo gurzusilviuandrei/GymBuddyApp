@@ -3,6 +3,7 @@
 // becomes and what reaches the server. No React here, so every edge case is
 // unit-tested in set-sync.test.ts.
 import type { CachedSet } from "./active-session";
+import { isServerRefusal } from "./server-refusal";
 
 export type SyncApi = {
   /** Idempotent per set key: a retry updates the same row. */
@@ -81,8 +82,10 @@ export async function syncSet(
     if (current.weight_kg !== item.weight_kg || current.reps !== item.reps) {
       api.update(row.id, current.weight_kg, current.reps).catch(() => {});
     }
-  } catch {
-    setStatus(store, key, { status: "local" });
+  } catch (e) {
+    // The database said no to these numbers: retrying cannot help, so it waits for the
+    // member to correct (or delete) the set instead of cycling "Syncing…" forever.
+    setStatus(store, key, { status: isServerRefusal(e) ? "refused" : "local" });
   }
 }
 
@@ -133,4 +136,14 @@ export function nextRetryDelay(current: number, r: FlushResult): number {
 /** A finish may only go out once every set has a server id. */
 export function allSaved(sets: CachedSet[]): boolean {
   return sets.every((x) => Boolean(x.id));
+}
+
+/** Sets still on their way to the account (the offline queue and its badge); refused ones are not. */
+export function isWaitingToSync(set: CachedSet): boolean {
+  return set.status === "local" || set.status === "syncing";
+}
+
+/** A refused set, corrected by the member, goes back in line for another try. */
+export function reviveRefused(set: CachedSet): CachedSet {
+  return set.status === "refused" ? { ...set, status: "local" } : set;
 }

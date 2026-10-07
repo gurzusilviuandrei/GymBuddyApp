@@ -36,7 +36,8 @@ export type CachedSet = {
   set_number: number;
   weight_kg: number;
   reps: number;
-  status: "saved" | "local" | "syncing";
+  /** "refused": the database rejected these numbers; it waits for a correction, not for signal. */
+  status: "saved" | "local" | "syncing" | "refused";
 };
 
 export function readActiveSession(): ActiveSession | null {

@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { activityDays, heatmapLookbackMs } from "@/lib/activity";
 import { groupSessionSets, type SessionLogRow } from "@/lib/session-detail";
+import { isRefusalCode, ServerRefusedError } from "@/lib/server-refusal";
 
 type Input<T> = { data: T };
 type DbFunction = keyof Database["public"]["Functions"];
@@ -25,7 +26,9 @@ async function call<T>(fn: DbFunction, args: Record<string, unknown>, fallback: 
   if (error) {
     console.error(fn, error.code, error.message);
     // Raised exceptions carry a member-facing message; anything else gets the fallback.
-    throw new Error(error.code === "P0001" && error.message ? error.message : fallback);
+    const message = error.code === "P0001" && error.message ? error.message : fallback;
+    // A value the database will never accept is final, unlike a dropped connection.
+    throw isRefusalCode(error.code) ? new ServerRefusedError(message) : new Error(message);
   }
   return data as T;
 }

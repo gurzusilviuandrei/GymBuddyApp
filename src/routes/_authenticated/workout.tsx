@@ -21,7 +21,7 @@ import { SwapDrawer } from "@/components/workout/SwapDrawer";
 import { IdleNudge, LeaveWorkoutDialog, PersonalRecordDialog } from "@/components/workout/WorkoutDialogs";
 import { WorkoutComplete, type WorkoutSummary } from "@/components/workout/WorkoutComplete";
 import { haptic, keepScreenOn } from "@/lib/native-workout";
-import { allSaved, flushPending, nextRetryDelay, RETRY_MIN_MS, syncSet as uploadSet } from "@/lib/set-sync";
+import { allSaved, flushPending, isWaitingToSync, nextRetryDelay, RETRY_MIN_MS, reviveRefused, syncSet as uploadSet } from "@/lib/set-sync";
 import { syncApi, syncEnv } from "@/lib/set-sync-client";
 import {
   buildCues,
@@ -204,7 +204,8 @@ function Workout() {
   // Mirror every unsynced set into the offline queue so the badge (and Home) can see it,
   // and wake the retry loop whenever a set is still waiting to reach the account.
   useEffect(() => {
-    const unsynced = sets.filter((x) => x.status !== "saved");
+    // Refused sets stay out of the queue: the badge and Home count sets waiting for signal.
+    const unsynced = sets.filter(isWaitingToSync);
     writeOfflineQueue(unsynced);
     if (unsynced.some((x) => x.status === "local")) kickSyncRef.current();
   }, [sets]);
@@ -272,7 +273,8 @@ function Workout() {
       return false;
     }
     const before = { weight_kg: target.weight_kg, reps: target.reps };
-    commitSets((prev) => prev.map((x) => (x.key === target.key ? { ...x, weight_kg: fix.weight, reps: fix.reps } : x)));
+    // A refused set, once corrected, goes back in line for another try.
+    commitSets((prev) => prev.map((x) => (x.key === target.key ? reviveRefused({ ...x, weight_kg: fix.weight, reps: fix.reps }) : x)));
     if (target.id) {
       updateWorkoutSet({ data: { id: target.id, weight_kg: fix.weight, reps_completed: fix.reps } })
         .then((res) => {
@@ -330,7 +332,11 @@ function Workout() {
     if (!allSaved(setsRef.current)) {
       finishLock.current = false;
       setFinishing(false);
-      toast.error("Some sets are only saved locally. Check your connection and try again.");
+      toast.error(
+        setsRef.current.some((x) => x.status === "refused")
+          ? "A set couldn't be saved. Fix its numbers with the pencil, or delete it, then finish."
+          : "Some sets are only saved locally. Check your connection and try again.",
+      );
       return false;
     }
     await Promise.all(

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { CachedSet } from "./active-session";
-import { allSaved, flushPending, nextRetryDelay, RETRY_MAX_MS, RETRY_MIN_MS, syncSet, type SyncApi, type SyncEnv, type SyncStore } from "./set-sync";
+import { allSaved, flushPending, isWaitingToSync, nextRetryDelay, RETRY_MAX_MS, RETRY_MIN_MS, reviveRefused, syncSet, type SyncApi, type SyncEnv, type SyncStore } from "./set-sync";
+import { ServerRefusedError } from "./server-refusal";
 
 const set = (key: string, over: Partial<CachedSet> = {}): CachedSet => ({
   key,
@@ -72,6 +73,29 @@ describe("syncSet", () => {
   it("keeps the set on the device when the upload fails", async () => {
     const h = harness([set("a")]);
     h.api.log.mockRejectedValueOnce(new Error("500"));
+    await h.sync("a");
+    expect(h.find("a")?.status).toBe("local");
+  });
+
+  it("marks a set the database refuses as refused, not as waiting for signal", async () => {
+    const h = harness([set("a")]);
+    h.api.log.mockRejectedValueOnce(new ServerRefusedError("value too large"));
+    await h.sync("a");
+    expect(h.find("a")).toMatchObject({ id: null, status: "refused" });
+  });
+
+  it("does not retry a refused set in later passes, so nothing keeps 'syncing'", async () => {
+    const h = harness([set("a", { status: "refused" }), set("b", { status: "local" })]);
+    const result = await flushPending(h.store, h.api, h.env, h.sync);
+    expect(h.api.log).toHaveBeenCalledTimes(1);
+    expect(h.api.log.mock.calls[0]?.[0].key).toBe("b");
+    expect(h.find("a")?.status).toBe("refused");
+    expect(result).toMatchObject({ pendingBefore: 1, pendingAfter: 0 });
+  });
+
+  it("keeps a plain failure (no signal, timeout, server hiccup) retryable", async () => {
+    const h = harness([set("a")]);
+    h.api.log.mockRejectedValueOnce(new Error("Could not save your set"));
     await h.sync("a");
     expect(h.find("a")?.status).toBe("local");
   });
@@ -193,6 +217,18 @@ describe("retry backoff", () => {
   });
   it("resets as soon as something gets through", () => {
     expect(nextRetryDelay(40_000, { ...stuck, pendingAfter: 1 })).toBe(RETRY_MIN_MS);
+  });
+});
+
+describe("refused sets", () => {
+  it("are not counted as waiting to sync, and come back into line once corrected", () => {
+    expect(isWaitingToSync(set("a", { status: "local" }))).toBe(true);
+    expect(isWaitingToSync(set("a", { status: "syncing" }))).toBe(true);
+    expect(isWaitingToSync(set("a", { status: "refused" }))).toBe(false);
+    expect(isWaitingToSync(set("a", { status: "saved", id: "x" }))).toBe(false);
+    expect(reviveRefused(set("a", { status: "refused", weight_kg: 20 }))).toMatchObject({ status: "local", weight_kg: 20 });
+    const other = set("b", { status: "local" });
+    expect(reviveRefused(other)).toBe(other);
   });
 });
 

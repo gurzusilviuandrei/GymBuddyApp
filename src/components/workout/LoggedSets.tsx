@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, CloudOff, Pencil, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, CloudOff, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { CachedSet } from "@/lib/active-session";
 
@@ -42,10 +42,16 @@ export function LoggedSets({ sets, onDelete, onSaveEdit }: Props) {
               <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
               <span className="text-sm font-semibold text-foreground">Set {x.set_number}</span>
               <span className="text-sm tabular-nums text-muted-foreground">{x.weight_kg} kg × {x.reps}</span>
-              {x.status !== "saved" && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-                  <CloudOff className="size-3" aria-hidden="true" /> Saved locally
+              {x.status === "refused" ? (
+                <span role="alert" className="inline-flex items-center gap-1 rounded-full border border-destructive/60 px-2 py-0.5 text-xs text-destructive">
+                  <AlertTriangle className="size-3" aria-hidden="true" /> Couldn't save · fix or delete
                 </span>
+              ) : (
+                x.status !== "saved" && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                    <CloudOff className="size-3" aria-hidden="true" /> Saved locally
+                  </span>
+                )
               )}
               <div className="ml-auto flex items-center gap-1">
                 <button type="button" onClick={() => startEdit(x)} aria-label={`Edit set ${x.set_number}`} className="flex size-11 items-center justify-center rounded-md text-muted-foreground transition hover:bg-secondary hover:text-primary">
