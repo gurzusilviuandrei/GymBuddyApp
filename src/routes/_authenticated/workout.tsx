@@ -567,6 +567,11 @@ function Workout() {
       {blocker.status === "blocked" && (
         <LeaveWorkoutDialog
           onStay={() => blocker.reset?.()}
+          // The workout is already saved on the phone after every change; Home offers to resume it.
+          onLeave={() => {
+            leaveFreely.current = true;
+            blocker.proceed?.();
+          }}
           onAbandon={() => {
             abandoned.current = true;
             const savedIds = setsRef.current.flatMap((x) => (x.id ? [x.id] : []));

@@ -28,15 +28,22 @@ export function IdleNudge({ onDismiss }: { onDismiss: () => void }) {
   );
 }
 
-export function LeaveWorkoutDialog({ onStay, onAbandon }: { onStay: () => void; onAbandon: () => void }) {
+export function LeaveWorkoutDialog({ onStay, onAbandon, onLeave }: { onStay: () => void; onAbandon: () => void; onLeave?: () => void }) {
   // Android Back keeps the workout, like "Continue Training".
   useBackToClose(true, onStay);
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background/90 px-6 backdrop-blur-sm" role="alertdialog" aria-modal="true" aria-labelledby="exit-title">
       <div className="w-full max-w-sm rounded-lg border border-primary/40 bg-card p-6 text-center">
         <p id="exit-title" className="text-xl font-semibold text-foreground">Active Workout in Progress!</p>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Are you sure you want to abandon your workout? The sets you logged in this session will be removed.</p>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          {onLeave
+            ? "Leave it for now and pick it up later from Home, or abandon it: the sets you logged in this session will be removed."
+            : "Are you sure you want to abandon your workout? The sets you logged in this session will be removed."}
+        </p>
         <Button type="button" onClick={onStay} className="mt-6 h-12 w-full font-semibold shadow-neon">Continue Training</Button>
+        {onLeave && (
+          <Button type="button" variant="outline" onClick={onLeave} className="mt-3 h-12 w-full border-primary/60 text-primary hover:bg-primary/10 hover:text-primary">Leave it for now</Button>
+        )}
         <Button type="button" variant="outline" onClick={onAbandon} className="mt-3 h-12 w-full border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive">Abandon Session</Button>
       </div>
     </div>
