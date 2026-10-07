@@ -98,6 +98,15 @@ Two of them have extra rules:
 - Deleting an account re-checks the password inside the database (`delete_account`).
 - The login lockout after failed attempts lives on the device only; Supabase's own rate limits are the real protection.
 
+## Pro for beta testers
+
+The official version is free for everyone until billing exists. Beta testers get Pro through a private list in the database, so nobody can grant it to themselves:
+
+- Add a tester (Supabase SQL Editor): `insert into public.beta_testers (email, note) values ('maria@example.com', 'Maria');` The email is stored in lower case and must be the address the tester signs up with.
+- They become Pro (`subscription_status = 'beta'`) the next time they open the app (`ensure_user_row`), and the screen updates through Realtime. Remove one with `delete from public.beta_testers where email = '…';`: they go back to free at their next app start.
+- **Ending the beta / launching the official version: `delete from public.beta_testers;`** Every account that was upgraded this way drops to free at its next start. Pro granted any other way (the owner's account, future store billing) has a different status and is left alone.
+- The table has no grants, row-level security on and no policy: members can neither read nor change it (database tests cover this). Migration `20261007160000_beta_testers.sql`.
+
 ## Navigation
 
 | Route | Screen |

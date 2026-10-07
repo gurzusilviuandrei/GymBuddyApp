@@ -41,5 +41,6 @@ insert into supabase_migrations.schema_migrations (version, name, statements) va
   ('20261007120000', 'equipment_aware_swaps_and_barbell_plan', '{}'),
   ('20261007130000', 'revoke_members_update_on_users', '{}'),
   ('20261007140000', 'refinish_attaches_extra_sets', '{}'),
-  ('20261007150000', 'update_training_profile', '{}')
+  ('20261007150000', 'update_training_profile', '{}'),
+  ('20261007160000', 'beta_testers', '{}')
 on conflict (version) do nothing;
