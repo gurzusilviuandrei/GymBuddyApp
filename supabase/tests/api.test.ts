@@ -129,6 +129,58 @@ describe("finishing a workout", () => {
     expect(await splitDay()).toBe("B");
   });
 
+  describe("finishing again after more sets were logged (the first answer never reached the phone)", () => {
+    let beforeVolume = 0;
+    let extraIds: string[] = [];
+
+    it("adds the new sets to that same workout instead of leaving them out", async () => {
+      await t.as(A);
+      const [before] = await t.rows<{ n: string; volume: string }>(`SELECT count(*) AS n, max(total_volume_kg) FILTER (WHERE id = $1) AS volume FROM workout_sessions`, [workoutId]);
+      beforeVolume = Number(before?.volume);
+      const a = await log(30, "k8", "db-bench", 2); // 300 kg
+      const b = await log(15, "k9", "db-row", 1); // 150 kg, an exercise not in the first save
+      extraIds = [a.id, b.id];
+      const again = await t.rpc<{ id: string; sets: number; volume: number }>(
+        `SELECT public.complete_workout('premade', $1, $2, $3, 'A', false)`,
+        [["goblet-squat", "db-bench", "db-row"], [...logIds, ...extraIds], started],
+      );
+      expect(again.id).toBe(workoutId);
+      expect(again.sets).toBe(6);
+      expect(Number(again.volume)).toBe(beforeVolume + 450);
+      const [after] = await t.rows<{ n: string }>(`SELECT count(*) AS n FROM workout_sessions`);
+      expect(Number(after?.n)).toBe(Number(before?.n)); // no second workout
+    });
+
+    it("links the new sets, updates the exercise list and end time, and does not rotate the plan again", async () => {
+      expect(await t.rows(`SELECT id FROM workout_logs WHERE id = ANY ($1) AND session_id = $2`, [extraIds, workoutId])).toHaveLength(2);
+      const [s] = await t.rows<{ exercise_names: string[]; total_sets: number; ok: boolean }>(
+        `SELECT exercise_names, total_sets, completed_at >= started_at AND completed_at <= now() AS ok FROM workout_sessions WHERE id = $1`,
+        [workoutId],
+      );
+      expect(s).toMatchObject({ exercise_names: ["Goblet Squat", "Dumbbell Bench Press", "Dumbbell Row"], total_sets: 6, ok: true });
+      expect(await splitDay()).toBe("B");
+    });
+
+    it("changes nothing when the same finish is sent once more", async () => {
+      const third = await t.rpc<{ id: string; sets: number; volume: number }>(
+        `SELECT public.complete_workout('premade', $1, $2, $3, 'A', false)`,
+        [["goblet-squat", "db-bench", "db-row"], [...logIds, ...extraIds], started],
+      );
+      expect(third).toMatchObject({ id: workoutId, sets: 6 });
+      expect(Number(third.volume)).toBe(beforeVolume + 450);
+    });
+
+    it("never pulls in another member's sets", async () => {
+      await t.as(B);
+      const theirs = await t.rpc<{ id: string }>(`SELECT public.log_workout_set('goblet-squat', 99, 10, 1, 'b-set')`);
+      await t.as(A);
+      await t.rpc(`SELECT public.complete_workout('premade', $1, $2, $3, 'A', false)`, [["goblet-squat"], [...logIds, theirs.id], started]);
+      await t.asAdmin();
+      expect(await t.rows(`SELECT session_id FROM workout_logs WHERE id = $1`, [theirs.id])).toEqual([{ session_id: null }]);
+      await t.as(A);
+    });
+  });
+
   it("keeps a finished workout's sets when a stale phone copy tries to delete them", async () => {
     await t.rpc(`SELECT public.delete_workout_set($1)`, [logIds[0]]);
     expect(await t.rows(`SELECT id FROM workout_logs WHERE id = $1 AND session_id = $2`, [logIds[0], workoutId])).toHaveLength(1);
