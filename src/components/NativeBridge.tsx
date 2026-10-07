@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { isNativeApp } from "@/lib/platform";
 import { runBackHandler } from "@/lib/back-stack";
+import { INVALID_LINK_MESSAGE, parseAuthLink } from "@/lib/auth-link";
 
 // Screens where Android Back leaves the app instead of walking back through history.
 // Onboarding is always opened in place of the previous screen: minimizing keeps the
@@ -19,35 +20,28 @@ export function NativeBridge() {
     if (!isNativeApp) return;
 
     const urlListener = App.addListener("appUrlOpen", async ({ url }) => {
-      // e.g. app.gymbuddyapp.gymbuddy://auth-callback/reset-password#access_token=…&type=recovery
-      let parsed: URL;
+      const link = parseAuthLink(url);
+      if (link.kind === "ignore") return;
+      if (link.kind === "invalid") {
+        toast.error(INVALID_LINK_MESSAGE);
+        return;
+      }
+      if (link.kind === "notice") {
+        toast.success(link.text);
+        await router.navigate({ to: "/", replace: true });
+        return;
+      }
+      // setSession throws (instead of returning an error) for a damaged token.
       try {
-        parsed = new URL(url);
+        const { error } = link.kind === "session"
+          ? await supabase.auth.setSession({ access_token: link.accessToken, refresh_token: link.refreshToken })
+          : await supabase.auth.exchangeCodeForSession(link.code);
+        if (error) throw error;
       } catch {
+        toast.error(INVALID_LINK_MESSAGE);
         return;
       }
-      if (parsed.host !== "auth-callback") return;
-      const hash = new URLSearchParams(parsed.hash.slice(1));
-      const query = parsed.searchParams;
-      const errorText = hash.get("error_description") ?? query.get("error_description");
-      if (errorText) {
-        toast.error("That link is invalid or has expired.");
-        return;
-      }
-      const accessToken = hash.get("access_token");
-      const refreshToken = hash.get("refresh_token");
-      const code = query.get("code");
-      const { error } = accessToken && refreshToken
-        ? await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
-        : code
-          ? await supabase.auth.exchangeCodeForSession(code)
-          : { error: null };
-      if (error) {
-        toast.error("That link is invalid or has expired.");
-        return;
-      }
-      const recovery = hash.get("type") === "recovery" || parsed.pathname === "/reset-password";
-      if (recovery) await router.navigate({ to: "/reset-password", hash: "type=recovery", replace: true });
+      if (link.recovery) await router.navigate({ to: "/reset-password", hash: "type=recovery", replace: true });
       else await router.navigate({ to: "/", replace: true });
     });
 
