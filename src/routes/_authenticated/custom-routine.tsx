@@ -125,7 +125,7 @@ function CustomRoutineEditor() {
       {FILTERS.map((item) => (
         <Button key={item.key} type="button" size="sm" variant="outline" aria-pressed={filter === item.key}
           onClick={() => { setFilter(item.key); if (!insideDrawer) setDrawerOpen(true); }}
-          className={cn("h-10 shrink-0 rounded-full border-border px-4 text-xs", filter === item.key ? "border-primary bg-primary/10 text-primary hover:text-primary" : "bg-card text-muted-foreground")}
+          className={cn("h-11 shrink-0 rounded-full border-border px-4 text-xs", filter === item.key ? "border-primary bg-primary/10 text-primary hover:text-primary" : "bg-card text-muted-foreground")}
         >{item.label}</Button>
       ))}
     </div>
@@ -154,14 +154,14 @@ function CustomRoutineEditor() {
               <li key={id} className="rounded-lg border border-border bg-card px-2 py-3.5 sm:px-3">
                 <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:gap-3">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-sm font-bold text-primary">{index + 1}</span>
-                <button type="button" onClick={() => setChartId((c) => (c === id ? null : id))} aria-expanded={chartId === id} aria-label={`Show strength progress for ${exercise.name}`} className="min-w-0 text-left">
+                <button type="button" onClick={() => setChartId((c) => (c === id ? null : id))} aria-expanded={chartId === id} aria-label={`Show strength progress for ${exercise.name}`} className="min-h-11 min-w-0 text-left">
                   <p className="truncate text-sm font-semibold">{exercise.name}</p>
                   <p className="flex items-center gap-1 truncate text-xs text-muted-foreground"><LineChart className={cn("size-3", chartId === id ? "text-primary" : "")} aria-hidden="true" /> {exercise.movement_type} · {exercise.equipment_type}</p>
                 </button>
                 <div className="flex shrink-0 items-center gap-0.5">
                   <Button type="button" size="icon" variant="ghost" disabled={index === 0} onClick={() => moveExercise(index, -1)} aria-label={`Move ${exercise.name} up`} title="Move up" className="size-11 text-muted-foreground hover:text-primary"><ArrowUp aria-hidden="true" /></Button>
                   <Button type="button" size="icon" variant="ghost" disabled={index === selected.length - 1} onClick={() => moveExercise(index, 1)} aria-label={`Move ${exercise.name} down`} title="Move down" className="size-11 text-muted-foreground hover:text-primary"><ArrowDown aria-hidden="true" /></Button>
-                  <Button type="button" size="icon" variant="ghost" onClick={() => removeExercise(id)} aria-label={`Remove ${exercise.name}`} title="Remove exercise" className="size-11 text-muted-foreground hover:text-destructive"><X aria-hidden="true" /></Button>
+                  <Button type="button" size="icon" variant="ghost" onClick={() => removeExercise(id)} aria-label={`Remove ${exercise.name}`} title="Remove exercise" className="size-11 text-muted-foreground hover:text-destructive-text"><X aria-hidden="true" /></Button>
                 </div>
                 </div>
                 {chartId === id && <div className="animate-fade-in"><Suspense fallback={<p className="py-6 text-center text-sm text-muted-foreground">Loading chart…</p>}><ExerciseProgressChart exerciseId={id} /></Suspense></div>}

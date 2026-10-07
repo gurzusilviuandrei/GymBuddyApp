@@ -31,9 +31,9 @@ export function LoggedSets({ sets, onDelete, onSaveEdit }: Props) {
           {editingKey === x.key ? (
             <div className="flex items-center gap-2">
               <span className="w-12 shrink-0 text-sm font-semibold text-muted-foreground">Set {x.set_number}</span>
-              <input aria-label="Corrected weight in kg" inputMode="decimal" value={editWeight} onChange={(e) => setEditWeight(e.target.value)} className="h-10 w-full min-w-0 rounded-md border border-primary/50 bg-background px-3 text-sm text-foreground outline-none focus:border-primary" />
+              <input aria-label="Corrected weight in kg" inputMode="decimal" value={editWeight} onChange={(e) => setEditWeight(e.target.value)} className="h-11 w-full min-w-0 rounded-md border border-primary/50 bg-background px-3 text-sm text-foreground outline-none focus:border-primary" />
               <span className="text-xs text-muted-foreground">kg</span>
-              <input aria-label="Corrected reps" inputMode="numeric" value={editReps} onChange={(e) => setEditReps(e.target.value)} className="h-10 w-full min-w-0 rounded-md border border-primary/50 bg-background px-3 text-sm text-foreground outline-none focus:border-primary" />
+              <input aria-label="Corrected reps" inputMode="numeric" value={editReps} onChange={(e) => setEditReps(e.target.value)} className="h-11 w-full min-w-0 rounded-md border border-primary/50 bg-background px-3 text-sm text-foreground outline-none focus:border-primary" />
               <span className="text-xs text-muted-foreground">reps</span>
               <Button type="button" size="sm" onClick={() => onSaveEdit(x, editWeight, editReps) && setEditingKey(null)}>Save</Button>
             </div>
@@ -43,7 +43,7 @@ export function LoggedSets({ sets, onDelete, onSaveEdit }: Props) {
               <span className="text-sm font-semibold text-foreground">Set {x.set_number}</span>
               <span className="text-sm tabular-nums text-muted-foreground">{x.weight_kg} kg × {x.reps}</span>
               {x.status === "refused" ? (
-                <span role="alert" className="inline-flex items-center gap-1 rounded-full border border-destructive/60 px-2 py-0.5 text-xs text-destructive">
+                <span role="alert" className="inline-flex items-center gap-1 rounded-full border border-destructive/60 px-2 py-0.5 text-xs text-destructive-text">
                   <AlertTriangle className="size-3" aria-hidden="true" /> Couldn't save · fix or delete
                 </span>
               ) : (
@@ -64,7 +64,7 @@ export function LoggedSets({ sets, onDelete, onSaveEdit }: Props) {
                     onDelete(x.key);
                   }}
                   aria-label={`Delete set ${x.set_number}`}
-                  className="flex size-11 items-center justify-center rounded-md text-destructive/70 transition hover:bg-destructive/10 hover:text-destructive"
+                  className="flex size-11 items-center justify-center rounded-md text-destructive-text transition hover:bg-destructive/10 hover:text-destructive-text"
                 >
                   <Trash2 className="size-4" aria-hidden="true" />
                 </button>

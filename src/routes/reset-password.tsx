@@ -82,7 +82,7 @@ function ResetPasswordPage() {
           <KeyRound className="size-12 text-primary" strokeWidth={1.5} aria-hidden="true" />
           <h1 className="mt-7 text-3xl font-semibold">Set a new password</h1>
           <p className="mt-3 text-muted-foreground">Use at least 8 characters to protect your Bro profile.</p>
-          <Input type="password" autoComplete="new-password" aria-label="New password" placeholder="New password" value={password} onChange={(event) => setPassword(event.target.value)} disabled={!ready || saving} className="mt-10 h-14 border-border bg-card px-4 text-base" />
+          <Input type="password" autoComplete="new-password" aria-label="New password" placeholder="New password" value={password} onChange={(event) => setPassword(event.target.value)} disabled={!ready || saving} className="mt-10 h-14 border-input bg-card px-4 text-base" />
           <Button type="submit" size="lg" disabled={!ready || saving} className="mt-5 h-14 w-full rounded-lg shadow-neon">{saving ? "Updating…" : ready ? "Update Password" : "Checking reset link…"}</Button>
         </form>
       )}

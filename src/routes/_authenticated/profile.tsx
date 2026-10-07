@@ -250,7 +250,7 @@ function ProfilePage() {
             </div>
             {editingEmail && (
               <form onSubmit={handleEmailUpdate} className="mt-5 space-y-3">
-                <Input type="email" autoComplete="email" aria-label="New email address" placeholder="Enter new email" value={newEmail} onChange={(event) => setNewEmail(event.target.value)} className="h-12 border-border bg-background px-4" />
+                <Input type="email" autoComplete="email" aria-label="New email address" placeholder="Enter new email" value={newEmail} onChange={(event) => setNewEmail(event.target.value)} className="h-12 border-input bg-background px-4" />
                 <div className="flex gap-3">
                   <Button type="submit" disabled={savingEmail} className="flex-1">{savingEmail ? "Saving…" : "Save Email"}</Button>
                   <Button type="button" variant="outline" onClick={() => setEditingEmail(false)}>Cancel</Button>
@@ -303,7 +303,7 @@ function ProfilePage() {
         </div>
         <div className="mt-5 rounded-lg border border-border bg-card p-5">
           <p className="text-sm leading-relaxed text-muted-foreground">Download a copy of your profile, every logged set, and all completed workouts.</p>
-          <Button variant="outline" className="mt-4 h-auto min-h-9 w-full whitespace-normal border-primary/50 py-2 text-primary hover:bg-primary/10 hover:text-primary" disabled={exporting} onClick={handleExport}>
+          <Button variant="outline" className="mt-4 h-auto min-h-11 w-full whitespace-normal border-primary/50 py-2 text-primary hover:bg-primary/10 hover:text-primary" disabled={exporting} onClick={handleExport}>
             <FileDown aria-hidden="true" /> {exporting ? "Preparing…" : "Export Training History (JSON)"}
           </Button>
         </div>
@@ -311,11 +311,11 @@ function ProfilePage() {
 
       <section className="mt-auto pt-20">
         <div className="rounded-lg border border-destructive/60 bg-destructive/5 p-5">
-          <h2 className="text-lg font-semibold text-destructive">Danger Zone</h2>
+          <h2 className="text-lg font-semibold text-destructive-text">Danger Zone</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Permanently remove your profile, workout history, and login account.</p>
           <AlertDialog open={deleteOpen} onOpenChange={closeDeleteDialog}>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" className="mt-5 w-full border-destructive/70 text-destructive hover:bg-destructive/10 hover:text-destructive">
+              <Button variant="outline" className="mt-5 w-full border-destructive/70 text-destructive-text hover:bg-destructive/10 hover:text-destructive-text">
                 <Trash2 aria-hidden="true" /> Delete Account
               </Button>
             </AlertDialogTrigger>
@@ -329,12 +329,12 @@ function ProfilePage() {
               {!verifyStep ? (
                 <label className="mt-2 space-y-2 text-sm font-medium">
                   <span>Type DELETE to confirm</span>
-                  <Input value={deleteText} onChange={(event) => setDeleteText(event.target.value)} aria-label="Type DELETE to confirm" autoComplete="off" className="h-12 border-destructive/60 bg-background px-4" />
+                  <Input value={deleteText} onChange={(event) => setDeleteText(event.target.value)} aria-label="Type DELETE to confirm" autoComplete="off" className="h-12 border-destructive-text bg-background px-4" />
                 </label>
               ) : (
                 <label className="mt-2 space-y-2 text-sm font-medium">
-                  <span className="flex items-center gap-2"><KeyRound className="size-4 text-destructive" aria-hidden="true" />Verify your password to confirm identity</span>
-                  <Input type="password" autoFocus value={deletePassword} onChange={(event) => setDeletePassword(event.target.value)} aria-label="Verify your password to confirm identity" autoComplete="current-password" className="h-12 border-destructive/60 bg-background px-4" />
+                  <span className="flex items-center gap-2"><KeyRound className="size-4 text-destructive-text" aria-hidden="true" />Verify your password to confirm identity</span>
+                  <Input type="password" autoFocus value={deletePassword} onChange={(event) => setDeletePassword(event.target.value)} aria-label="Verify your password to confirm identity" autoComplete="current-password" className="h-12 border-destructive-text bg-background px-4" />
                 </label>
               )}
               <AlertDialogFooter className="mt-3 gap-2">

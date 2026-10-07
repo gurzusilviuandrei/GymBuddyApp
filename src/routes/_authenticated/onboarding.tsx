@@ -178,7 +178,7 @@ function Onboarding() {
                 className="h-16 rounded-lg border-2 border-border bg-card px-6 text-lg text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-0"
               />
               {!ageCheck.ok && ageCheck.message && (
-                <p id="age-error" role="alert" className="-mt-2 text-sm font-medium text-destructive">
+                <p id="age-error" role="alert" className="-mt-2 text-sm font-medium text-destructive-text">
                   {ageCheck.message}
                 </p>
               )}

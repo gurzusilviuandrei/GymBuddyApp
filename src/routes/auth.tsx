@@ -230,7 +230,7 @@ function AuthPage() {
     <main
       className={`mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-background px-7 pb-10 pt-8 text-foreground transition-[transform,opacity] duration-300 ease-out ${leaving ? "-translate-x-8 opacity-0" : "translate-x-0 opacity-100"}`}
     >
-      <Link to="/" aria-label="Back to welcome" className="mb-10 inline-flex size-10 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground">
+      <Link to="/" aria-label="Back to welcome" className="mb-10 inline-flex size-11 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-5" />
       </Link>
 
@@ -258,7 +258,7 @@ function AuthPage() {
           </p>
 
           <div className="mt-12 flex flex-col gap-5">
-            <Input type="email" autoComplete="email" placeholder="Enter your email" aria-label="Email" value={email} onChange={(e) => { setEmail(e.target.value); if (unconfirmedEmail && e.target.value.trim() !== unconfirmedEmail) setUnconfirmedEmail(null); }} className="h-14 rounded-lg border-border bg-card px-4 text-base" />
+            <Input type="email" autoComplete="email" placeholder="Enter your email" aria-label="Email" value={email} onChange={(e) => { setEmail(e.target.value); if (unconfirmedEmail && e.target.value.trim() !== unconfirmedEmail) setUnconfirmedEmail(null); }} className="h-14 rounded-lg border-input bg-card px-4 text-base" />
             <Input type="password" autoComplete={isSignup ? "new-password" : "current-password"} placeholder={isSignup ? "Create a password" : "Your password"} aria-label="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-14 rounded-lg border-border bg-card px-4 text-base" />
           </div>
 

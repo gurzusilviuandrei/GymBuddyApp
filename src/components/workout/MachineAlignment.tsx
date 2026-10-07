@@ -77,7 +77,7 @@ export function MachineAlignment({ exerciseId }: { exerciseId: string }) {
             Other Adjustment Note
             <input value={note} maxLength={120} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Leg pad notch 3" className="h-11 rounded-lg border-2 border-input bg-card px-3 text-sm normal-case tracking-normal text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden" />
           </label>
-          <button type="button" onClick={onSave} disabled={saving} className="text-sm font-semibold text-primary underline underline-offset-4 disabled:opacity-50">
+          <button type="button" onClick={onSave} disabled={saving} className="inline-flex min-h-11 items-center self-start text-sm font-semibold text-primary underline underline-offset-4 disabled:opacity-50">
             {saving ? "Saving…" : "Save Setup"}
           </button>
         </div>

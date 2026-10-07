@@ -31,7 +31,7 @@ export function RestOverlay({ secondsLeft, restSecs, chimeMuted, onChangeLength,
               role="radio"
               aria-checked={restSecs === s}
               onClick={() => onChangeLength(s)}
-              className={`h-10 rounded-full border-2 px-4 text-sm font-semibold transition ${restSecs === s ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground"}`}
+              className={`h-11 rounded-full border-2 px-4 text-sm font-semibold transition ${restSecs === s ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground"}`}
             >
               {s}s
             </button>

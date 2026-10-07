@@ -72,7 +72,7 @@ export function SessionCard({
               onKeyDown={(e) => e.stopPropagation()}
               disabled={deleting}
               aria-label="Delete this workout"
-              className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+              className="flex size-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive-text disabled:opacity-50"
             >
               <Trash2 size={16} strokeWidth={1.8} aria-hidden="true" />
             </button>

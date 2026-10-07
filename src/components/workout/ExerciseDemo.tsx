@@ -187,7 +187,7 @@ export function ExerciseDemo({
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Close form guide"
-                className="rounded-md p-1 text-muted-foreground hover:text-foreground"
+                className="flex size-11 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
               >
                 <X className="size-5" aria-hidden="true" />
               </button>

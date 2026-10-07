@@ -147,7 +147,7 @@ export function ProProvider({ children }: { children: ReactNode }) {
             className="relative max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl border-2 border-primary/40 bg-card p-6 shadow-neon sm:rounded-3xl"
             style={{ animation: "paywall-up 320ms cubic-bezier(.2,.9,.3,1)" }}
           >
-            <button type="button" onClick={() => setPaywall(false)} aria-label="Close" className="absolute right-4 top-4 rounded-md p-1 text-muted-foreground hover:text-foreground">
+            <button type="button" onClick={() => setPaywall(false)} aria-label="Close" className="absolute right-2 top-2 flex size-11 items-center justify-center rounded-md text-muted-foreground hover:text-foreground">
               <X className="size-5" />
             </button>
             <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary/15 text-primary">

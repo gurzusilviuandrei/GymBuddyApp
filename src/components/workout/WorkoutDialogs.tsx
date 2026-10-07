@@ -23,7 +23,7 @@ export function IdleNudge({ onDismiss }: { onDismiss: () => void }) {
     <div role="status" className="fixed inset-x-4 top-4 z-40 mx-auto flex max-w-md items-center gap-3 rounded-lg border border-primary/60 bg-card/95 px-4 py-3 shadow-neon backdrop-blur animate-fade-in">
       <Zap className="size-5 shrink-0 text-primary" aria-hidden="true" />
       <p className="flex-1 text-sm text-foreground">Ready for the next set, Bro? Let's keep your momentum going.</p>
-      <button type="button" onClick={onDismiss} aria-label="Dismiss reminder" className="rounded-md p-1 text-muted-foreground hover:text-foreground"><X className="size-4" aria-hidden="true" /></button>
+      <button type="button" onClick={onDismiss} aria-label="Dismiss reminder" className="-my-2 -mr-2 flex size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"><X className="size-4" aria-hidden="true" /></button>
     </div>
   );
 }
@@ -44,7 +44,7 @@ export function LeaveWorkoutDialog({ onStay, onAbandon, onLeave }: { onStay: () 
         {onLeave && (
           <Button type="button" variant="outline" onClick={onLeave} className="mt-3 h-12 w-full border-primary/60 text-primary hover:bg-primary/10 hover:text-primary">Leave it for now</Button>
         )}
-        <Button type="button" variant="outline" onClick={onAbandon} className="mt-3 h-12 w-full border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive">Abandon Session</Button>
+        <Button type="button" variant="outline" onClick={onAbandon} className="mt-3 h-12 w-full border-destructive/60 text-destructive-text hover:bg-destructive/10 hover:text-destructive-text">Abandon Session</Button>
       </div>
     </div>
   );
@@ -79,7 +79,7 @@ export function UnfinishedWorkoutDialog({
           It has {setCount} logged {setCount === 1 ? "set" : "sets"}. Finish it to save it as that day's workout, or discard it to remove its sets.
         </p>
         <Button type="button" onClick={onFinish} disabled={busy} className="mt-6 h-12 w-full font-semibold shadow-neon">Finish it</Button>
-        <Button type="button" variant="outline" onClick={onDiscard} disabled={busy} className="mt-3 h-12 w-full border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive">Discard it</Button>
+        <Button type="button" variant="outline" onClick={onDiscard} disabled={busy} className="mt-3 h-12 w-full border-destructive/60 text-destructive-text hover:bg-destructive/10 hover:text-destructive-text">Discard it</Button>
         <Button type="button" variant="ghost" onClick={onClose} disabled={busy} className="mt-2 w-full text-muted-foreground">Decide later</Button>
       </div>
     </div>

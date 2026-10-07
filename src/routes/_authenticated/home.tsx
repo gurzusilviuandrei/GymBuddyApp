@@ -298,7 +298,7 @@ function Home() {
             type="button"
             variant="link"
             onClick={() => setConfirmAbandon(true)}
-            className="mt-2 w-full text-sm text-muted-foreground hover:text-destructive"
+            className="mt-2 w-full text-sm text-muted-foreground hover:text-destructive-text"
           >
             Abandon Workout
           </Button>
@@ -451,7 +451,7 @@ function Home() {
       <section className="mt-14" aria-label="Recent workouts">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Recent Workouts</h2>
-          <Link to="/history" className="text-sm font-semibold text-primary hover:underline">See all</Link>
+          <Link to="/history" className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline">See all</Link>
         </div>
         <div className="mt-4 space-y-4">
           {recent && recent.length > 0 ? (
@@ -512,7 +512,7 @@ function Home() {
               setPendingStart(null);
               proceedToWorkout(next.mode, next.superSore);
             }}
-            className="mt-3 h-12 w-full border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            className="mt-3 h-12 w-full border-destructive/60 text-destructive-text hover:bg-destructive/10 hover:text-destructive-text"
           >
             Abandon &amp; start new
           </Button>
