@@ -1,6 +1,9 @@
 // Pure workout rules used by the tracker screen. No React, storage or network here,
 // so every rule is unit-tested in workout-logic.test.ts.
 import type { ActiveSession, CachedSet } from "./active-session";
+import { MAX_SET_WEIGHT_KG, unitToKg, type WeightUnit } from "./weight-units";
+
+export { MAX_SET_WEIGHT_KG };
 
 export type Exercise = {
   id: string;
@@ -61,17 +64,18 @@ export function isAssistedExercise(exercise: { id?: string; name?: string } | nu
 }
 
 /**
- * Step-up progression: suggest +2.5 kg only when every target set and rep landed
- * last time; otherwise repeat the weight and clean up form. For an assisted
- * exercise the step is 2.5 kg *less* assistance (never below 0), measured from
- * the least assistance used last time.
+ * Step-up progression: suggest one step more (2.5 kg, or 5 lb for a member on pounds) only
+ * when every target set and rep landed last time; otherwise repeat the weight and clean up
+ * form. For an assisted exercise the step is that much *less* assistance (never below 0),
+ * measured from the least assistance used last time. Everything here is in kilograms; `stepKg`
+ * is the member's step converted to kilograms.
  */
-export function progression(last: LastLog, targetSets: number, targetReps: number, assisted = false) {
+export function progression(last: LastLog, targetSets: number, targetReps: number, assisted = false, stepKg: number = STEP_UP_KG) {
   const base = assisted ? (last.low_weight_kg ?? last.weight_kg) : (last.top_weight_kg ?? last.weight_kg);
   const setsLast = last.sets_completed ?? 1;
   const repsLast = last.min_reps ?? last.reps_completed;
   const targetsHit = setsLast >= targetSets && repsLast >= targetReps;
-  const next = assisted ? Math.max(0, base - STEP_UP_KG) : base + STEP_UP_KG;
+  const next = assisted ? Math.max(0, base - stepKg) : base + stepKg;
   const stepUp = Math.round(next * 100) / 100;
   // Nothing left to take off: the member is already unassisted, so there is no step.
   const atLimit = assisted && base <= 0;
@@ -79,17 +83,15 @@ export function progression(last: LastLog, targetSets: number, targetReps: numbe
   return { base, setsLast, repsLast, hitAll, targetsHit, atLimit, assisted, stepUp, suggested: hitAll ? stepUp : base };
 }
 
-/** A new set from the inputs; null when the entry is not a loggable set. */
-/** The database's limits for one set (workout_logs CHECK constraints). */
-export const MAX_SET_WEIGHT_KG = 1000;
+/** The database's limit on reps in one set (workout_logs CHECK constraint); the weight limit is MAX_SET_WEIGHT_KG. */
 export const MAX_SET_REPS = 100;
 
 /**
  * A new set, within the database's limits. A set outside them would be rejected
  * on every upload, stay "saved locally" forever and block finishing the workout.
  */
-export function parseNewSet(weight: string, reps: string): { weight: number; reps: number } | null {
-  return parseCorrection(weight, reps);
+export function parseNewSet(weight: string, reps: string, unit: WeightUnit = "kg"): { weight: number; reps: number } | null {
+  return parseCorrection(weight, reps, unit);
 }
 
 /**
@@ -103,9 +105,13 @@ export function parseWeightText(text: string): number {
   return Number(t);
 }
 
-/** A correction to a logged set; same limits as a new set. */
-export function parseCorrection(weight: string, reps: string): { weight: number; reps: number } | null {
-  const w = parseWeightText(weight);
+/**
+ * A correction to a logged set; same limits as a new set. `weight` is typed in the member's unit and
+ * comes back in kilograms, which is what is stored (the limit applies to the kilograms).
+ */
+export function parseCorrection(weight: string, reps: string, unit: WeightUnit = "kg"): { weight: number; reps: number } | null {
+  const typed = parseWeightText(weight);
+  const w = Number.isFinite(typed) ? unitToKg(typed, unit) : NaN;
   const r = Number(reps);
   if (!Number.isFinite(w) || w < 0 || w > MAX_SET_WEIGHT_KG || reps.trim() === "" || !Number.isInteger(r) || r < 1 || r > MAX_SET_REPS) return null;
   return { weight: w, reps: r };

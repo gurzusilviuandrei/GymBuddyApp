@@ -3,15 +3,19 @@
 import { X, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBackToClose } from "@/lib/back-stack";
+import { useWeightUnit } from "@/lib/use-weight-unit";
+import { formatWeight } from "@/lib/weight-units";
 
+/** `weight` is in kilograms (as stored); the popup shows it in the member's unit. */
 export function PersonalRecordDialog({ weight, name, onClose }: { weight: number; name: string; onClose: () => void }) {
   useBackToClose(true, onClose);
+  const unit = useWeightUnit();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 px-6 backdrop-blur-sm animate-fade-in" onClick={onClose}>
       <div role="alertdialog" aria-live="assertive" aria-label="New personal record" className="w-full max-w-sm rounded-2xl border-2 border-primary bg-card p-7 text-center shadow-neon" onClick={(e) => e.stopPropagation()}>
         <p className="text-5xl" aria-hidden="true">🏆</p>
         <p className="mt-4 text-2xl font-bold text-primary">New Personal Record! 🔥</p>
-        <p className="mt-3 text-base leading-relaxed text-foreground">{weight}kg is your heaviest {name} to date, Bro!</p>
+        <p className="mt-3 text-base leading-relaxed text-foreground">{formatWeight(weight, unit)} is your heaviest {name} to date, Bro!</p>
         <Button type="button" onClick={onClose} className="mt-6 h-12 w-full rounded-lg text-base font-semibold shadow-neon">Let's Go!</Button>
       </div>
     </div>

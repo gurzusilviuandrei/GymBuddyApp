@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Flame, Trash2 } from "lucide-react";
 import { useBackToClose } from "@/lib/back-stack";
+import { useWeightUnit } from "@/lib/use-weight-unit";
+import { formatVolume } from "@/lib/weight-units";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +40,7 @@ export function SessionCard({
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   useBackToClose(confirmOpen, () => setConfirmOpen(false));
+  const unit = useWeightUnit();
 
   return (
     <article
@@ -63,7 +66,7 @@ export function SessionCard({
         <div className="flex shrink-0 flex-col items-center gap-2">
           <div className="flex flex-col items-center gap-1 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-primary">
             <Flame size={18} strokeWidth={1.8} aria-hidden="true" />
-            <span className="text-xs font-semibold">{session.volume} kg</span>
+            <span className="text-xs font-semibold">{formatVolume(session.volume, unit)}</span>
           </div>
           {onDelete && (
             <button

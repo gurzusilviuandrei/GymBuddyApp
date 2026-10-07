@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { kgToUnit, unitToKg, weightStepKg } from "./weight-units";
 import type { ActiveSession, CachedSet } from "./active-session";
 import {
   buildCues,
@@ -293,5 +294,61 @@ describe("a decimal comma in a typed weight (22,5)", () => {
     expect(parseCorrection("22,5,1", "10")).toBeNull();
     expect(parseCorrection("22,5", "")).toBeNull();
     expect(parseCorrection("22,5", "7,5")).toBeNull();
+  });
+});
+
+describe("weights typed in pounds", () => {
+  it("are stored as kilograms", () => {
+    expect(parseNewSet("135", "10", "lb")).toEqual({ weight: 61.23, reps: 10 });
+    expect(parseNewSet("45", "8", "lb")).toEqual({ weight: 20.41, reps: 8 });
+    expect(parseNewSet("0", "12", "lb")).toEqual({ weight: 0, reps: 12 });
+    expect(parseCorrection("225", "5", "lb")).toEqual({ weight: 102.06, reps: 5 });
+  });
+
+  it("accept a decimal comma or point, like kilograms do", () => {
+    expect(parseNewSet("187,5", "5", "lb")).toEqual(parseNewSet("187.5", "5", "lb"));
+    expect(parseNewSet("187.5", "5", "lb")?.weight).toBe(85.05);
+  });
+
+  it("show exactly what was typed when read back", () => {
+    for (const typed of ["135", "187.5", "225", "45", "2.5", "315"]) {
+      const kg = parseNewSet(typed, "5", "lb")!.weight;
+      expect(String(kgToUnit(kg, "lb")), typed).toBe(typed);
+    }
+  });
+
+  it("stop at the database's 1000 kg limit (2204 lb)", () => {
+    expect(parseNewSet("2204", "1", "lb")).not.toBeNull();
+    expect(parseNewSet("2205", "1", "lb")).toBeNull();
+    expect(parseNewSet("1000", "1", "kg")).not.toBeNull();
+    expect(parseNewSet("1000.5", "1", "kg")).toBeNull();
+  });
+
+  it("still refuse rubbish, negatives and bad reps", () => {
+    for (const w of ["", "abc", "-5", "1e3", "5..5"]) expect(parseNewSet(w, "5", "lb"), w).toBeNull();
+    expect(parseNewSet("135", "0", "lb")).toBeNull();
+    expect(parseNewSet("135", "101", "lb")).toBeNull();
+  });
+});
+
+describe("the step-up suggestion for a member on pounds", () => {
+  const hit = (kg: number) => ({ weight_kg: kg, reps_completed: 10, sets_completed: 3, min_reps: 10, top_weight_kg: kg, low_weight_kg: kg });
+
+  it("moves 5 lb, landing on a round pound number", () => {
+    const kg = unitToKg(135, "lb");
+    const p = progression(hit(kg), 3, 10, false, weightStepKg("lb"));
+    expect(kgToUnit(p.stepUp, "lb")).toBe(140);
+    const next = progression(hit(p.stepUp), 3, 10, false, weightStepKg("lb"));
+    expect(kgToUnit(next.stepUp, "lb")).toBe(145);
+  });
+
+  it("moves 2.5 kg by default, exactly as before", () => {
+    expect(progression(hit(40), 3, 10).stepUp).toBe(42.5);
+  });
+
+  it("takes 5 lb off an assisted exercise, and never goes below zero", () => {
+    const kg = unitToKg(70, "lb");
+    expect(kgToUnit(progression(hit(kg), 3, 10, true, weightStepKg("lb")).stepUp, "lb")).toBe(65);
+    expect(progression(hit(unitToKg(3, "lb")), 3, 10, true, weightStepKg("lb")).stepUp).toBe(0);
   });
 });

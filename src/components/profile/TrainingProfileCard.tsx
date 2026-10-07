@@ -9,6 +9,8 @@ import { useBackToClose } from "@/lib/back-stack";
 import { durableStorage } from "@/lib/durable-storage";
 import { getTrainingProfile, updateTrainingProfile } from "@/lib/gym-api";
 import { cn } from "@/lib/utils";
+import { rememberWeightUnit } from "@/lib/use-weight-unit";
+import { WEIGHT_UNITS } from "@/lib/weight-units";
 import {
   checkTrainingForm,
   EQUIPMENT_OPTIONS,
@@ -81,6 +83,7 @@ export function TrainingProfileCard() {
           "gymbuddy-profile",
           JSON.stringify({ ...existing, name: next.name, age: next.age, frequency: next.frequency, goal: next.goal, equipment: next.equipment }),
         );
+        rememberWeightUnit(result.weightUnit);
       } catch {
         /* the server has it; the cache refreshes on next start */
       }
@@ -94,7 +97,7 @@ export function TrainingProfileCard() {
 
   const begin = () => {
     if (!profile) return;
-    setForm({ name: profile.name, age: String(profile.age), frequency: profile.frequency, goal: profile.goal, equipment: profile.equipment });
+    setForm({ name: profile.name, age: String(profile.age), frequency: profile.frequency, goal: profile.goal, equipment: profile.equipment, weightUnit: profile.weightUnit });
     setProblem(null);
     setEditing(true);
   };
@@ -150,6 +153,8 @@ export function TrainingProfileCard() {
               <dd className="text-right font-medium">{labelFor(FREQUENCY_OPTIONS, profile.frequency)}</dd>
               <dt className="text-muted-foreground">Goal</dt>
               <dd className="text-right font-medium">{labelFor(GOAL_OPTIONS, profile.goal)}</dd>
+              <dt className="text-muted-foreground">Weights in</dt>
+              <dd className="text-right font-medium">{labelFor(WEIGHT_UNITS, profile.weightUnit)}</dd>
             </dl>
             <Button type="button" variant="outline" className="mt-5 w-full" onClick={begin}>
               <Pencil aria-hidden="true" /> Edit training profile
@@ -195,6 +200,7 @@ export function TrainingProfileCard() {
             )}
             <OptionGroup label="Days per week" options={FREQUENCY_OPTIONS} value={form.frequency} onChange={(frequency) => setForm({ ...form, frequency })} />
             <OptionGroup label="Goal" options={GOAL_OPTIONS} value={form.goal} onChange={(goal) => setForm({ ...form, goal })} />
+            <OptionGroup label="Weights in" options={WEIGHT_UNITS} value={form.weightUnit} onChange={(weightUnit) => setForm({ ...form, weightUnit })} />
             <div className="flex gap-3">
               <Button type="submit" className="flex-1" disabled={save.isPending || blocked}>{save.isPending ? "Saving…" : "Save"}</Button>
               <Button type="button" variant="outline" onClick={stopEditing} disabled={save.isPending}>Cancel</Button>

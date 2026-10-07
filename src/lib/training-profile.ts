@@ -2,6 +2,7 @@
 // the Profile screen). Free of React and the network, so the rules are unit-tested in
 // training-profile.test.ts.
 import { checkAge } from "./onboarding-validation";
+import { isWeightUnit, type WeightUnit } from "./weight-units";
 
 export const EQUIPMENT_OPTIONS = [
   { id: "full-gym", label: "Full Gym Machines" },
@@ -28,7 +29,7 @@ export type Goal = (typeof GOAL_OPTIONS)[number]["id"];
 /** The longest name the database stores. */
 export const NAME_MAX = 60;
 
-export type TrainingProfile = { name: string; age: number; frequency: Frequency; goal: Goal; equipment: Equipment };
+export type TrainingProfile = { name: string; age: number; frequency: Frequency; goal: Goal; equipment: Equipment; weightUnit: WeightUnit };
 
 /** The database keeps the number of training days; the form talks in the three onboarding choices. */
 export function frequencyFromDays(days: number | null | undefined): Frequency {
@@ -43,14 +44,16 @@ export function profileFromRow(row: {
   weekly_goal_days: number | null;
   primary_goal: string | null;
   equipment_type: string | null;
+  weight_unit?: string | null;
 }): TrainingProfile | null {
   const goal = GOAL_OPTIONS.find((g) => g.id === row.primary_goal)?.id;
   const equipment = EQUIPMENT_OPTIONS.find((e) => e.id === row.equipment_type)?.id;
   if (!row.full_name || row.age == null || !goal || !equipment) return null;
-  return { name: row.full_name, age: row.age, frequency: frequencyFromDays(row.weekly_goal_days), goal, equipment };
+  const weightUnit = isWeightUnit(row.weight_unit) ? row.weight_unit : "kg";
+  return { name: row.full_name, age: row.age, frequency: frequencyFromDays(row.weekly_goal_days), goal, equipment, weightUnit };
 }
 
-export type TrainingForm = { name: string; age: string; frequency: Frequency; goal: Goal; equipment: Equipment };
+export type TrainingForm = { name: string; age: string; frequency: Frequency; goal: Goal; equipment: Equipment; weightUnit: WeightUnit };
 
 export type CheckedForm =
   | { ok: true; profile: TrainingProfile }
@@ -63,11 +66,11 @@ export function checkTrainingForm(form: TrainingForm): CheckedForm {
   if (name.length > NAME_MAX) return { ok: false, field: "name", message: `Your name can be up to ${NAME_MAX} characters.` };
   const age = checkAge(form.age);
   if (!age.ok) return { ok: false, field: "age", message: age.message ?? "Enter your age." };
-  return { ok: true, profile: { name, age: age.age, frequency: form.frequency, goal: form.goal, equipment: form.equipment } };
+  return { ok: true, profile: { name, age: age.age, frequency: form.frequency, goal: form.goal, equipment: form.equipment, weightUnit: form.weightUnit } };
 }
 
 export function sameProfile(a: TrainingProfile, b: TrainingProfile): boolean {
-  return a.name === b.name && a.age === b.age && a.frequency === b.frequency && a.goal === b.goal && a.equipment === b.equipment;
+  return a.name === b.name && a.age === b.age && a.frequency === b.frequency && a.goal === b.goal && a.equipment === b.equipment && a.weightUnit === b.weightUnit;
 }
 
 /** Changing equipment moves the member to a different plan, so the A-B-C rotation restarts at Day A. */

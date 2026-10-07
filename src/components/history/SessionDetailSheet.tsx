@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getSessionDetail } from "@/lib/gym-api";
 import { useBackToClose } from "@/lib/back-stack";
+import { useWeightUnit } from "@/lib/use-weight-unit";
+import { formatVolume, formatWeight } from "@/lib/weight-units";
 import type { SessionSummary } from "@/components/SessionCard";
 
 export function SessionDetailSheet({ session, onClose }: { session: SessionSummary | null; onClose: () => void }) {
@@ -12,6 +14,7 @@ export function SessionDetailSheet({ session, onClose }: { session: SessionSumma
   });
 
   useBackToClose(Boolean(session), onClose);
+  const unit = useWeightUnit();
 
   return (
     <Sheet open={Boolean(session)} onOpenChange={(o) => !o && onClose()}>
@@ -23,7 +26,7 @@ export function SessionDetailSheet({ session, onClose }: { session: SessionSumma
             </p>
             <SheetTitle className="text-2xl">{session?.program === "custom" ? "Custom Routine" : "Pre-Made Plan"}</SheetTitle>
             <SheetDescription>
-              {session?.sets} sets · {session?.volume} kg total volume
+              {session?.sets} sets · {formatVolume(session?.volume ?? 0, unit)} total volume
             </SheetDescription>
           </SheetHeader>
 
@@ -39,7 +42,7 @@ export function SessionDetailSheet({ session, onClose }: { session: SessionSumma
                     <li key={s.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
                       <span className="text-muted-foreground">Set {s.set_number}</span>
                       <span className="tabular-nums text-foreground">
-                        {s.weight_kg} kg <span className="text-primary">×</span> {s.reps} reps
+                        {formatWeight(s.weight_kg, unit)} <span className="text-primary">×</span> {s.reps} reps
                       </span>
                     </li>
                   ))}

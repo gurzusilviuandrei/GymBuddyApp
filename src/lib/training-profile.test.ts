@@ -12,8 +12,8 @@ import {
   type TrainingProfile,
 } from "./training-profile";
 
-const form = (over: Partial<TrainingForm> = {}): TrainingForm => ({ name: "Ana", age: "30", frequency: "3-days", goal: "gain-muscle", equipment: "dumbbells", ...over });
-const profile: TrainingProfile = { name: "Ana", age: 30, frequency: "3-days", goal: "gain-muscle", equipment: "dumbbells" };
+const form = (over: Partial<TrainingForm> = {}): TrainingForm => ({ name: "Ana", age: "30", frequency: "3-days", goal: "gain-muscle", equipment: "dumbbells", weightUnit: "kg", ...over });
+const profile: TrainingProfile = { name: "Ana", age: 30, frequency: "3-days", goal: "gain-muscle", equipment: "dumbbells", weightUnit: "kg" };
 
 describe("frequencyFromDays", () => {
   it("maps stored days to the three onboarding choices", () => {
@@ -30,6 +30,12 @@ describe("profileFromRow", () => {
   const row = { full_name: "Ana", age: 30, weekly_goal_days: 3, primary_goal: "gain-muscle", equipment_type: "dumbbells" };
   it("reads a finished profile", () => {
     expect(profileFromRow(row)).toEqual(profile);
+  });
+  it("reads the weight unit, and falls back to kilograms for an old row or an unknown value", () => {
+    expect(profileFromRow({ ...row, weight_unit: "lb" })?.weightUnit).toBe("lb");
+    expect(profileFromRow({ ...row, weight_unit: "kg" })?.weightUnit).toBe("kg");
+    expect(profileFromRow({ ...row, weight_unit: "stone" })?.weightUnit).toBe("kg");
+    expect(profileFromRow({ ...row, weight_unit: null })?.weightUnit).toBe("kg");
   });
   it("returns null for anything missing or unknown, so a half-set-up account is never edited", () => {
     expect(profileFromRow({ ...row, equipment_type: null })).toBeNull();
@@ -62,6 +68,7 @@ describe("comparing and restarting", () => {
     expect(sameProfile(profile, { ...profile })).toBe(true);
     expect(sameProfile(profile, { ...profile, age: 31 })).toBe(false);
     expect(sameProfile(profile, { ...profile, equipment: "barbell" })).toBe(false);
+    expect(sameProfile(profile, { ...profile, weightUnit: "lb" })).toBe(false);
   });
   it("restarts the plan only when the equipment changes", () => {
     expect(restartsPlan("dumbbells", "barbell")).toBe(true);

@@ -1,10 +1,13 @@
 import logoUrl from "@/assets/gymbuddy-logo.png";
 import { saveFile } from "./native-files";
+import { broCardVolume, type WeightUnit } from "./weight-units";
 
 export type BroCardStats = {
   date: string;
   durationMinutes: number;
+  /** Total volume in kilograms (as stored); the card shows it in the member's unit. */
   volumeKg: number;
+  unit: WeightUnit;
   weeklyWorkouts: number;
 };
 
@@ -69,9 +72,10 @@ export async function createBroCardBlob(stats: BroCardStats): Promise<Blob> {
   context.font = "500 34px 'Space Grotesk', sans-serif";
   context.fillText(stats.date, 540, 715);
 
+  const volume = broCardVolume(stats.volumeKg, stats.unit);
   const cards = [
     ["ACTIVE TIME", `${stats.durationMinutes} MIN`],
-    ["KG SHIFTED", Math.round(stats.volumeKg).toLocaleString("en-US")],
+    [volume.label, volume.value],
     ["THIS WEEK", `${stats.weeklyWorkouts} WORKOUT${stats.weeklyWorkouts === 1 ? "" : "S"}`],
   ] as const;
 

@@ -16,6 +16,8 @@ import { useRestTimer } from "@/hooks/use-rest-timer";
 import { ExerciseDemo } from "@/components/workout/ExerciseDemo";
 import { ExerciseHeading, ProgressionCard } from "@/components/workout/ExerciseOverview";
 import { LoggedSets } from "@/components/workout/LoggedSets";
+import { useWeightUnit } from "@/lib/use-weight-unit";
+import { kgToUnit, maxWeightInUnit, weightStep } from "@/lib/weight-units";
 import { RestOverlay } from "@/components/workout/RestOverlay";
 import { SwapDrawer } from "@/components/workout/SwapDrawer";
 import { IdleNudge, LeaveWorkoutDialog, PersonalRecordDialog } from "@/components/workout/WorkoutDialogs";
@@ -61,6 +63,10 @@ function Workout() {
   const rest = useRestTimer(superSore ? 120 : 90);
 
   const [weight, setWeight] = useState("");
+  // The member's unit (kg or lb): what they see and type. Sets are stored in kilograms.
+  const unit = useWeightUnit();
+  const unitRef = useRef(unit);
+  unitRef.current = unit;
   const [reps, setReps] = useState("");
   const [setNumber, setSetNumber] = useState(1);
   const [logging, setLogging] = useState(false);
@@ -152,7 +158,7 @@ function Workout() {
       const current = (cached.swapped_exercises_map[cached.current_exercise_index] as Exercise | undefined) ?? workout.exercises[cached.current_exercise_index];
       const previous = current ? lastSetFor(cached.logged_sets ?? [], cached.current_exercise_index, current.id) : undefined;
       if (previous) {
-        setWeight(String(previous.weight_kg));
+        setWeight(String(kgToUnit(previous.weight_kg, unitRef.current)));
         setReps(String(previous.reps));
       }
       // (Not when Home's "Finish it" is saving it: the member never sees the tracker.)
@@ -267,9 +273,9 @@ function Workout() {
   };
 
   const saveEdit = (target: CachedSet, weightText: string, repsText: string): boolean => {
-    const fix = parseCorrection(weightText, repsText);
+    const fix = parseCorrection(weightText, repsText, unit);
     if (!fix) {
-      toast.error("Enter a weight (0–1000 kg) and 1–100 reps.");
+      toast.error(`Enter a weight (0–${maxWeightInUnit(unit)} ${unit}) and 1–100 reps.`);
       return false;
     }
     const before = { weight_kg: target.weight_kg, reps: target.reps };
@@ -438,9 +444,9 @@ function Workout() {
 
   const handleLogSet = async () => {
     if (setsDone) return handleNext();
-    const entry = parseNewSet(weight, reps);
+    const entry = parseNewSet(weight, reps, unit);
     if (!entry) {
-      toast.error("Enter a weight (0–1000 kg) and 1–100 reps.");
+      toast.error(`Enter a weight (0–${maxWeightInUnit(unit)} ${unit}) and 1–100 reps.`);
       return;
     }
     if (!exercise) {
@@ -463,7 +469,7 @@ function Workout() {
     setLastLog({ weight_kg: entry.weight, reps_completed: entry.reps });
     setSetNumber((n) => n + 1);
     // Auto-fill: keep this set's numbers ready for the next one.
-    setWeight(String(entry.weight));
+    setWeight(String(kgToUnit(entry.weight, unit)));
     setReps(String(entry.reps));
     void syncSet(key);
   };
@@ -497,7 +503,7 @@ function Workout() {
         />
         {exercise ? <MachineAlignment key={`machine-${exercise.id}`} exerciseId={exercise.id} /> : null}
         {exercise ? (
-          <WarmUpCalculator key={`warmup-${exercise.id}`} exerciseId={exercise.id} equipment={exercise.equipment_type} weight={Number(weight) || 0} />
+          <WarmUpCalculator key={`warmup-${exercise.id}`} exerciseId={exercise.id} equipment={exercise.equipment_type} weight={Number(weight) || 0} unit={unit} />
         ) : (
           <p className="mt-4 text-muted-foreground">{isLoading ? "Loading exercise details…" : "No exercise is assigned to this workout."}</p>
         )}
@@ -507,8 +513,9 @@ function Workout() {
             targetSets={targetSets}
             targetReps={targetReps}
             assisted={isAssistedExercise(exercise)}
+            unit={unit}
             onUse={(w, r) => {
-              setWeight(String(w));
+              setWeight(String(kgToUnit(w, unit)));
               setReps(String(r));
             }}
           />
@@ -517,11 +524,11 @@ function Workout() {
 
       {/* Set logging inputs */}
       <div className="mt-10 grid grid-cols-1 gap-5 min-[380px]:grid-cols-2 min-[380px]:gap-3" role="group" aria-label="Log a set">
-        <Stepper label={isAssistedExercise(exercise) ? "Assistance (kg)" : "Weight (kg)"} unit="kg" value={weight} onChange={setWeight} step={2.5} min={0} max={500} inputMode="decimal" />
+        <Stepper label={`${isAssistedExercise(exercise) ? "Assistance" : "Weight"} (${unit})`} unit={unit} value={weight} onChange={setWeight} step={weightStep(unit)} min={0} max={Math.floor(kgToUnit(500, unit))} inputMode="decimal" />
         <Stepper label="Reps" unit="rep" value={reps} onChange={setReps} step={1} min={0} max={100} inputMode="numeric" />
       </div>
       {/* Plate math only means something on a barbell (shown when the type isn't known yet). */}
-      {(!exercise?.equipment_type || exercise.equipment_type === "Barbell") && <PlateVisualizer weight={Number(weight) || 0} />}
+      {(!exercise?.equipment_type || exercise.equipment_type === "Barbell") && <PlateVisualizer weight={Number(weight) || 0} unit={unit} />}
 
       {/* After a swap, only the new exercise's sets (the set count restarts at 1). */}
       <LoggedSets sets={sets.filter((x) => x.exercise_index === index && x.exercise_id === exercise?.id)} onDelete={handleDeleteSet} onSaveEdit={saveEdit} />
