@@ -239,12 +239,15 @@ function AuthPage() {
           <MailCheck className="size-16 text-primary drop-shadow-[0_0_18px_var(--primary)]" strokeWidth={1.4} />
           <h1 className="mt-8 text-3xl font-semibold">Check your email</h1>
           <p className="mt-4 text-muted-foreground">
-            We sent a confirmation link to <span className="text-foreground">{sentTo}</span>. Tap it to activate your Bro Profile and start onboarding.
+            We sent a confirmation link to <span className="text-foreground">{sentTo}</span>. Open the email <span className="text-foreground">on this phone</span> and tap it to activate your Bro Profile and start onboarding.
+          </p>
+          <p className="mt-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+            Opened the link on a computer, or it showed a blank page? Your email is still confirmed. Come back here and log in.
           </p>
           <Button type="button" variant="outline" onClick={() => void resendConfirmation(sentTo)} disabled={resending || resendRemaining > 0} className="mt-10 h-12 w-full rounded-lg">
             {resending ? "Sending…" : resendRemaining > 0 ? `Sent. Check spam too (resend in ${resendRemaining}s)` : "Didn't get it? Resend email"}
           </Button>
-          <button type="button" onClick={() => { setSentTo(null); setMode("login"); }} className="mt-6 text-sm font-medium text-primary underline-offset-4 hover:underline">
+          <button type="button" onClick={() => { setSentTo(null); setMode("login"); }} className="mt-6 inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline">
             Already confirmed? Log in
           </button>
         </section>
