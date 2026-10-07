@@ -414,7 +414,7 @@ function Workout() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const { data: swapOptions, isFetching: loadingOptions } = useQuery({
+  const { data: swapOptions, isFetching: loadingOptions, isError: swapError } = useQuery({
     queryKey: ["swap-options", exercise?.id],
     queryFn: () => getAlternativeOptions({ data: { exercise_id: exercise!.id, exclude: session.map((e) => e.id) } }),
     enabled: swapOpen && isPro && Boolean(exercise),
@@ -554,6 +554,7 @@ function Workout() {
         onOpenChange={setSwapOpen}
         exerciseName={exercise?.name}
         loading={loadingOptions}
+        error={swapError}
         options={swapOptions}
         onPick={handleSwap}
       />

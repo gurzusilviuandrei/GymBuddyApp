@@ -48,7 +48,7 @@ persistQueryClient({
   queryClient,
   persister: createSyncStoragePersister({ storage: durableStorage, key: "gymbuddy-query-cache" }),
   maxAge: OFFLINE_CACHE_MS,
-  buster: "1",
+  buster: "2",
 });
 
 const router = createRouter({

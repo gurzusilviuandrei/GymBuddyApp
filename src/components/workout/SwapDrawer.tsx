@@ -10,12 +10,14 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   exerciseName: string | undefined;
   loading: boolean;
+  /** The list could not be loaded (offline, server error). */
+  error?: boolean;
   options: SwapOption[] | undefined;
   onPick: (option: SwapOption) => void;
 };
 
 /** Bottom sheet of same-movement alternatives when the machine is taken (Pro). */
-export function SwapDrawer({ open, onOpenChange, exerciseName, loading, options, onPick }: Props) {
+export function SwapDrawer({ open, onOpenChange, exerciseName, loading, error = false, options, onPick }: Props) {
   useBackToClose(open, () => onOpenChange(false));
   return (
     <Drawer open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
@@ -26,7 +28,10 @@ export function SwapDrawer({ open, onOpenChange, exerciseName, loading, options,
         </DrawerHeader>
         <div className="mx-auto w-full max-w-lg space-y-3 overflow-y-auto px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           {loading && <p className="py-4 text-sm text-muted-foreground">Finding alternatives…</p>}
-          {!loading && options?.length === 0 && <p className="py-4 text-sm text-muted-foreground">No alternatives for this one, Bro. Wait a minute for the machine.</p>}
+          {!loading && error && <p role="alert" className="py-4 text-sm text-muted-foreground">Couldn't load alternatives. Check your signal and try again.</p>}
+          {!loading && !error && options?.length === 0 && (
+            <p className="py-4 text-sm text-muted-foreground">No other exercise fits your equipment for this movement, Bro. Wait a minute for the machine, or carry on with this one.</p>
+          )}
           {options?.map((opt) => (
             <button
               key={opt.id}

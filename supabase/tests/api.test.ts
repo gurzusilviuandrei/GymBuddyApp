@@ -250,14 +250,49 @@ describe("Pro features", () => {
     expect(await errorOf(t.rpc(`SELECT public.save_custom_routine($1)`, [[]]))).toMatch(/at least one/);
   });
 
-  it("offer up to 4 swaps of the same movement, curated one first", async () => {
-    const alts = await t.rpc<{ id: string; movement_type: string }[]>(`SELECT public.get_alternative_options('db-bench')`);
+  type Alt = { id: string; movement_type: string; equipment_type: string };
+  const setEquipment = async (equipment: string | null) => {
+    await t.asAdmin();
+    await t.db.query(`UPDATE users SET equipment_type = $2 WHERE id = $1`, [A, equipment]);
+    await t.as(A);
+  };
+
+  it("offer up to 4 swaps of the same movement, curated one first (full gym)", async () => {
+    await setEquipment("full-gym");
+    const alts = await t.rpc<Alt[]>(`SELECT public.get_alternative_options('db-bench')`);
     expect(alts.length).toBeGreaterThan(0);
     expect(alts.length).toBeLessThanOrEqual(4);
     expect(alts[0]?.id).toBe("chest-press");
     expect(new Set(alts.map((a) => a.movement_type)).size).toBe(1);
     const filtered = await t.rpc<{ id: string }[]>(`SELECT public.get_alternative_options('db-bench', $1)`, [["chest-press"]]);
     expect(filtered.map((a) => a.id)).not.toContain("chest-press");
+  });
+
+  it("only offer dumbbell exercises to a dumbbells-only member (never a machine or barbell)", async () => {
+    await setEquipment("dumbbells");
+    const alts = await t.rpc<Alt[]>(`SELECT public.get_alternative_options('db-bench')`);
+    expect(alts.map((a) => a.id)).toEqual(["incline-db-press"]);
+    expect(alts.every((a) => a.equipment_type === "Dumbbell")).toBe(true);
+    // The curated alternative is a machine, so it is not offered.
+    expect(alts.map((a) => a.id)).not.toContain("chest-press");
+    // Nothing suitable left: an empty list, not a machine.
+    expect(await t.rpc(`SELECT public.get_alternative_options('db-bench', $1)`, [["incline-db-press"]])).toEqual([]);
+  });
+
+  it("only offer barbell exercises to a barbell-only member", async () => {
+    await setEquipment("barbell");
+    const alts = await t.rpc<Alt[]>(`SELECT public.get_alternative_options('db-bench')`);
+    expect(alts.map((a) => a.id)).toEqual(["bench-press"]);
+    const squats = await t.rpc<Alt[]>(`SELECT public.get_alternative_options('goblet-squat')`);
+    expect(squats.length).toBeGreaterThan(0);
+    expect(squats.every((a) => a.equipment_type === "Barbell")).toBe(true);
+  });
+
+  it("do not filter until the member has answered onboarding", async () => {
+    await setEquipment(null);
+    const alts = await t.rpc<Alt[]>(`SELECT public.get_alternative_options('db-bench')`);
+    expect(alts[0]?.id).toBe("chest-press");
+    await setEquipment("dumbbells");
   });
 
   it("chart the best estimated 1RM per day", async () => {
@@ -267,6 +302,38 @@ describe("Pro features", () => {
     const days = await t.rpc<{ e1rm: number }[]>(`SELECT public.get_exercise_progress('goblet-squat', 0)`);
     expect(days).toHaveLength(1);
     expect(Number(days[0]?.e1rm)).toBe(Math.round(80 * (1 + 10 / 30) * 10) / 10);
+  });
+});
+
+describe("pre-made plans", () => {
+  const plans = async () => {
+    await t.asAdmin();
+    return t.rows<{ plan: string; day_number: number; id: string; equipment_type: string }>(
+      `SELECT p.equipment_type AS plan, p.day_number, e.id, e.equipment_type
+         FROM workout_programs p
+         CROSS JOIN LATERAL unnest(p.exercise_ids_list) AS x(exercise_id)
+         JOIN exercises e ON e.id = x.exercise_id`,
+    );
+  };
+
+  it("only use exercises the member's equipment can do", async () => {
+    const rows = await plans();
+    const wrong = (plan: string, type: string) => rows.filter((r) => r.plan === plan && r.equipment_type !== type).map((r) => `${plan} day ${r.day_number}: ${r.id}`);
+    expect(wrong("barbell", "Barbell")).toEqual([]);
+    expect(wrong("dumbbells", "Dumbbell")).toEqual([]);
+  });
+
+  it("list only exercises that exist, three days for each of the three plans", async () => {
+    await t.asAdmin();
+    const [counts] = await t.rows<{ listed: string; found: string }>(
+      `SELECT sum(cardinality(exercise_ids_list)) AS listed,
+              (SELECT count(*) FROM workout_programs p2 CROSS JOIN LATERAL unnest(p2.exercise_ids_list) AS y(exercise_id) JOIN exercises e2 ON e2.id = y.exercise_id) AS found
+         FROM workout_programs`,
+    );
+    expect(Number(counts?.found)).toBe(Number(counts?.listed));
+    const days = await t.rows<{ equipment_type: string; n: string }>(`SELECT equipment_type, count(*) AS n FROM workout_programs GROUP BY 1 ORDER BY 1`);
+    expect(days.map((d) => [d.equipment_type, Number(d.n)])).toEqual([["barbell", 3], ["dumbbells", 3], ["full-gym", 3]]);
+    await t.as(A);
   });
 });
 
