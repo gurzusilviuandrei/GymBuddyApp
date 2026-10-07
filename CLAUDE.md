@@ -132,12 +132,11 @@ Bottom tabs: Home, History, Profile. Android Back minimizes the app on `/`, `/au
 
 ## Branches
 
-- `main` is the **official version**, the one real members get. It only moves by fast-forward from a branch whose latest CI run is green and that the member has confirmed.
-- `beta` (long-lived) is the **beta version**: what beta testers get (Play internal/closed testing later). New features reach members here first, and are promoted to `main` only after the beta has been tried and the member says so. Everything on `main` must also be in `beta` (after `main` moves, merge `main` into `beta`), so `beta` is always `main` plus what is still being tested.
-- `v1/polish` (long-lived): bug fixes and small improvements. They go to `main` directly (members shouldn't wait for a beta cycle for a fix), then `beta` merges `main`.
-- `v1/features` (long-lived): bigger features, so they stay separate from polish. A finished feature is merged into `beta`, not into `main`.
-- Flow: fixes: `v1/polish` → `main` → merge into `beta`. Features: `v1/features` → `beta` → (tested, member agrees) → `main`.
-- Database changes for a beta feature go live in the same Supabase project (there is only one), so make them backwards compatible: a new function or column, never a change that breaks the official app.
+- `main` is the **official version** (what real members get). `beta` is the **beta version** (what testers get). They are two separate channels for the same code: `beta` exists to keep the two versions apart.
+- Work happens in two long-lived branches: `v1/polish` (bug fixes and small improvements) and `v1/features` (bigger features).
+- **Everything from `v1/polish` and `v1/features` is merged into both `main` and `beta`**, each after its latest CI run is green and the member says so. After merging into one, merge into the other too (or ask the member when the other should follow). `main` moves by fast-forward; `beta` takes a merge commit, because it carries the beta-only commits below. After merging `main` stuff into `beta`, run `npm run migrations:record` if migrations were involved (a test fails otherwise).
+- **Beta-only, never merge into `main`:** the beta testers' Pro access (migration `20261007160000_beta_testers.sql`, its tests, its section in this file and the regenerated record file that lists it). Commit anything of that kind on `beta` only, never on `v1/polish` or `v1/features`. To check what is beta-only: `git log main..beta` minus the merge commits.
+- The live Supabase project is shared by both channels, so database changes must stay backwards compatible (a new function or column, never a change that breaks an app that doesn't have the new code yet). The beta list is applied to the shared database, but it only ever upgrades emails that are on it; official members are never on it.
 - Don't push a branch until the member says so: every push starts a CI run.
 
 ## Session log: 2026-10-07 (read this first when resuming)
