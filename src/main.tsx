@@ -14,6 +14,7 @@ import { durableStorage, initDurableStorage } from "./lib/durable-storage";
 import { claimDeviceData } from "./lib/device-owner";
 import { initMonitoring, setMonitoringUser } from "./lib/monitoring";
 import { supabase } from "./integrations/supabase/client";
+import { removeSharedFiles } from "./lib/native-files";
 
 // First, so errors during start-up are reported too.
 initMonitoring();
@@ -36,8 +37,12 @@ const queryClient = new QueryClient({
 // Native storage must be in memory before anything reads it (cache, offline sets).
 await initDurableStorage();
 
-supabase.auth.onAuthStateChange((_event, session) => {
+// Exported data and Bro Cards from earlier shares don't need to stay on the phone.
+void removeSharedFiles();
+
+supabase.auth.onAuthStateChange((event, session) => {
   setMonitoringUser(session?.user.id ?? null);
+  if (event === "SIGNED_OUT") void removeSharedFiles();
   // A different account signed in on this phone: drop the previous one's data.
   if (session && claimDeviceData(session.user.id)) queryClient.clear();
 });

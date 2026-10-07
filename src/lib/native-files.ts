@@ -31,6 +31,33 @@ async function shareNative(blob: Blob, filename: string, title: string) {
   }
 }
 
+// Files we create for sharing: Bro Cards and the data export (which holds all of a
+// member's data). They are written to the app's cache folder so the share sheet can
+// read them, and nothing else deletes them.
+const SHARED_FILE = /^gymbuddy-(bro-card|training-history)[\w.-]*\.(png|json)$/;
+
+export function isSharedFileName(name: string): boolean {
+  return SHARED_FILE.test(name);
+}
+
+/**
+ * Deletes leftovers from earlier shares. Run at app start and at sign-out, never right
+ * after sharing: the receiving app may still be reading the file when the share sheet closes.
+ */
+export async function removeSharedFiles(): Promise<void> {
+  if (!isNativeApp) return;
+  try {
+    const { files } = await Filesystem.readdir({ path: "", directory: Directory.Cache });
+    await Promise.all(
+      files
+        .filter((f) => isSharedFileName(f.name))
+        .map((f) => Filesystem.deleteFile({ path: f.name, directory: Directory.Cache }).catch(() => {})),
+    );
+  } catch {
+    /* nothing to clean, or the folder isn't readable: harmless */
+  }
+}
+
 /** Opens the share sheet with the file (Instagram, WhatsApp, …). */
 export async function shareFile(blob: Blob, filename: string, title: string) {
   if (isNativeApp) return shareNative(blob, filename, title);
