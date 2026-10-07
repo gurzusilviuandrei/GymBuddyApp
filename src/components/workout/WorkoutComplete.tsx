@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { createBroCardBlob, downloadBroCard, type BroCardStats } from "@/lib/bro-card";
 import { shareFile } from "@/lib/native-files";
+import { useBackToClose } from "@/lib/back-stack";
 
 export type WorkoutSummary = {
   sets: number;
@@ -20,6 +21,7 @@ export function WorkoutComplete({ summary, exerciseCount }: { summary: WorkoutSu
   const [broCardUrl, setBroCardUrl] = useState<string | null>(null);
   const [broCardBlob, setBroCardBlob] = useState<Blob | null>(null);
   const [creatingCard, setCreatingCard] = useState(false);
+  useBackToClose(broCardUrl !== null, () => setBroCardUrl(null));
 
   useEffect(() => () => {
     if (broCardUrl) URL.revokeObjectURL(broCardUrl);

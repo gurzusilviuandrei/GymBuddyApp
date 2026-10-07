@@ -26,6 +26,7 @@ import { saveFile } from "@/lib/native-files";
 import { deleteAccount, exportMyData, getAccountSettings, updateAccountEmail } from "@/lib/account-api";
 import { usePro } from "@/components/pro/ProProvider";
 import { clearAccountData } from "@/lib/device-owner";
+import { useBackToClose } from "@/lib/back-stack";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   component: ProfilePage,
@@ -64,6 +65,17 @@ function ProfilePage() {
   const [verifyStep, setVerifyStep] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const closeDeleteDialog = (open: boolean) => {
+    setDeleteOpen(open);
+    if (!open) {
+      setDeleteText("");
+      setVerifyStep(false);
+      setDeletePassword("");
+    }
+  };
+  // Android Back closes the dialog (nothing is deleted) instead of leaving Profile.
+  useBackToClose(deleteOpen, () => closeDeleteDialog(false));
   const [lingoSearch, setLingoSearch] = useState("");
 
   const { data: account, isLoading } = useQuery({
@@ -300,7 +312,7 @@ function ProfilePage() {
         <div className="rounded-lg border border-destructive/60 bg-destructive/5 p-5">
           <h2 className="text-lg font-semibold text-destructive">Danger Zone</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Permanently remove your profile, workout history, and login account.</p>
-          <AlertDialog onOpenChange={(open) => { if (!open) { setDeleteText(""); setVerifyStep(false); setDeletePassword(""); } }}>
+          <AlertDialog open={deleteOpen} onOpenChange={closeDeleteDialog}>
             <AlertDialogTrigger asChild>
               <Button variant="outline" className="mt-5 w-full border-destructive/70 text-destructive hover:bg-destructive/10 hover:text-destructive">
                 <Trash2 aria-hidden="true" /> Delete Account

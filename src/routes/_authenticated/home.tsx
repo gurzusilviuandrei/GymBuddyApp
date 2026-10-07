@@ -21,6 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { RecoveryModeCard } from "@/components/RecoveryModeCard";
 import { durableStorage } from "@/lib/durable-storage";
+import { useBackToClose } from "@/lib/back-stack";
 import { clearAccountData } from "@/lib/device-owner";
 
 
@@ -91,6 +92,9 @@ function Home() {
     }
   }, [active, staleActive, staleSetCount]);
   const [pendingStart, setPendingStart] = useState<{ mode: "premade" | "custom"; superSore: boolean } | null>(null);
+  // Android Back closes these two dialogs (keeping everything) before it leaves the screen.
+  useBackToClose(Boolean(pendingStart && active), () => setPendingStart(null));
+  useBackToClose(checkInMode !== null, () => setCheckInMode(null));
 
   // Super sore skips the check-in (the answer is already known); otherwise ask.
   const proceedToWorkout = (mode: "premade" | "custom", superSore: boolean) => {

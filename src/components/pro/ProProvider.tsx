@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type React from "react";
+import { useBackToClose } from "@/lib/back-stack";
 import { Check, Lock, Trophy, X, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { durableStorage } from "@/lib/durable-storage";
@@ -59,6 +60,8 @@ export function ProProvider({ children }: { children: ReactNode }) {
   const [loaded, setLoaded] = useState(false);
   const [paywall, setPaywall] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
+  useBackToClose(paywall, () => setPaywall(false));
+  useBackToClose(celebrate, () => setCelebrate(false));
   const wasPro = useRef<boolean | null>(null);
   const proUser = useRef<string | null>(null);
 

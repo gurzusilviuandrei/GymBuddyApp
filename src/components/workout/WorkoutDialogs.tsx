@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useBackToClose } from "@/lib/back-stack";
 
 export function PersonalRecordDialog({ weight, name, onClose }: { weight: number; name: string; onClose: () => void }) {
+  useBackToClose(true, onClose);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 px-6 backdrop-blur-sm animate-fade-in" onClick={onClose}>
       <div role="alertdialog" aria-live="assertive" aria-label="New personal record" className="w-full max-w-sm rounded-2xl border-2 border-primary bg-card p-7 text-center shadow-neon" onClick={(e) => e.stopPropagation()}>

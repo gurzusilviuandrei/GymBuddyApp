@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getSessionDetail } from "@/lib/gym-api";
+import { useBackToClose } from "@/lib/back-stack";
 import type { SessionSummary } from "@/components/SessionCard";
 
 export function SessionDetailSheet({ session, onClose }: { session: SessionSummary | null; onClose: () => void }) {
@@ -9,6 +10,8 @@ export function SessionDetailSheet({ session, onClose }: { session: SessionSumma
     queryFn: () => getSessionDetail({ data: { session_id: session!.id } }),
     enabled: Boolean(session),
   });
+
+  useBackToClose(Boolean(session), onClose);
 
   return (
     <Sheet open={Boolean(session)} onOpenChange={(o) => !o && onClose()}>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Flame, Trash2 } from "lucide-react";
+import { useBackToClose } from "@/lib/back-stack";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +37,7 @@ export function SessionCard({
   deleting?: boolean;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  useBackToClose(confirmOpen, () => setConfirmOpen(false));
 
   return (
     <article

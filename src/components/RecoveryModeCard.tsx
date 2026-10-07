@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check, Pause, Play, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useBackToClose } from "@/lib/back-stack";
 
 const TIPS = [
   { icon: "💧", title: "Hydration Target", text: "Aim for an extra 500ml of water today to flush out lactic acid." },
@@ -64,6 +65,7 @@ export function RecoveryModeCard({ onTrainAnyway }: { onTrainAnyway: () => void 
 }
 
 function MobilityGuide({ onClose }: { onClose: () => void }) {
+  useBackToClose(true, onClose);
   const [left, setLeft] = useState(TOTAL);
   const [running, setRunning] = useState(true);
   const [checked, setChecked] = useState<boolean[]>([false, false, false]);

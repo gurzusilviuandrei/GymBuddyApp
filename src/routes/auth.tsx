@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useBackToClose } from "@/lib/back-stack";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, MailCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -51,6 +52,7 @@ function AuthPage() {
   const [lockedUntil, setLockedUntil] = useState<number>(() => readLockoutUntil());
   const [now, setNow] = useState(() => Date.now());
   const [forgotOpen, setForgotOpen] = useState(false);
+  useBackToClose(forgotOpen, () => setForgotOpen(false));
   const [forgotEmail, setForgotEmail] = useState("");
   const [sendingReset, setSendingReset] = useState(false);
   const [resetSentTo, setResetSentTo] = useState<string | null>(null);

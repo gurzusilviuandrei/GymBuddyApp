@@ -1,6 +1,7 @@
 import { ArrowRightLeft } from "lucide-react";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import type { Exercise } from "@/lib/workout-logic";
+import { useBackToClose } from "@/lib/back-stack";
 
 export type SwapOption = Exercise & { equipment_type: string; movement_type: string };
 
@@ -15,6 +16,7 @@ type Props = {
 
 /** Bottom sheet of same-movement alternatives when the machine is taken (Pro). */
 export function SwapDrawer({ open, onOpenChange, exerciseName, loading, options, onPick }: Props) {
+  useBackToClose(open, () => onOpenChange(false));
   return (
     <Drawer open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
       <DrawerContent className="max-h-[85dvh] rounded-t-lg border-primary/40 bg-background">

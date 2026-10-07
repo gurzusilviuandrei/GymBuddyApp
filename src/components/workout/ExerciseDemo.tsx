@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Expand, Pause, Play, X } from "lucide-react";
+import { useBackToClose } from "@/lib/back-stack";
 import { getExerciseFrames } from "@/lib/exercise-media";
 
 const FRAME_MS = 900;
@@ -89,6 +90,7 @@ export function ExerciseDemo({
   const frames = getExerciseFrames(exerciseId);
   const [ready, setReady] = useState(false);
   const [open, setOpen] = useState(false);
+  useBackToClose(open, () => setOpen(false));
   const [paused, setPaused] = useState(false);
 
   // Read after mount so server and browser render the same icon first.

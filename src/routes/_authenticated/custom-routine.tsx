@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { getExerciseLibrary, saveCustomRoutine } from "@/lib/gym-api";
 import { cn } from "@/lib/utils";
+import { useBackToClose } from "@/lib/back-stack";
 
 // The chart library is large: load it only when a member opens a progress chart.
 const ExerciseProgressChart = lazy(() =>
@@ -61,6 +62,7 @@ function CustomRoutineEditor() {
   const [selected, setSelected] = useState<string[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  useBackToClose(drawerOpen, () => setDrawerOpen(false));
   const [saving, setSaving] = useState(false);
   const [chartId, setChartId] = useState<string | null>(null);
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ["exercise-library"], queryFn: () => getExerciseLibrary() });
