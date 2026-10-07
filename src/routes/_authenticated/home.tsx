@@ -330,10 +330,11 @@ function Home() {
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-3xl font-semibold text-foreground">
+              {/* Sized to stay inside the ring even with the phone's font set to the largest size. */}
+              <span className="text-2xl font-semibold leading-none text-foreground">
                 {completed} <span className="text-muted-foreground">/ {weeklyTarget}</span>
               </span>
-              <span className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">Workouts</span>
+              <span className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">Workouts</span>
             </div>
           </div>
         </div>

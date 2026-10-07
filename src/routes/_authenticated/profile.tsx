@@ -237,15 +237,16 @@ function ProfilePage() {
 
         <div className="mt-5 divide-y divide-border rounded-lg border border-border bg-card px-5">
           <div className="py-5">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex min-w-0 items-center gap-3">
+            {/* Rows wrap, so large fonts on small phones drop the button below the text instead of widening the page. */}
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+              <div className="flex min-w-0 flex-1 basis-40 items-center gap-3">
                 <Mail className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
                 <div className="min-w-0">
                   <p className="text-sm font-medium">Email address</p>
                   <p className="mt-1 truncate text-sm text-muted-foreground">{account?.email}</p>
                 </div>
               </div>
-              {!editingEmail && <Button variant="outline" size="sm" onClick={beginEmailEdit}>Update Email</Button>}
+              {!editingEmail && <Button variant="outline" size="sm" className="shrink-0" onClick={beginEmailEdit}>Update Email</Button>}
             </div>
             {editingEmail && (
               <form onSubmit={handleEmailUpdate} className="mt-5 space-y-3">
@@ -258,15 +259,15 @@ function ProfilePage() {
             )}
           </div>
 
-          <div className="flex items-center justify-between gap-4 py-5">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 py-5">
+            <div className="flex min-w-0 flex-1 basis-40 items-center gap-3">
               <KeyRound className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium">Password</p>
                 <p className="mt-1 text-sm text-muted-foreground">Send a secure reset link</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" disabled={sendingReset || !account?.email} onClick={handlePasswordReset}>
+            <Button variant="outline" size="sm" className="shrink-0" disabled={sendingReset || !account?.email} onClick={handlePasswordReset}>
               {sendingReset ? "Sending…" : "Reset Password"}
             </Button>
           </div>
@@ -302,7 +303,7 @@ function ProfilePage() {
         </div>
         <div className="mt-5 rounded-lg border border-border bg-card p-5">
           <p className="text-sm leading-relaxed text-muted-foreground">Download a copy of your profile, every logged set, and all completed workouts.</p>
-          <Button variant="outline" className="mt-4 w-full border-primary/50 text-primary hover:bg-primary/10 hover:text-primary" disabled={exporting} onClick={handleExport}>
+          <Button variant="outline" className="mt-4 h-auto min-h-9 w-full whitespace-normal border-primary/50 py-2 text-primary hover:bg-primary/10 hover:text-primary" disabled={exporting} onClick={handleExport}>
             <FileDown aria-hidden="true" /> {exporting ? "Preparing…" : "Export Training History (JSON)"}
           </Button>
         </div>
@@ -318,7 +319,7 @@ function ProfilePage() {
                 <Trash2 aria-hidden="true" /> Delete Account
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="mx-5 w-[calc(100%-2.5rem)] max-w-md rounded-lg border-destructive/60 bg-card">
+            <AlertDialogContent className="max-h-[90dvh] w-[calc(100%-2.5rem)] max-w-md overflow-y-auto rounded-lg border-destructive/60 bg-card">
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete your Bro profile?</AlertDialogTitle>
                 <AlertDialogDescription className="leading-relaxed">
