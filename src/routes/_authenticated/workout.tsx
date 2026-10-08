@@ -37,6 +37,8 @@ import {
   parseCorrection,
   parseNewSet,
   removeSet as withoutSet,
+  restoreSet,
+  UNDO_SET_MS,
   sessionTargets,
   type Exercise,
   type LastLog,
@@ -255,12 +257,21 @@ function Workout() {
     };
   }, []);
 
+  // A removed set disappears at once but is only deleted on the server after the Undo toast is gone,
+  // so Undo is just putting it back (nothing was sent yet). Closing the app inside these seconds
+  // leaves the set unattached on the server, where it is never counted.
+  const undoTimers = useRef(new Map<string, number>());
+
   const handleDeleteSet = (key: string) => {
     const target = setsRef.current.find((x) => x.key === key);
     if (!target) return;
+    const position = setsRef.current.indexOf(target);
     commitSets((prev) => withoutSet(prev, key));
     if (target.exercise_index === index) setSetNumber((n) => Math.max(1, n - 1));
-    if (target.id) {
+
+    const commitDelete = () => {
+      undoTimers.current.delete(key);
+      if (!target.id) return;
       const id = target.id;
       // Record the deletion on the device first: if the app closes before signal
       // returns, the removal is still pending and the set can't come back.
@@ -268,8 +279,22 @@ function Workout() {
       deleteWorkoutSet({ data: { id } })
         .then(() => removePendingDelete(id))
         .catch(() => {});
-    }
-    toast.success("Set removed");
+    };
+    undoTimers.current.set(key, window.setTimeout(commitDelete, UNDO_SET_MS));
+    toast("Set removed", {
+      duration: UNDO_SET_MS,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          const timer = undoTimers.current.get(key);
+          if (timer === undefined) return;
+          window.clearTimeout(timer);
+          undoTimers.current.delete(key);
+          commitSets((prev) => restoreSet(prev, target, position));
+          if (target.exercise_index === index) setSetNumber((n) => n + 1);
+        },
+      },
+    });
   };
 
   const saveEdit = (target: CachedSet, weightText: string, repsText: string): boolean => {
@@ -514,6 +539,7 @@ function Workout() {
             targetReps={targetReps}
             assisted={isAssistedExercise(exercise)}
             unit={unit}
+            equipment={exercise?.equipment_type}
             onUse={(w, r) => {
               setWeight(String(kgToUnit(w, unit)));
               setReps(String(r));
@@ -524,7 +550,7 @@ function Workout() {
 
       {/* Set logging inputs */}
       <div className="mt-10 grid grid-cols-1 gap-5 min-[380px]:grid-cols-2 min-[380px]:gap-3" role="group" aria-label="Log a set">
-        <Stepper label={`${isAssistedExercise(exercise) ? "Assistance" : "Weight"} (${unit})`} unit={unit} value={weight} onChange={setWeight} step={weightStep(unit)} min={0} max={Math.floor(kgToUnit(500, unit))} inputMode="decimal" />
+        <Stepper label={`${isAssistedExercise(exercise) ? "Assistance" : "Weight"} (${unit})`} unit={unit} value={weight} onChange={setWeight} step={weightStep(unit, exercise?.equipment_type)} min={0} max={Math.floor(kgToUnit(500, unit))} inputMode="decimal" />
         <Stepper label="Reps" unit="rep" value={reps} onChange={setReps} step={1} min={0} max={100} inputMode="numeric" />
       </div>
       {/* Plate math only means something on a barbell (shown when the type isn't known yet). */}

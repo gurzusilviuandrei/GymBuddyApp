@@ -82,6 +82,19 @@ describe("steps and limits", () => {
     expect(weightStepKg("lb")).toBe(2.27);
   });
 
+  it("steps by the equipment: machines 5 kg / 10 lb, dumbbells 2 kg / 5 lb, barbells 2.5 kg / 5 lb", () => {
+    expect(weightStep("kg", "Machine")).toBe(5);
+    expect(weightStep("lb", "Machine")).toBe(10);
+    expect(weightStep("kg", "Dumbbell")).toBe(2);
+    expect(weightStep("lb", "Dumbbell")).toBe(5);
+    expect(weightStep("kg", "Barbell")).toBe(2.5);
+    expect(weightStep("lb", "Barbell")).toBe(5);
+    expect(weightStep("kg", null)).toBe(2.5);
+    expect(weightStep("lb", undefined)).toBe(5);
+    expect(weightStepKg("kg", "Machine")).toBe(5);
+    expect(weightStepKg("lb", "Machine")).toBe(4.54);
+  });
+
   it("allows up to the database limit of 1000 kg, in either unit", () => {
     expect(maxWeightInUnit("kg")).toBe(1000);
     expect(maxWeightInUnit("lb")).toBe(2204);

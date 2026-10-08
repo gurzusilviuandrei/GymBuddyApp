@@ -18,6 +18,7 @@ import {
   parseWeightText,
   progression,
   removeSet,
+  restoreSet,
   restRemaining,
   sessionTargets,
   shiftRestEnd,
@@ -167,6 +168,30 @@ describe("removeSet", () => {
   });
   it("leaves the list alone for an unknown set", () => {
     expect(removeSet(sets, "zzz")).toBe(sets);
+  });
+});
+
+describe("restoreSet (Undo of a removed set)", () => {
+  const sets = [set("a", 0, 1), set("b", 0, 2), set("c", 1, 1), set("d", 0, 3)];
+  it("puts a removed set back exactly where it was", () => {
+    const b = sets[1]!;
+    const back = restoreSet(removeSet(sets, "b"), b, 1);
+    expect(back).toEqual(sets);
+  });
+  it("brings back the first and the last set too", () => {
+    for (const [i, key] of [[0, "a"], [3, "d"]] as const) {
+      const removed = removeSet(sets, key);
+      expect(restoreSet(removed, sets[i]!, i)).toEqual(sets);
+    }
+  });
+  it("numbers the exercise's sets by position again, even if others changed meanwhile", () => {
+    const afterRemoval = removeSet(sets, "b");
+    const withNew = [...afterRemoval, set("e", 0, 3)];
+    expect(restoreSet(withNew, sets[1]!, 1).filter((s) => s.exercise_index === 0).map((s) => [s.key, s.set_number])).toEqual([["a", 1], ["b", 2], ["d", 3], ["e", 4]]);
+  });
+  it("does nothing when the set is already there, and clamps a position past the end", () => {
+    expect(restoreSet(sets, sets[0]!, 0)).toBe(sets);
+    expect(restoreSet([set("a", 0, 1)], set("z", 0, 2), 99).map((s) => s.key)).toEqual(["a", "z"]);
   });
 });
 

@@ -20,6 +20,8 @@ export type Exercise = {
 
 export const REST_OPTIONS = [45, 60, 90, 120] as const;
 export const STEP_UP_KG = 2.5;
+/** How long "Set removed" offers Undo before the set is really deleted. */
+export const UNDO_SET_MS = 5000;
 
 /**
  * The three setup/form cues shown for an exercise, with safe fallbacks. The first one
@@ -125,6 +127,18 @@ export function removeSet(sets: CachedSet[], key: string): CachedSet[] {
   return sets
     .filter((x) => x.key !== key)
     .map((x) => (x.exercise_index === target.exercise_index ? { ...x, set_number: ++n } : x));
+}
+
+/**
+ * Undo of removeSet: puts a removed set back where it was in the list (its position among all sets)
+ * and numbers that exercise's sets again by position. Does nothing if the set is already back.
+ */
+export function restoreSet(sets: CachedSet[], removed: CachedSet, position: number): CachedSet[] {
+  if (sets.some((x) => x.key === removed.key)) return sets;
+  const at = Math.min(Math.max(0, position), sets.length);
+  const next = [...sets.slice(0, at), removed, ...sets.slice(at)];
+  let n = 0;
+  return next.map((x) => (x.exercise_index === removed.exercise_index ? { ...x, set_number: ++n } : x));
 }
 
 /** Whole seconds of rest left, never negative. */

@@ -3,9 +3,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { createUserProfile } from "@/lib/gym-api";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useBackToClose } from "@/lib/back-stack";
 import { durableStorage } from "@/lib/durable-storage";
 import { checkAge } from "@/lib/onboarding-validation";
 import { EQUIPMENT_OPTIONS, FREQUENCY_OPTIONS, GOAL_OPTIONS } from "@/lib/training-profile";
@@ -26,12 +28,19 @@ function CheckIcon() {
   );
 }
 
-function ProgressBar({ step }: { step: number }) {
+function ProgressBar({ step, onBack }: { step: number; onBack: () => void }) {
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-        Step {step} of {TOTAL_STEPS}
-      </p>
+      <div className="flex min-h-11 items-center gap-2">
+        {step > 1 && (
+          <button type="button" onClick={onBack} aria-label="Back to the previous step" className="-ml-3 flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground">
+            <ArrowLeft className="size-5" aria-hidden="true" />
+          </button>
+        )}
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          Step {step} of {TOTAL_STEPS}
+        </p>
+      </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={TOTAL_STEPS} aria-label="Onboarding progress">
         <div
           className="h-full rounded-full bg-primary shadow-neon transition-[width] duration-500 ease-out"
@@ -55,6 +64,10 @@ function Onboarding() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const createUser = createUserProfile;
+
+  const goBack = () => setStep((s) => Math.max(1, s - 1));
+  // Android Back steps back through the questions; on the first one it minimizes the app, as before.
+  useBackToClose(step > 1 && !saving, goBack);
 
   const ageCheck = checkAge(age);
   const ageNumber = ageCheck.ok ? ageCheck.age : NaN;
@@ -116,7 +129,7 @@ function Onboarding() {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col overflow-hidden bg-background px-7 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-10 text-foreground">
-      <ProgressBar step={step} />
+      <ProgressBar step={step} onBack={goBack} />
 
       <div className="relative mt-12 flex flex-1 flex-col">
         {/* Step 1 — Personal Details */}
