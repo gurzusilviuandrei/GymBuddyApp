@@ -1,0 +1,15 @@
+# Netlify publishes only the static website in site/ (no build step). The app itself is not hosted here.
+[build]
+  publish = "site"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    X-Frame-Options = "DENY"
+
+[[headers]]
+  for = "/open"
+  [headers.values]
+    Cache-Control = "no-store"
