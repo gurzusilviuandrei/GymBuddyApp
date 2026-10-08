@@ -61,3 +61,14 @@ describe("the website in site/", () => {
     expect(js).toContain("location.search");
   });
 });
+
+describe("the website's public details", () => {
+  it("has no placeholders left and names the contact address", () => {
+    for (const page of pages) {
+      const html = readFileSync(join(SITE, page), "utf8");
+      expect(html, page).not.toMatch(/\[(OPERATOR|SUPPORT)/);
+    }
+    expect(readFileSync(join(SITE, "privacy.html"), "utf8")).toContain("support@gymbuddyapp.app");
+    expect(readFileSync(join(SITE, "delete-account.html"), "utf8")).toContain("support@gymbuddyapp.app");
+  });
+});

@@ -11,10 +11,7 @@ Plain HTML, CSS and one small script: no build step. Pages:
 
 ## Before publishing
 
-Replace the two placeholders (search for `[` in `privacy.html` and `delete-account.html`):
-
-- `[OPERATOR NAME AND COUNTRY]` – who runs GymBuddy.
-- `[SUPPORT EMAIL]` – a mailbox you read (also needed by Google Play).
+The pages name "Andrei, France" as the operator and `support@gymbuddyapp.app` as the contact (in `privacy.html` and `delete-account.html`). **That mailbox must exist and be read** (Google Play also checks the contact address); change both pages if the address changes.
 
 Then have the policy read by someone who can judge it for your country. It describes what the app does today; keep it in step with the app (CLAUDE.md lists what changes should trigger an update).
 
