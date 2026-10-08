@@ -1,0 +1,57 @@
+:root {
+  --bg: #121212;
+  --card: #1c1c1c;
+  --border: #2e2e2e;
+  --text: #ffffff;
+  --muted: #b3b3b3;
+  --accent: #39ff14;
+  --accent-text: #121212;
+  --link: #39ff14;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f6f6f4;
+    --card: #ffffff;
+    --border: #d8d8d4;
+    --text: #151515;
+    --muted: #4d4d4d;
+    --accent: #1a7a08;
+    --accent-text: #ffffff;
+    --link: #146206;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+main, header, footer { width: 100%; max-width: 44rem; margin: 0 auto; padding: 0 16px; }
+header { display: flex; align-items: center; justify-content: space-between; padding-top: 24px; padding-bottom: 8px; }
+.brand { font-size: 1.35rem; font-weight: 700; color: var(--text); text-decoration: none; display: inline-flex; align-items: center; min-height: 44px; }
+.brand span { color: var(--accent); }
+nav { display: flex; gap: 4px; flex-wrap: wrap; }
+nav a { color: var(--muted); text-decoration: none; padding: 12px 10px; min-height: 44px; display: inline-flex; align-items: center; }
+nav a:hover, nav a[aria-current="page"] { color: var(--text); }
+main { padding-top: 24px; padding-bottom: 48px; }
+h1 { font-size: 2rem; line-height: 1.2; margin: 8px 0 16px; }
+h2 { font-size: 1.25rem; margin: 32px 0 8px; }
+p, li { color: var(--muted); }
+p strong, li strong { color: var(--text); }
+a { color: var(--link); }
+ul, ol { padding-left: 1.25rem; }
+li { margin: 6px 0; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 4px 20px; margin: 20px 0; }
+.eyebrow { color: var(--accent); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.8rem; margin: 0; }
+.button {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 48px;
+  background: var(--accent); color: var(--accent-text); font-weight: 700; text-decoration: none;
+  padding: 12px 22px; border-radius: 8px; font-size: 1rem;
+}
+.button:focus-visible, a:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
+.updated { font-size: 0.9rem; }
+footer { padding-top: 16px; padding-bottom: 40px; border-top: 1px solid var(--border); font-size: 0.9rem; }
+footer a { color: var(--muted); display: inline-block; padding: 10px 4px; }
+[hidden] { display: none !important; }

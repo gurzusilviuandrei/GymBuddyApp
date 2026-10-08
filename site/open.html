@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Open GymBuddy</title>
+    <meta name="description" content="Finish signing in to GymBuddy." />
+    <meta name="robots" content="noindex" />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="icon" href="/favicon.png" />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/">GymBuddy<span>.</span></a>
+    </header>
+    <main>
+      <p class="eyebrow">Email link</p>
+      <h1>Done. Now open GymBuddy.</h1>
+      <p>If you were confirming your email, it is confirmed: open the GymBuddy app and log in. If you were resetting your password or changing your email, open this page on the phone where you asked for it, then tap the button.</p>
+      <p id="phone" hidden><a class="button" id="openApp" href="app.gymbuddyapp.gymbuddy://auth-callback/">Open GymBuddy</a></p>
+      <div class="card" id="computer" hidden>
+        <p><strong>You are not on your phone.</strong> Nothing else is needed here. Open GymBuddy on your phone and log in. To reset a password or change an email, use the link from the email on the phone where you asked for it.</p>
+      </div>
+      <noscript><p>Open the GymBuddy app on your phone to continue.</p></noscript>
+      <script src="/open.js"></script>
+    </main>
+    <footer>
+      <p>&copy; GymBuddy &middot; <a href="/privacy">Privacy policy</a> &middot; <a href="/delete-account">Delete your account</a></p>
+    </footer>
+  </body>
+</html>
