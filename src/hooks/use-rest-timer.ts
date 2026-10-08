@@ -2,12 +2,15 @@ import { useEffect, useState } from "react";
 import { isChimeMuted, playRestOverChime, setChimeMuted, unlockChime } from "@/lib/rest-chime";
 import { haptic, prepareRestAlerts, startRestTimer, stopRestTimer } from "@/lib/native-workout";
 import { restRemaining, shiftRestEnd } from "@/lib/workout-logic";
+import { readRestLength, rememberRestLength } from "@/lib/rest-length";
 
 /**
  * Rest between sets: the on-screen countdown, the chime and buzz when it ends, and
  * a native lock-screen countdown that alerts on time while the phone is locked.
+ * `defaultSeconds` applies until the member picks a length; after that their choice is remembered.
  */
-export function useRestTimer(initialSeconds: number) {
+export function useRestTimer(defaultSeconds: number) {
+  const [initialSeconds] = useState(() => readRestLength() ?? defaultSeconds);
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
   const [restSecs, setRestSecs] = useState(initialSeconds);
@@ -72,6 +75,7 @@ export function useRestTimer(initialSeconds: number) {
     changeLength(seconds: number) {
       setRestEndsAt((end) => (end === null ? end : shiftRestEnd(end, restSecs, seconds)));
       setRestSecs(seconds);
+      rememberRestLength(seconds);
     },
     toggleChime() {
       const next = !chimeMuted;

@@ -58,14 +58,20 @@ export function broCardVolume(kg: number, unit: WeightUnit): { label: string; va
   return { label: `${unit.toUpperCase()} SHIFTED`, value: volumeInUnit(kg, unit).toLocaleString("en-US") };
 }
 
-/** How far the +/- buttons move a weight, in the member's unit. */
-export function weightStep(unit: WeightUnit): number {
+/**
+ * How far the +/- buttons move a weight, in the member's unit. Machine stacks go up in bigger jumps
+ * (5 kg or 10 lb) and dumbbells in small pairs (2 kg or 5 lb); barbells and anything unknown keep
+ * the usual 2.5 kg or 5 lb.
+ */
+export function weightStep(unit: WeightUnit, equipment?: string | null): number {
+  if (equipment === "Machine") return unit === "kg" ? 5 : 10;
+  if (equipment === "Dumbbell") return unit === "kg" ? 2 : 5;
   return unit === "kg" ? 2.5 : 5;
 }
 
 /** The same step in kilograms (the step-up suggestion works in kg). */
-export function weightStepKg(unit: WeightUnit): number {
-  return unitToKg(weightStep(unit), unit);
+export function weightStepKg(unit: WeightUnit, equipment?: string | null): number {
+  return unitToKg(weightStep(unit, equipment), unit);
 }
 
 /** The most the +/- buttons and the plate maths go to, in the member's unit. */
