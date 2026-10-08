@@ -1,6 +1,8 @@
 # Netlify publishes only the static website in site/ (no build step). The app itself is not hosted here.
 [build]
   publish = "site"
+  # The site is plain files: do not run the app's own build (it needs Supabase settings Netlify does not have).
+  command = "echo static site, nothing to build"
 
 [[headers]]
   for = "/*"
