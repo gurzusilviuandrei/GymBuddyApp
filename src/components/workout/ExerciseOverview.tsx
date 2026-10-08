@@ -69,6 +69,7 @@ export function ProgressionCard({
   targetReps,
   assisted = false,
   unit,
+  equipment,
   onUse,
 }: {
   lastLog: LastLog;
@@ -78,12 +79,14 @@ export function ProgressionCard({
   assisted?: boolean;
   /** The member's unit; weights arrive and leave in kilograms, only the text and the step follow the unit. */
   unit: WeightUnit;
+  /** The exercise's equipment type: machines step up by more than dumbbells. */
+  equipment?: string | null | undefined;
   onUse: (weight: number, reps: number) => void;
 }) {
-  const { base, setsLast, repsLast, hitAll, atLimit, stepUp, suggested } = progression(lastLog, targetSets, targetReps, assisted, weightStepKg(unit));
+  const { base, setsLast, repsLast, hitAll, atLimit, stepUp, suggested } = progression(lastLog, targetSets, targetReps, assisted, weightStepKg(unit, equipment));
   // "30 kg", or "30 kg assistance" for the exercise where the number is the machine's help.
   const show = (kg: number) => (assisted ? `${formatWeight(kg, unit)} assistance` : formatWeight(kg, unit));
-  const step = weightStep(unit);
+  const step = weightStep(unit, equipment);
   return (
     <div className="mt-6 rounded-2xl border border-primary/40 bg-card p-5" aria-live="polite">
       <p className="text-xs font-semibold uppercase tracking-widest text-primary">
