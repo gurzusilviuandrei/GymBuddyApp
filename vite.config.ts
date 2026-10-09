@@ -26,5 +26,8 @@ export default defineConfig(({ command, mode }) => {
       tsconfigPaths(),
     ],
     server: { port: 5173 },
+    // The GitHub Release workflow sets SOURCEMAPS=hidden: maps are made for Sentry (which turns crash
+    // traces back into readable code), uploaded, then deleted before the app is packaged.
+    build: { sourcemap: process.env.SOURCEMAPS === "hidden" ? "hidden" : false },
   };
 });

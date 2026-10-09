@@ -1,0 +1,84 @@
+# Builds a release APK on GitHub and uploads its source maps to Sentry, so crash reports from
+# that build show readable code. Started by hand: Actions → Release → Run workflow.
+# The APK is signed with GitHub's debug key until the Play upload key is added as secrets
+# (it then installs only after uninstalling a copy built elsewhere; see CLAUDE.md).
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      SENTRY_ORG: gurzu-silviu-andrei
+      SENTRY_PROJECT: gymbuddy
+      SENTRY_CLI: "@sentry/cli@3.8.0"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+      - run: npm ci
+      - run: npm test
+
+      - name: Build the app (with source maps kept out of the files)
+        run: npx vite build
+        env:
+          SOURCEMAPS: hidden
+          # Public by design (they ship inside every copy of the app), same as ci.yml.
+          VITE_SUPABASE_URL: https://uoljwupvesnnsjipnzyn.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_wRHNLX3Jo49IcuWO-JYmKQ_Z05uBuB3
+          VITE_SENTRY_DSN: https://339fd206883f6489807d93e7ae2feeef@o4512205215694849.ingest.de.sentry.io/4512205230112848
+
+      # Debug ids tie each shipped file to its map, so Sentry finds the right map without paths.
+      - name: Upload source maps to Sentry
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+            echo "::error::Add the SENTRY_AUTH_TOKEN secret (repo Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+          VERSION=$(node -p "require('./package.json').version")
+          npx --yes "$SENTRY_CLI" sourcemaps inject dist
+          npx --yes "$SENTRY_CLI" sourcemaps upload --release "gymbuddy@$VERSION" dist
+
+      - name: Keep the maps out of the app
+        run: find dist -name '*.map' -delete
+
+      - name: Copy the app into Android
+        run: npx cap sync android
+
+      - name: Assemble release (shrunk) APK
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Name the APK after the version and commit
+        id: name
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "file=GymBuddy-${VERSION}-${GITHUB_SHA::7}.apk" >> "$GITHUB_OUTPUT"
+          cp android/app/build/outputs/apk/release/app-release.apk "GymBuddy-${VERSION}-${GITHUB_SHA::7}.apk"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.name.outputs.file }}
+          path: ${{ steps.name.outputs.file }}
+          retention-days: 30
+      # For reading Java crash traces of this build (R8 renames classes).
+      - uses: actions/upload-artifact@v7
+        with:
+          name: gymbuddy-r8-mapping-${{ github.sha }}
+          path: android/app/build/outputs/mapping/release/mapping.txt
+          retention-days: 90
