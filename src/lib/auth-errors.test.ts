@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   cooldownSecondsLeft,
   emailSendError,
+  EMAIL_SEND_FAILED_MESSAGE,
   friendlyAuthError,
+  isServerError,
+  SERVER_PROBLEM_MESSAGE,
   isAlreadyRegistered,
   isEmailNotConfirmed,
   isFakeSignUp,
@@ -55,6 +58,33 @@ describe("resend cooldown", () => {
     expect(cooldownSecondsLeft(until, sentAt + 59_001)).toBe(1);
     expect(cooldownSecondsLeft(until, until)).toBe(0);
     expect(cooldownSecondsLeft(until, until + 5_000)).toBe(0);
+  });
+});
+
+describe("server errors are not 'no connection'", () => {
+  // Found on 2026-10-09: the sign-up email could not be sent (500), and the app said "No connection".
+  const emailFailure = { name: "AuthRetryableFetchError", status: 500, message: "Error sending confirmation email" };
+
+  it("tells the member the email could not be sent, not that they are offline", () => {
+    expect(isNetworkError(emailFailure)).toBe(false);
+    expect(isServerError(emailFailure)).toBe(true);
+    expect(friendlyAuthError(emailFailure)).toBe(EMAIL_SEND_FAILED_MESSAGE);
+    expect(emailSendError(emailFailure, "Couldn't resend the email. Check your signal and try again.")).toBe(EMAIL_SEND_FAILED_MESSAGE);
+    expect(friendlyAuthError({ ...emailFailure, message: "Error sending recovery email" })).toBe(EMAIL_SEND_FAILED_MESSAGE);
+  });
+
+  it("says the server had a problem for other server errors", () => {
+    for (const status of [500, 502, 503, 504, 522]) {
+      const err = { name: "AuthRetryableFetchError", status, message: "HTTP " + status };
+      expect(isNetworkError(err), String(status)).toBe(false);
+      expect(friendlyAuthError(err), String(status)).toBe(SERVER_PROBLEM_MESSAGE);
+    }
+  });
+
+  it("still treats a 4xx refusal as the server's own message", () => {
+    expect(isServerError({ status: 422, message: "x" })).toBe(false);
+    expect(isServerError({ status: 0 })).toBe(false);
+    expect(isServerError(null)).toBe(false);
   });
 });
 

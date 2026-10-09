@@ -5,19 +5,36 @@
 type AuthLikeError = { name?: string; status?: number; code?: string; message?: string } | null | undefined;
 
 export const OFFLINE_MESSAGE = "No connection. Check your signal and try again.";
+export const EMAIL_SEND_FAILED_MESSAGE = "We couldn't send the email right now. Please try again in a few minutes.";
+export const SERVER_PROBLEM_MESSAGE = "GymBuddy's server had a problem. Please try again in a few minutes.";
 
 /** How long to wait before asking for another confirmation email. */
 export const RESEND_COOLDOWN_MS = 60_000;
 
-/** The request never reached the server (no signal, DNS, airplane mode…). */
+/**
+ * The request never reached the server (no signal, DNS, airplane mode…). The auth library also
+ * calls a server error (500 and up) "retryable", but that one did reach the server: it has a status.
+ */
 export function isNetworkError(error: unknown): boolean {
   const e = error as AuthLikeError;
   if (!e) return false;
+  if (isServerError(e)) return false;
   return (
     e.name === "AuthRetryableFetchError" ||
     e.status === 0 ||
     /failed to fetch|load failed|network ?error|network request failed|fetch failed/i.test(e.message ?? "")
   );
+}
+
+/** The server answered with an error of its own (500 and up), e.g. it could not send an email. */
+export function isServerError(error: unknown): boolean {
+  const status = (error as AuthLikeError)?.status;
+  return typeof status === "number" && status >= 500;
+}
+
+/** Wording for a server error: an email that could not be sent, or a general problem. */
+function serverErrorText(error: unknown): string {
+  return /sending .*email|send .*email|smtp/i.test((error as AuthLikeError)?.message ?? "") ? EMAIL_SEND_FAILED_MESSAGE : SERVER_PROBLEM_MESSAGE;
 }
 
 /** Login refused because the sign-up email link hasn't been tapped yet. */
@@ -49,6 +66,7 @@ export function cooldownSecondsLeft(until: number, now: number): number {
 /** Text for a failed login / sign-up: friendly offline wording, else the server's own. */
 export function friendlyAuthError(error: unknown, fallback = "Something went wrong. Try again."): string {
   if (isNetworkError(error)) return OFFLINE_MESSAGE;
+  if (isServerError(error)) return serverErrorText(error);
   const message = (error as AuthLikeError)?.message?.trim();
   return message || fallback;
 }
@@ -60,6 +78,7 @@ export function friendlyAuthError(error: unknown, fallback = "Something went wro
  */
 export function emailSendError(error: unknown, fallback: string): string {
   if (isNetworkError(error)) return OFFLINE_MESSAGE;
+  if (isServerError(error)) return serverErrorText(error);
   const e = error as AuthLikeError;
   const message = e?.message ?? "";
   // e.g. "For security purposes, you can only request this after 42 seconds."
