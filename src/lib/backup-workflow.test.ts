@@ -15,7 +15,8 @@ describe("the weekly backup workflow", () => {
   it("takes the connection string and passphrase only from repository secrets", () => {
     expect(workflow).toContain("${{ secrets.SUPABASE_DB_URL }}");
     expect(workflow).toContain("${{ secrets.BACKUP_PASSPHRASE }}");
-    expect(workflow).not.toMatch(/postgres(ql)?:\/\//);
+    // No real connection string (a host after "://"); the "postgres://*" pattern in the check is fine.
+    expect(workflow).not.toMatch(/postgres(ql)?:\/\/[\w.-]+[:@]/);
   });
 
   it("encrypts before uploading, uploads only the encrypted file and deletes the plain dump", () => {
