@@ -28,6 +28,7 @@ import { usePro } from "@/components/pro/ProProvider";
 import { clearAccountData } from "@/lib/device-owner";
 import { useBackToClose } from "@/lib/back-stack";
 import { TrainingProfileCard } from "@/components/profile/TrainingProfileCard";
+import { RemindersCard } from "@/components/profile/RemindersCard";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   component: ProfilePage,
@@ -276,6 +277,7 @@ function ProfilePage() {
       </section>
 
       <TrainingProfileCard />
+      <RemindersCard />
 
       <section className="mt-10">
         <div className="flex items-center gap-3">

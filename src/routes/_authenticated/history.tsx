@@ -40,6 +40,7 @@ function HistoryPage() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["workout-history"] }),
         queryClient.invalidateQueries({ queryKey: ["user-stats"] }),
+        queryClient.invalidateQueries({ queryKey: ["streak"] }),
       ]);
       toast.success("Workout deleted");
     },

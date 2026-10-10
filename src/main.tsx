@@ -15,6 +15,7 @@ import { claimDeviceData } from "./lib/device-owner";
 import { initMonitoring, setMonitoringUser } from "./lib/monitoring";
 import { supabase } from "./integrations/supabase/client";
 import { removeSharedFiles } from "./lib/native-files";
+import { cancelReminders } from "./lib/native-reminders";
 
 // First, so errors during start-up are reported too.
 initMonitoring();
@@ -42,7 +43,11 @@ void removeSharedFiles();
 
 supabase.auth.onAuthStateChange((event, session) => {
   setMonitoringUser(session?.user.id ?? null);
-  if (event === "SIGNED_OUT") void removeSharedFiles();
+  if (event === "SIGNED_OUT") {
+    void removeSharedFiles();
+    // A signed-out phone gets no training reminders; they come back when the same member logs in.
+    void cancelReminders();
+  }
   // A different account signed in on this phone: drop the previous one's data.
   if (session && claimDeviceData(session.user.id)) queryClient.clear();
 });

@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { OfflineSyncWorker } from "@/components/OfflineSyncWorker";
 import { WeightUnitSync } from "@/components/WeightUnitSync";
+import { ReminderSync } from "@/components/ReminderSync";
 import { claimDeviceData } from "@/lib/device-owner";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/_authenticated")({
     <>
       <OfflineSyncWorker />
       <WeightUnitSync />
+      <ReminderSync />
       <Outlet />
     </>
   ),
