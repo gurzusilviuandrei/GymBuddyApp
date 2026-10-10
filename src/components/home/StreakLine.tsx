@@ -11,7 +11,8 @@ export function StreakLine() {
   const left = Math.max(0, goal - thisWeek);
 
   let detail: string;
-  if (current === 0) detail = `Hit ${goal} ${goal === 1 ? "workout" : "workouts"} this week to start a streak.`;
+  if (current === 0 && thisWeek > 0) detail = `${left} more this week to start a streak.`;
+  else if (current === 0) detail = `Hit ${goal} ${goal === 1 ? "workout" : "workouts"} this week to start a streak.`;
   else if (left > 0) detail = `${left} more this week to keep it going.`;
   else detail = best > current ? `Best ever: ${best} weeks.` : "Your best run yet. Keep it going!";
 
