@@ -27,10 +27,10 @@ describe("signed-out visitors", () => {
     expect(await errorOf(t.rows(`SELECT * FROM workout_programs`))).toMatch(/permission denied/);
   });
 
-  it("see no member data", async () => {
+  it("are refused member data outright (no table privileges at all since review M1)", async () => {
     await t.as(null);
     for (const table of ["users", "workout_logs", "workout_sessions", "user_machine_settings"]) {
-      expect(await t.rows(`SELECT * FROM ${table}`)).toHaveLength(0);
+      expect(await errorOf(t.rows(`SELECT * FROM ${table}`)), table).toMatch(/permission denied/);
     }
   });
 

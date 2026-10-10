@@ -43,5 +43,6 @@ insert into supabase_migrations.schema_migrations (version, name, statements) va
   ('20261007140000', 'refinish_attaches_extra_sets', '{}'),
   ('20261007150000', 'update_training_profile', '{}'),
   ('20261007160000', 'beta_testers', '{}'),
-  ('20261008120000', 'weight_unit', '{}')
+  ('20261008120000', 'weight_unit', '{}'),
+  ('20261010120000', 'revoke_table_privileges', '{}')
 on conflict (version) do nothing;
