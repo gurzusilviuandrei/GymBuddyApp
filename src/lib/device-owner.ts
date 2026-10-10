@@ -15,10 +15,12 @@ export const ACCOUNT_DATA_KEYS = [
   "gymbuddy-profile",
   "gymbuddy-pro",
   "gymbuddy-query-cache",
+  // Training-day reminder choice (reminders.ts REMINDERS_KEY); ReminderSync cancels the phone's reminders when it is gone.
+  "gymbuddy-reminders",
 ] as const;
 
 // Per-account conveniences that live in plain WebView storage.
-const ACCOUNT_WEB_KEYS = ["gymbuddy-bag-checklist", "gymbuddy-train-anyway"];
+const ACCOUNT_WEB_KEYS = ["gymbuddy-bag-checklist", "gymbuddy-train-anyway", "gymbuddy-reminder-prompt"];
 
 /** Erase every account's data from this phone (e.g. after deleting the account). */
 export function clearAccountData() {

@@ -407,6 +407,7 @@ function Workout() {
       const endedAt = atLastSet ? (lastSetAtRef.current ?? Date.parse(startedAt)) : Date.now();
       setSummary({ sets: saved.sets, volume: saved.volume, durationMinutes: durationMinutes(startedAt, endedAt), weeklyWorkouts, finishedAt: endedAt });
       queryClient.invalidateQueries({ queryKey: ["user-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["streak"] });
       queryClient.invalidateQueries({ queryKey: ["workout-history"] });
       // Next split day loads when Home mounts; don't swap this screen's plan now.
       queryClient.invalidateQueries({ queryKey: ["day-one-workout"], refetchType: "none" });

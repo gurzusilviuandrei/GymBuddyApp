@@ -361,6 +361,30 @@ export async function getUserStats({ data }: Input<{ tz_offset?: number | undefi
   };
 }
 
+// The weekly streak on Home: when each finished workout ended (about 3 a week, so the
+// newest 1,000 cover years) and the weekly goal; streak.ts does the counting on the phone.
+export async function getStreakData() {
+  const userId = await currentUserId();
+  const [sessionsRes, userRes] = await Promise.all([
+    supabase
+      .from("workout_sessions")
+      .select("completed_at")
+      .eq("user_id", userId)
+      .order("completed_at", { ascending: false })
+      .limit(1000),
+    supabase.from("users").select("weekly_goal_days").eq("id", userId).maybeSingle(),
+  ]);
+  const failed = sessionsRes.error ?? userRes.error;
+  if (failed) {
+    console.error("getStreakData failed", failed.code, failed.message);
+    throw new Error("Could not load your streak");
+  }
+  return {
+    completedAts: (sessionsRes.data ?? []).map((s) => s.completed_at).filter((v): v is string => Boolean(v)),
+    weeklyGoal: userRes.data?.weekly_goal_days ?? 3,
+  };
+}
+
 // Records a finished workout from this session's logged set IDs, not unrelated logs.
 export async function completeWorkout({ data }: Input<{
   program_type: "premade" | "custom";

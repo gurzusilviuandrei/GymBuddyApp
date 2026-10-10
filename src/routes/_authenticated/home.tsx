@@ -20,6 +20,8 @@ import { OfflineSyncBadge } from "@/components/OfflineSyncBadge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { RecoveryModeCard } from "@/components/RecoveryModeCard";
+import { StreakLine } from "@/components/home/StreakLine";
+import { ReminderPrompt } from "@/components/home/ReminderPrompt";
 import { durableStorage } from "@/lib/durable-storage";
 import { useBackToClose } from "@/lib/back-stack";
 import { readTrainAnywayToday, rememberTrainAnywayToday } from "@/lib/train-anyway";
@@ -353,7 +355,10 @@ function Home() {
             : `${completed} / ${weeklyTarget} Workouts Completed`}
         </p>
         <p className="mt-2 text-center text-xs text-muted-foreground">Resets every Monday</p>
+        <StreakLine />
       </section>
+
+      {stats && <ReminderPrompt weeklyGoal={weeklyTarget} />}
 
       {isRestDay ? (
       <section className="mt-14" aria-label="Rest and recovery">
