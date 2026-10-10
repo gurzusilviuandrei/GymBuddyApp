@@ -14,18 +14,23 @@
             </tr>
             <tr>
               <td style="padding:12px 28px 0;font-size:15px;line-height:1.6;color:#b3b3b3;">
-                Tap the button to activate your GymBuddy account and set up your training plan.
+                Enter this code in the GymBuddy app to activate your account. You can read this email on any device.
               </td>
             </tr>
             <tr>
-              <td style="padding:28px 28px 8px;">
-                <a href="{{ .ConfirmationURL }}" style="display:block;background:#39ff14;color:#121212;text-align:center;text-decoration:none;font-size:16px;font-weight:bold;padding:16px 20px;border-radius:8px;">Confirm my email</a>
+              <td align="center" style="padding:24px 28px 8px;">
+                <div style="display:inline-block;background:#121212;border:1px solid #39ff14;border-radius:10px;padding:16px 24px;font-family:'Courier New',Courier,monospace;font-size:34px;font-weight:bold;letter-spacing:8px;color:#39ff14;">{{ .Token }}</div>
               </td>
             </tr>
             <tr>
-              <td style="padding:16px 28px 0;font-size:13px;line-height:1.6;color:#8a8a8a;">
-                Open this email on the phone where GymBuddy is installed. If the button doesn't work, copy this link into your browser:<br />
-                <a href="{{ .ConfirmationURL }}" style="color:#39ff14;word-break:break-all;">{{ .ConfirmationURL }}</a>
+              <td style="padding:8px 28px 0;font-size:13px;line-height:1.6;color:#8a8a8a;text-align:center;">
+                The code works once and expires in one hour.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px 28px 0;font-size:13px;line-height:1.6;color:#8a8a8a;">
+                Reading this on the phone with GymBuddy? You can also tap
+                <a href="{{ .ConfirmationURL }}" style="color:#39ff14;">confirm my email</a> instead.
               </td>
             </tr>
             <tr>

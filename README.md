@@ -27,6 +27,23 @@ A session companion for people who have a gym membership and still freeze in the
 4. Copy `.env.example` to `.env` and fill in your project URL and publishable key (Project Settings → API).
 5. `npm install`
 
+## Backups
+
+The Supabase free plan has no restorable backups, so `.github/workflows/backup.yml` saves the database every Sunday (and on demand: Actions → Backup → Run workflow). It keeps the members' data (`public`) and their accounts (`auth`), encrypted with AES-256, as a download on the run's page for 90 days.
+
+**Setup (once):** add two repository secrets (Settings → Secrets and variables → Actions):
+- `SUPABASE_DB_URL`: Supabase → **Connect** → **Session pooler** connection string, with the database password filled in. (The "Direct connection" address does not work from GitHub, which has no IPv6.)
+- `BACKUP_PASSPHRASE`: a long passphrase. Keep it in a password manager: **without it no backup can be opened**, and with it anyone holding a backup file can read it.
+
+**Restore (into a new or emptied project):**
+1. Download the newest backup from Actions → Backup → latest run → Artifacts, and unzip it.
+2. Decrypt: `gpg --output backup.dump --decrypt gymbuddy-db-YYYY-MM-DD.dump.gpg` (asks for the passphrase).
+3. Create the tables by running every file in `supabase/migrations/` in order (SQL Editor), as for a new project.
+4. Load accounts first, then the data: `pg_restore --data-only --no-owner --schema=auth -d "<new SUPABASE_DB_URL>" backup.dump`, then the same with `--schema=public`.
+5. Re-do the dashboard-only settings listed above.
+
+Practise a restore once into a throwaway project, so the first real one isn't a surprise.
+
 ## Settings that live only in the Supabase dashboard
 
 Migrations cover the database. These are set in the dashboard and are not in any file, so they are written down here (check them if a project is ever rebuilt):
