@@ -39,6 +39,14 @@ jobs:
             echo "::error::Add the repository secret(s):$missing (Settings → Secrets and variables → Actions)."
             exit 1
           fi
+          # Catch a connection string pasted into the passphrase by mistake, or a weak passphrase.
+          case "$BACKUP_PASSPHRASE" in
+            postgres://*|postgresql://*) echo "::error::BACKUP_PASSPHRASE holds a connection string. Put your passphrase there."; exit 1 ;;
+          esac
+          if [ "${#BACKUP_PASSPHRASE}" -lt 16 ]; then
+            echo "::error::BACKUP_PASSPHRASE is shorter than 16 characters. Use a longer passphrase."
+            exit 1
+          fi
 
       # pg_dump must be at least as new as the server; 17 also reads older servers.
       - name: Install the PostgreSQL 17 tools
