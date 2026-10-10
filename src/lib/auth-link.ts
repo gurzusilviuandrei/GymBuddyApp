@@ -1,7 +1,8 @@
 // What an email link (confirm sign-up, reset password, change email) asks the app to do.
 // Kept free of the Supabase client so the rules can be tested; NativeBridge acts on it.
 
-export const INVALID_LINK_MESSAGE = "That link is invalid or has expired.";
+export const INVALID_LINK_MESSAGE =
+  "That link was already used or has expired. Confirming your email? It's probably done: log in. Resetting a password? Ask for a new link.";
 
 export type AuthLink =
   /** Not one of ours (other host, not a URL): do nothing. */

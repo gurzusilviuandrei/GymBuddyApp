@@ -15,6 +15,7 @@ import {
   isFakeSignUp,
   RESEND_COOLDOWN_MS,
 } from "@/lib/auth-errors";
+import { cleanCode, codeError, isCompleteCode, CODE_MAX_LENGTH } from "@/lib/confirm-code";
 import { ensureUserRow } from "@/lib/gym-api";
 import { syncLocalProfile } from "@/lib/account-sync";
 import { clearAccountData } from "@/lib/device-owner";
@@ -47,6 +48,9 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  // The one-time code from the sign-up email, typed on the "Check your email" screen.
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [failures, setFailures] = useState(0);
   const [lockedUntil, setLockedUntil] = useState<number>(() => readLockoutUntil());
@@ -126,6 +130,28 @@ function AuthPage() {
     }
   };
 
+  // Confirm the email with the code it carries: works whichever device the email was read on.
+  const verifyCode = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!sentTo || verifying || !isCompleteCode(code)) return;
+    setVerifying(true);
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({ email: sentTo, token: code, type: "signup" });
+      if (error) throw error;
+      if (data.session) await enterApp();
+      else {
+        // Confirmed, but no session came back (rare): log in with the password.
+        toast.success("Email confirmed. Log in to continue.");
+        setSentTo(null);
+        setMode("login");
+      }
+    } catch (err) {
+      toast.error(codeError(err));
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   const sendResetLink = async (event: FormEvent) => {
     event.preventDefault();
     const parsed = z.string().trim().email("Enter a valid email").max(255).safeParse(forgotEmail);
@@ -174,7 +200,10 @@ function AuthPage() {
           return;
         }
         if (data.session) await enterApp();
-        else setSentTo(parsed.data.email);
+        else {
+          setCode("");
+          setSentTo(parsed.data.email);
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: parsed.data.email,
@@ -239,15 +268,32 @@ function AuthPage() {
           <MailCheck className="size-16 text-primary drop-shadow-[0_0_18px_var(--primary)]" strokeWidth={1.4} />
           <h1 className="mt-8 text-3xl font-semibold">Check your email</h1>
           <p className="mt-4 text-muted-foreground">
-            We sent a confirmation link to <span className="text-foreground">{sentTo}</span>. Open the email <span className="text-foreground">on this phone</span> and tap it to activate your Bro Profile and start onboarding.
+            We emailed a 6-digit code to <span className="text-foreground">{sentTo}</span>. Enter it here to activate your Bro Profile. You can read the email on any device.
           </p>
-          <p className="mt-4 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-            Opened the link on a computer, or it showed a blank page? Your email is still confirmed. Come back here and log in.
+          <form onSubmit={verifyCode} className="mt-8 w-full">
+            <Input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="[0-9]*"
+              maxLength={CODE_MAX_LENGTH}
+              placeholder="123456"
+              aria-label="Confirmation code"
+              value={code}
+              onChange={(e) => setCode(cleanCode(e.target.value))}
+              className="h-16 rounded-lg border-input bg-card px-4 text-center text-2xl font-semibold tracking-[0.4em] tabular-nums"
+            />
+            <Button type="submit" disabled={verifying || !isCompleteCode(code)} className="mt-4 h-12 w-full rounded-lg font-semibold">
+              {verifying ? "Checking…" : "Confirm email"}
+            </Button>
+          </form>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Tapped the link in the email instead? Then you're confirmed: log in below.
           </p>
-          <Button type="button" variant="outline" onClick={() => void resendConfirmation(sentTo)} disabled={resending || resendRemaining > 0} className="mt-10 h-12 w-full rounded-lg">
-            {resending ? "Sending…" : resendRemaining > 0 ? `Sent. Check spam too (resend in ${resendRemaining}s)` : "Didn't get it? Resend email"}
+          <Button type="button" variant="outline" onClick={() => void resendConfirmation(sentTo)} disabled={resending || resendRemaining > 0} className="mt-8 h-12 w-full rounded-lg">
+            {resending ? "Sending…" : resendRemaining > 0 ? `Sent. Check spam too (resend in ${resendRemaining}s)` : "Didn't get it? Send a new code"}
           </Button>
-          <button type="button" onClick={() => { setSentTo(null); setMode("login"); }} className="mt-6 inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline">
+          <button type="button" onClick={() => { setSentTo(null); setCode(""); setMode("login"); }} className="mt-6 inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline">
             Already confirmed? Log in
           </button>
         </section>
@@ -278,8 +324,11 @@ function AuthPage() {
           {!isSignup && unconfirmedEmail && (
             <div role="alert" className="mt-5 rounded-lg border border-primary/40 bg-primary/10 px-4 py-4 text-sm text-foreground">
               <p>
-                Your email isn't confirmed yet. Tap the link we sent to <span className="font-semibold">{unconfirmedEmail}</span>, or send a new one.
+                Your email isn't confirmed yet. Enter the code we sent to <span className="font-semibold">{unconfirmedEmail}</span>, or send a new one.
               </p>
+              <Button type="button" onClick={() => { setCode(""); setSentTo(unconfirmedEmail); }} className="mt-3 h-11 w-full rounded-lg">
+                Enter my code
+              </Button>
               <Button
                 type="button"
                 variant="outline"
