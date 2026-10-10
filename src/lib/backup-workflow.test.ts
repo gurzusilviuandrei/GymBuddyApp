@@ -26,6 +26,11 @@ describe("the weekly backup workflow", () => {
     for (const path of uploads) expect(path.endsWith(".dump.gpg"), path).toBe(true);
   });
 
+  it("refuses a passphrase that is a pasted connection string or too short", () => {
+    expect(workflow).toContain("postgres://*|postgresql://*)");
+    expect(workflow).toMatch(/BACKUP_PASSPHRASE}" -lt 16/);
+  });
+
   it("never prints the connection string or passphrase", () => {
     expect(workflow).not.toMatch(/echo[^\n]*\$(SUPABASE_DB_URL|BACKUP_PASSPHRASE)/);
   });
